@@ -26,17 +26,12 @@ import EventRegistration from "src/events/entities/eventRegistration.entity";
 import { Tenant } from "../../tenants/entities/tenant.entity";
 
 @Entity()
-@Index(["tenantId", "id"])
+@Index(["tenant", "id"])
 export default class Contact {
   @PrimaryGeneratedColumn({ name: "id" })
   id: number;
 
-  @Column({ type: "int", nullable: false })
-  @Index()
-  tenantId: number;
-
-  @ManyToOne(() => Tenant, { nullable: false })
-  @JoinColumn({ name: "tenantId" })
+  @ManyToOne(() => Tenant, (tenant) => tenant.contacts, { nullable: false })
   tenant: Tenant;
 
   @Column({

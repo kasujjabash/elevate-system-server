@@ -15,17 +15,12 @@ import { ReportStatus } from "../enums/report.enum";
 import { Tenant } from "../../tenants/entities/tenant.entity";
 
 @Entity()
-@Index(["tenantId", "id"])
+@Index(["tenant", "id"])
 export class Report {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: "int", nullable: false })
-  @Index()
-  tenantId: number;
-
-  @ManyToOne(() => Tenant, { nullable: false })
-  @JoinColumn({ name: "tenantId" })
+  @ManyToOne(() => Tenant, (tenant) => tenant.reports, { nullable: false })
   tenant: Tenant;
 
   @Column()

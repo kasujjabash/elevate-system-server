@@ -12,19 +12,16 @@ import EventField from "./eventField.entity";
 import { Tenant } from "../../tenants/entities/tenant.entity";
 
 @Entity()
-@Index(["tenantId", "name"], { unique: true })
-@Index(["tenantId", "id"])
+@Index(["tenant", "name"], { unique: true })
+@Index(["tenant", "id"])
 export default class EventCategory {
   @Column()
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: "int", nullable: false })
-  @Index()
-  tenantId: number;
-
-  @ManyToOne(() => Tenant, { nullable: false })
-  @JoinColumn({ name: "tenantId" })
+  @ManyToOne(() => Tenant, (tenant) => tenant.eventCategories, {
+    nullable: false,
+  })
   tenant: Tenant;
 
   @Column({ length: 200 })

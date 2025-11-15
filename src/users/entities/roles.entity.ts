@@ -9,23 +9,18 @@ import {
   PrimaryGeneratedColumn,
   Unique,
   UpdateDateColumn,
-} from 'typeorm';
-import UserRoles from './userRoles.entity';
-import { Tenant } from '../../tenants/entities/tenant.entity';
+} from "typeorm";
+import UserRoles from "./userRoles.entity";
+import { Tenant } from "../../tenants/entities/tenant.entity";
 
 @Entity()
-@Unique(['tenantId', 'role'])
-@Index(['tenantId', 'id'])
+@Index(["tenant", "id"])
+@Index(["role"])
 export default class Roles {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: 'int', nullable: false })
-  @Index()
-  tenantId: number;
-
-  @ManyToOne(() => Tenant, { nullable: false })
-  @JoinColumn({ name: 'tenantId' })
+  @ManyToOne(() => Tenant, (tenant) => tenant.roles, { nullable: false })
   tenant: Tenant;
 
   @Column({ nullable: false })
@@ -34,20 +29,20 @@ export default class Roles {
   @Column({ nullable: false })
   description: string;
 
-  @Column('simple-array', { nullable: false })
+  @Column("simple-array", { nullable: false })
   permissions: string[];
 
   @Column({ nullable: false })
   isActive: Boolean;
 
   @CreateDateColumn({
-    default: () => 'NOW()',
+    default: () => "NOW()",
     nullable: false,
   })
   createdOn: Date;
 
   @UpdateDateColumn({
-    default: () => 'NOW()',
+    default: () => "NOW()",
     nullable: false,
   })
   modifiedOn: Date;

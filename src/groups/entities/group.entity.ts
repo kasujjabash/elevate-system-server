@@ -21,17 +21,12 @@ import { Tenant } from "../../tenants/entities/tenant.entity";
 
 @Entity()
 @Tree("closure-table")
-@Index(["tenantId", "id"])
+@Index(["tenant", "id"])
 export default class Group {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: "int", nullable: false })
-  @Index()
-  tenantId: number;
-
-  @ManyToOne(() => Tenant, { nullable: false })
-  @JoinColumn({ name: "tenantId" })
+  @ManyToOne(() => Tenant, (tenant) => tenant.groups, { nullable: false })
   tenant: Tenant;
 
   @Column({

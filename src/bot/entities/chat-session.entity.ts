@@ -12,17 +12,12 @@ import { ChatNode } from "./chat-node.entity";
 import { Tenant } from "../../tenants/entities/tenant.entity";
 
 @Entity()
-@Index(["tenantId", "id"])
+@Index(["tenant", "id"])
 export class ChatSession {
   @PrimaryGeneratedColumn({ name: "id" })
   id: number;
 
-  @Column({ type: "int", nullable: false })
-  @Index()
-  tenantId: number;
-
-  @ManyToOne(() => Tenant, { nullable: false })
-  @JoinColumn({ name: "tenantId" })
+  @ManyToOne(() => Tenant, (tenant) => tenant.chatSessions, { nullable: false })
   tenant: Tenant;
 
   @CreateDateColumn({ type: "timestamptz", default: () => "CURRENT_TIMESTAMP" })
