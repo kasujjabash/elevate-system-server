@@ -1,11 +1,21 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, Index, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import Group from "./group.entity";
+import { Tenant } from "../../tenants/entities/tenant.entity";
 
 @Entity()
+@Index(["tenantId", "id"])
 export default class GroupCategory {
   @Column()
   @PrimaryGeneratedColumn()
   id: number;
+
+  @Column({ type: "int", nullable: false })
+  @Index()
+  tenantId: number;
+
+  @ManyToOne(() => Tenant, { nullable: false })
+  @JoinColumn({ name: "tenantId" })
+  tenant: Tenant;
 
   @Column({ length: 200 })
   name: string;

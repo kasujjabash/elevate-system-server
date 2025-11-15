@@ -2,18 +2,31 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
   Unique,
   UpdateDateColumn,
 } from 'typeorm';
 import UserRoles from './userRoles.entity';
+import { Tenant } from '../../tenants/entities/tenant.entity';
 
 @Entity()
-@Unique(['role'])
+@Unique(['tenantId', 'role'])
+@Index(['tenantId', 'id'])
 export default class Roles {
   @PrimaryGeneratedColumn()
   id: number;
+
+  @Column({ type: 'int', nullable: false })
+  @Index()
+  tenantId: number;
+
+  @ManyToOne(() => Tenant, { nullable: false })
+  @JoinColumn({ name: 'tenantId' })
+  tenant: Tenant;
 
   @Column({ nullable: false })
   role: string;

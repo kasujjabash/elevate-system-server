@@ -5,17 +5,28 @@ import {
   ManyToOne,
   OneToMany,
   Index,
+  JoinColumn,
 } from "typeorm";
 import { ReportSubmission } from "./report.submission.entity";
 import { User } from "src/users/entities/user.entity";
 import { ReportField } from "./report.field.entity";
 import GroupCategory from "src/groups/entities/groupCategory.entity";
 import { ReportStatus } from "../enums/report.enum";
+import { Tenant } from "../../tenants/entities/tenant.entity";
 
 @Entity()
+@Index(["tenantId", "id"])
 export class Report {
   @PrimaryGeneratedColumn()
   id: number;
+
+  @Column({ type: "int", nullable: false })
+  @Index()
+  tenantId: number;
+
+  @ManyToOne(() => Tenant, { nullable: false })
+  @JoinColumn({ name: "tenantId" })
+  tenant: Tenant;
 
   @Column()
   name: string;

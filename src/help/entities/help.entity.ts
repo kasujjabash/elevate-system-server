@@ -4,13 +4,26 @@ import {
   PrimaryGeneratedColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  Index,
+  ManyToOne,
+  JoinColumn,
 } from "typeorm";
 import { URLCategory } from "../enums/URLCategory";
+import { Tenant } from "../../tenants/entities/tenant.entity";
 
 @Entity({ name: "help" })
+@Index(["tenantId", "id"])
 export default class Help {
   @PrimaryGeneratedColumn()
   id: number;
+
+  @Column({ type: "int", nullable: false })
+  @Index()
+  tenantId: number;
+
+  @ManyToOne(() => Tenant, { nullable: false })
+  @JoinColumn({ name: "tenantId" })
+  tenant: Tenant;
 
   @Column({ length: 300 })
   title: string;

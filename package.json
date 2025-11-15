@@ -29,7 +29,8 @@
     "postinstall": "prisma generate",
     "command": "ts-node -r tsconfig-paths/register src/commands.ts",
     "sync:schemas": "NODE_OPTIONS='--max-old-space-size=4096' ts-node -r tsconfig-paths/register scripts/syncSchemas.ts",
-    "sync:migrateReportSubmissionData": "ts-node -r tsconfig-paths/register scripts/migrateReportData.ts"
+    "sync:migrateReportSubmissionData": "ts-node -r tsconfig-paths/register scripts/migrateReportData.ts",
+    "migrate:row-level": "ts-node -r tsconfig-paths/register scripts/migrateToRowLevelTenancy.ts"
   },
   "dependencies": {
     "@nestjs/axios": "^3.0.0",
