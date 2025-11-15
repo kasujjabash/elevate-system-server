@@ -83,16 +83,16 @@ async function migrateToRowLevelTenancy() {
     for (const tenant of tenants) {
       const schemaName = tenant.name.toLowerCase().replace(/\s+/g, "");
 
-      if ("demo" == tenant.name) {
+      if (!existingSchemas.includes(schemaName)) {
         console.log(
-          `   ⚠️  Schema '${schemaName}' already migrated, skipping tenant ${tenant.name}`,
+          `   ⚠️  Schema '${schemaName}' not found, skipping tenant ${tenant.name}`,
         );
         continue;
       }
 
-      if (!existingSchemas.includes(schemaName)) {
+      if ("worshipharvest" !== schemaName) {
         console.log(
-          `   ⚠️  Schema '${schemaName}' not found, skipping tenant ${tenant.name}`,
+          `   ⚠️  Schema '${schemaName}' will not be migrated. Skipping tenant ${tenant.name}`,
         );
         continue;
       }
@@ -164,29 +164,66 @@ async function getTableColumns(
 }
 
 /**
- * Build SELECT statement with proper enum casting
+ * Get columns that exist in target (public) schema
+ */
+async function getTargetTableColumns(
+  queryRunner: QueryRunner,
+  tableName: string,
+): Promise<Set<string>> {
+  const columns = await queryRunner.query(
+    `SELECT column_name
+     FROM information_schema.columns
+     WHERE table_schema = 'public' AND table_name = $1`,
+    [tableName],
+  );
+  return new Set(columns.map((col: any) => col.column_name));
+}
+
+/**
+ * Build SELECT statement with proper enum casting, only for columns that exist in target
  */
 function buildSelectWithEnumCasting(
   columns: Array<{ column_name: string; data_type: string; udt_name: string }>,
+  targetColumns: Set<string>,
   schemaName: string,
   tenantId: number,
   addTenantId: boolean,
-): string {
-  const columnSelects = columns.map((col) => {
+): { selectClause: string; insertColumns: string } {
+  const columnSelects: string[] = [];
+  const insertColumnNames: string[] = [];
+
+  columns.forEach((col) => {
+    // Skip columns that don't exist in target table
+    if (addTenantId && col.column_name === "tenantId") {
+      // Will add tenantId separately
+      return;
+    }
+
+    if (!targetColumns.has(col.column_name)) {
+      return; // Skip this column
+    }
+
+    insertColumnNames.push(`"${col.column_name}"`);
+
     // Check if it's a user-defined type (likely an enum)
     if (col.data_type === "USER-DEFINED") {
       // Double cast: schema-specific enum -> text -> public enum
       // This avoids schema-specific enum type issues
-      return `"${col.column_name}"::text::${col.udt_name}`;
+      columnSelects.push(`"${col.column_name}"::text::${col.udt_name}`);
+    } else {
+      columnSelects.push(`"${col.column_name}"`);
     }
-    return `"${col.column_name}"`;
   });
 
-  if (addTenantId) {
+  if (addTenantId && targetColumns.has("tenantId")) {
+    insertColumnNames.push(`"tenantId"`);
     columnSelects.push(`${tenantId} as "tenantId"`);
   }
 
-  return columnSelects.join(", ");
+  return {
+    selectClause: columnSelects.join(", "),
+    insertColumns: `(${insertColumnNames.join(", ")})`,
+  };
 }
 
 async function migrateTenantData(
@@ -277,20 +314,44 @@ async function migrateTenantData(
 
       // Get column information to handle enum casting
       const columns = await getTableColumns(queryRunner, schemaName, table);
-      const selectClause = buildSelectWithEnumCasting(
+      const targetColumns = await getTargetTableColumns(queryRunner, table);
+      const { selectClause, insertColumns } = buildSelectWithEnumCasting(
         columns,
+        targetColumns,
         schemaName,
         tenantId,
         hasData,
       );
 
-      // Migrate data with proper enum casting
+      // Migrate data with proper enum casting and explicit column list
       await queryRunner.query(`
-        INSERT INTO public."${table}"
+        INSERT INTO public."${table}" ${insertColumns}
         SELECT ${selectClause}
         FROM "${schemaName}"."${table}"
         ON CONFLICT DO NOTHING
       `);
+
+      // After migrating, fix sequence for "id" if it exists and is backed by a sequence
+      if (targetColumns.has("id")) {
+        try {
+          await queryRunner.query(
+            `
+            SELECT setval(
+              pg_get_serial_sequence($1, 'id'),
+              COALESCE((SELECT MAX(id) FROM ${"public"}.\"${table}\"), 1),
+              true
+            );
+            `,
+            [`public."${table}"`],
+          );
+          console.log(`      ↻ Reset sequence for '${table}.id'`);
+        } catch (e) {
+          console.log(
+            `      ⚠️ Could not reset sequence for '${table}.id' (might not be serial/identity):`,
+            e.message,
+          );
+        }
+      }
 
       console.log(
         `      ✓ Table '${table}': migrated ${rowCount} row(s)${
