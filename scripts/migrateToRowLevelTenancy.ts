@@ -237,53 +237,53 @@ async function migrateTenantData(
   // We need to migrate in dependency order
   const migrationOrder = [
     // 1. Root entities with no dependencies
-    { table: "group_category", hasData: true },
-    { table: "event_category", hasData: true },
-    { table: "roles", hasData: true },
-    { table: "contact", hasData: true },
-    { table: "help", hasData: true },
-    { table: "chat_session", hasData: true },
+    { table: "group_category", addTenantId: true },
+    { table: "event_category", addTenantId: true },
+    { table: "roles", addTenantId: true },
+    { table: "contact", addTenantId: true },
+    { table: "help", addTenantId: true },
+    { table: "chat_session", addTenantId: true },
 
     // 2. Entities that depend on contact
-    { table: "person", hasData: false }, // OneToOne with contact
-    { table: "company", hasData: false },
-    { table: "email", hasData: false },
-    { table: "phone", hasData: false },
-    { table: "address", hasData: false },
-    { table: "identification", hasData: false },
-    { table: "occasion", hasData: false },
-    { table: "relationship", hasData: false },
-    { table: "request", hasData: false },
-    { table: "user", hasData: true }, // OneToOne with contact
+    { table: "person", addTenantId: false }, // OneToOne with contact
+    { table: "company", addTenantId: false },
+    { table: "email", addTenantId: false },
+    { table: "phone", addTenantId: false },
+    { table: "address", addTenantId: false },
+    { table: "identification", addTenantId: false },
+    { table: "occasion", addTenantId: false },
+    { table: "relationship", addTenantId: false },
+    { table: "request", addTenantId: false },
+    { table: "user", addTenantId: true }, // OneToOne with contact
 
     // 3. User-dependent entities
-    { table: "user_roles", hasData: false },
+    { table: "user_roles", addTenantId: false },
 
     // 4. Group entities
-    { table: "group", hasData: true }, // Depends on group_category
-    { table: "group_closure", hasData: false }, // Tree structure table
-    { table: "group_membership", hasData: false },
-    { table: "group_membership_request", hasData: false },
+    { table: "group", addTenantId: true }, // Depends on group_category
+    { table: "group_closure", addTenantId: false }, // Tree structure table
+    { table: "group_membership", addTenantId: false },
+    { table: "group_membership_request", addTenantId: false },
 
     // 5. Event entities
-    { table: "event_field", hasData: false },
-    { table: "group_event", hasData: false },
-    { table: "event_registration", hasData: false },
-    { table: "event_attendance", hasData: false },
-    { table: "event_activity", hasData: false },
-    { table: "member_event_activities", hasData: false },
+    { table: "event_field", addTenantId: false },
+    { table: "group_event", addTenantId: false },
+    { table: "event_registration", addTenantId: false },
+    { table: "event_attendance", addTenantId: false },
+    { table: "event_activity", addTenantId: false },
+    { table: "member_event_activities", addTenantId: false },
 
     // 6. Report entities
-    { table: "report", hasData: true },
-    { table: "report_field", hasData: false },
-    { table: "report_submission", hasData: false },
-    { table: "report_submission_data", hasData: false },
+    { table: "report", addTenantId: true },
+    { table: "report_field", addTenantId: false },
+    { table: "report_submission", addTenantId: false },
+    { table: "report_submission_data", addTenantId: false },
 
     // 7. Chat entities
-    { table: "chat_node", hasData: false },
+    { table: "chat_node", addTenantId: false },
   ];
 
-  for (const { table, hasData } of migrationOrder) {
+  for (const { table, addTenantId } of migrationOrder) {
     try {
       // Check if table exists in tenant schema
       const tableExists = await queryRunner.query(
@@ -320,7 +320,7 @@ async function migrateTenantData(
         targetColumns,
         schemaName,
         tenantId,
-        hasData,
+        addTenantId,
       );
 
       // Migrate data with proper enum casting and explicit column list
@@ -355,7 +355,7 @@ async function migrateTenantData(
 
       console.log(
         `      ✓ Table '${table}': migrated ${rowCount} row(s)${
-          hasData ? ` with tenantId=${tenantId}` : " (tenantId inferred)"
+          addTenantId ? ` with tenantId=${tenantId}` : " (tenantId inferred)"
         }`,
       );
     } catch (error) {
