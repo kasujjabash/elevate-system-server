@@ -131,6 +131,48 @@ async function migrateToRowLevelTenancy() {
   }
 }
 
+/**
+ * Get column information for a table including enum types
+ */
+async function getTableColumns(
+  queryRunner: QueryRunner,
+  schemaName: string,
+  tableName: string
+): Promise<Array<{ column_name: string; data_type: string; udt_name: string }>> {
+  return await queryRunner.query(
+    `SELECT column_name, data_type, udt_name
+     FROM information_schema.columns
+     WHERE table_schema = $1 AND table_name = $2
+     ORDER BY ordinal_position`,
+    [schemaName, tableName]
+  );
+}
+
+/**
+ * Build SELECT statement with proper enum casting
+ */
+function buildSelectWithEnumCasting(
+  columns: Array<{ column_name: string; data_type: string; udt_name: string }>,
+  schemaName: string,
+  tenantId: number,
+  addTenantId: boolean
+): string {
+  const columnSelects = columns.map(col => {
+    // Check if it's a user-defined type (likely an enum)
+    if (col.data_type === 'USER-DEFINED') {
+      // Cast enum to text first to avoid schema-specific enum type issues
+      return `"${col.column_name}"::text`;
+    }
+    return `"${col.column_name}"`;
+  });
+
+  if (addTenantId) {
+    columnSelects.push(`${tenantId} as "tenantId"`);
+  }
+
+  return columnSelects.join(', ');
+}
+
 async function migrateTenantData(
   queryRunner: QueryRunner,
   tenant: TenantInfo,
@@ -215,26 +257,19 @@ async function migrateTenantData(
         continue;
       }
 
-      // Migrate data
-      if (hasData) {
-        // Tables that need tenantId added
-        await queryRunner.query(`
-          INSERT INTO public."${table}"
-          SELECT *, ${tenantId} as "tenantId"
-          FROM "${schemaName}"."${table}"
-          ON CONFLICT DO NOTHING
-        `);
-        console.log(`      ✓ Table '${table}': migrated ${rowCount} row(s) with tenantId=${tenantId}`);
-      } else {
-        // Tables that inherit tenantId from parent
-        await queryRunner.query(`
-          INSERT INTO public."${table}"
-          SELECT *
-          FROM "${schemaName}"."${table}"
-          ON CONFLICT DO NOTHING
-        `);
-        console.log(`      ✓ Table '${table}': migrated ${rowCount} row(s) (tenantId inferred)`);
-      }
+      // Get column information to handle enum casting
+      const columns = await getTableColumns(queryRunner, schemaName, table);
+      const selectClause = buildSelectWithEnumCasting(columns, schemaName, tenantId, hasData);
+
+      // Migrate data with proper enum casting
+      await queryRunner.query(`
+        INSERT INTO public."${table}"
+        SELECT ${selectClause}
+        FROM "${schemaName}"."${table}"
+        ON CONFLICT DO NOTHING
+      `);
+
+      console.log(`      ✓ Table '${table}': migrated ${rowCount} row(s)${hasData ? ` with tenantId=${tenantId}` : ' (tenantId inferred)'}`);
 
     } catch (error) {
       console.error(`      ✗ Error migrating table '${table}':`, error.message);
