@@ -1,6 +1,7 @@
 import EventCategory from "src/events/entities/eventCategory.entity";
 import { FieldType } from "../../events/entities/eventField.entity";
 import { EventCategories } from "src/events/enums/EventCategories";
+import { seedTenant } from "./users";
 
 const baseReportFields = [
   {
@@ -36,6 +37,7 @@ const categories: EventCategory[] = [
   {
     id: 1,
     name: EventCategories.Garage,
+    tenant: seedTenant,
     events: [],
     fields: [
       {
@@ -85,6 +87,7 @@ const categories: EventCategory[] = [
     id: 2,
     name: EventCategories.MC,
     events: [],
+    tenant: seedTenant,
     fields: [
       {
         id: 9,
@@ -108,6 +111,7 @@ const categories: EventCategory[] = [
   {
     id: 3,
     name: EventCategories.Frontier,
+    tenant: seedTenant,
     events: [],
     fields: [
       {
@@ -124,6 +128,7 @@ const categories: EventCategory[] = [
   {
     id: 4,
     name: EventCategories.Baptism,
+    tenant: seedTenant,
     events: [],
     fields: [
       {
@@ -140,6 +145,7 @@ const categories: EventCategory[] = [
   {
     id: 5,
     name: EventCategories.Evangelism,
+    tenant: seedTenant,
     events: [],
     fields: [
       {
@@ -156,6 +162,7 @@ const categories: EventCategory[] = [
   {
     id: 6,
     name: EventCategories.Wedding,
+    tenant: seedTenant,
     events: [],
     fields: [
       {

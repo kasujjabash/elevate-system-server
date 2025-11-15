@@ -86,7 +86,12 @@ export class GroupsService {
     if (hasValue(user)) {
       const groupIds =
         await this.groupsPermissionsService.getUserGroupIds(user);
-      findOps.id = In(groupIds);
+      if (groupIds.length > 0) {
+        findOps.id = In(groupIds);
+      } else {
+        // If user has no accessible groups, return empty array
+        return [];
+      }
     }
 
     if (hasValue(req.categories)) {
@@ -107,13 +112,12 @@ export class GroupsService {
     if (hasValue(req.query)) {
       findOps.name = ILike(`%${req.query}%`);
     }
-
     const data = await this.treeRepository.find({
       select: ["id", "name", "category", "parent"],
       where: findOps,
       skip: req.skip,
       take: req.limit,
-      cache: true,
+      cache: false,
     });
 
     return data;

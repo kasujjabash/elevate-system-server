@@ -6,14 +6,17 @@ import { SeedModule } from "src/seed/seed.module";
 import { Tenant } from "./entities/tenant.entity";
 import { TENANT_HEADER } from "../constants";
 import { UsersModule } from "src/users/users.module";
+import { TenantContext } from "src/shared/tenant/tenant-context";
 
-const connectionFactory = {
-  provide: "CONNECTION",
+/**
+ * Tenant validation provider - validates tenant and stores tenantId in request
+ * This is REQUEST-scoped to run for each request
+ */
+const tenantValidationProvider = {
+  provide: "TENANT_VALIDATOR",
   scope: Scope.REQUEST,
   useFactory: async (req: any, dbservice: DbService) => {
     const tenantName = req.headers[TENANT_HEADER];
-    const connectionPublic = await dbservice.getConnection();
-    let tenantDetails: Tenant;
 
     if (!tenantName) {
       throw new BadRequestException(
@@ -21,9 +24,7 @@ const connectionFactory = {
       );
     }
 
-    tenantDetails = await connectionPublic
-      .getRepository(Tenant)
-      .findOne({ where: { name: tenantName } });
+    const tenantDetails = await dbservice.getTenantByName(tenantName);
 
     if (!tenantDetails) {
       throw new BadRequestException(
@@ -31,15 +32,39 @@ const connectionFactory = {
       );
     }
 
-    return dbservice.getConnection(tenantName);
+    // Store tenant ID in request for TenantContext to use
+    req.tenantId = tenantDetails.id;
+    req.tenantName = tenantDetails.name;
+
+    return tenantDetails;
   },
   inject: [REQUEST, DbService],
+};
+
+/**
+ * Connection provider - now returns the single database connection
+ * Kept for backward compatibility with existing code
+ */
+const connectionFactory = {
+  provide: "CONNECTION",
+  scope: Scope.REQUEST,
+  useFactory: async (req: any, dbservice: DbService, tenantValidator: Tenant) => {
+    // tenantValidator dependency ensures tenant is validated before getting connection
+    return dbservice.getConnection();
+  },
+  inject: [REQUEST, DbService, "TENANT_VALIDATOR"],
 };
 
 @Global()
 @Module({
   imports: [SeedModule, UsersModule],
-  providers: [connectionFactory, TenantsService, DbService],
-  exports: ["CONNECTION"],
+  providers: [
+    tenantValidationProvider,
+    connectionFactory,
+    TenantsService,
+    DbService,
+    TenantContext,
+  ],
+  exports: ["CONNECTION", "TENANT_VALIDATOR", TenantContext],
 })
 export class TenantsModule {}

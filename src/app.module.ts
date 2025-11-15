@@ -21,6 +21,7 @@ import { TenantsModule } from "./tenants/tenants.module";
 import { JwtTenantHeaderMiddleware } from "./middleware/jwtTenantHeader.middleware";
 import { ReportsModule } from "./reports/reports.module";
 import { BotModule } from "./bot/bot.module";
+import { Tenant } from "./tenants/entities/tenant.entity";
 
 @Global()
 @Module({
@@ -36,7 +37,8 @@ import { BotModule } from "./bot/bot.module";
     }),
     TypeOrmModule.forRoot({
       ...config.database,
-      entities: appEntities,
+      entities: [...appEntities, Tenant],
+      schema: 'public', // Use public schema for row-level multi-tenancy
     }),
     UsersModule,
     AuthModule,

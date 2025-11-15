@@ -3,6 +3,7 @@ import GroupCategory from "../../groups/entities/groupCategory.entity";
 import CreateGroupDto from "../../groups/dto/create-group.dto";
 import { mcData } from "./mclist";
 import { GroupCategoryNames } from "src/groups/enums/groups";
+import { seedTenant } from "./users";
 
 export const groupConstants = {
   mc: GroupCategoryNames.MC,
@@ -41,36 +42,43 @@ const createGroupObject = ({
 export const seedGroupCategories: GroupCategory[] = [
   {
     id: 1,
+    tenant: seedTenant,
     name: GroupCategoryNames.NETWORK,
     groups: [],
   },
   {
     id: 2,
+    tenant: seedTenant,
     name: GroupCategoryNames.CLUSTER,
     groups: [],
   },
   {
     id: 3,
+    tenant: seedTenant,
     name: GroupCategoryNames.LOCATION,
     groups: [],
   },
   {
     id: 4,
+    tenant: seedTenant,
     name: GroupCategoryNames.ZONE,
     groups: [],
   },
   {
     id: 5,
+    tenant: seedTenant,
     name: GroupCategoryNames.MC,
     groups: [],
   },
   {
     id: 6,
+    tenant: seedTenant,
     name: GroupCategoryNames.HUDDLE,
     groups: [],
   },
   {
     id: 7,
+    tenant: seedTenant,
     name: GroupCategoryNames.GARAGE_TEAM,
     groups: [],
   },

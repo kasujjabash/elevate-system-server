@@ -1,7 +1,9 @@
 import {
   Column,
   Entity,
+  Index,
   JoinColumn,
+  ManyToOne,
   OneToMany,
   OneToOne,
   PrimaryColumn,
@@ -15,12 +17,14 @@ import { hasValue } from "../../utils/validation";
 import UserRoles from "./userRoles.entity";
 import { ReportSubmission } from "src/reports/entities/report.submission.entity";
 import { Report } from "src/reports/entities/report.entity";
+import { Tenant } from "src/tenants/entities/tenant.entity";
 // authentication will take approximately 13 seconds
 // https://pthree.org/wp-content/uploads/2016/06/bcrypt.png
 const hashCost = 10;
 
 @Entity()
 @Unique(["username"])
+@Index(["tenant"])
 export class User {
   @PrimaryGeneratedColumn()
   id: number;
@@ -41,6 +45,9 @@ export class User {
 
   @Column()
   isActive: boolean;
+
+  @ManyToOne(() => Tenant, (tenant) => tenant.users, { nullable: false })
+  tenant: Tenant;
 
   @OneToMany((type) => UserRoles, (it) => it.user)
   userRoles: UserRoles[];

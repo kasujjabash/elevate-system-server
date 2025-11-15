@@ -2,7 +2,9 @@ import { MemberEventActivities } from "../../events/entities/member-event-activi
 import {
   Column,
   Entity,
+  Index,
   JoinColumn,
+  ManyToOne,
   OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
@@ -21,11 +23,16 @@ import Relationship from "./relationship.entity";
 import GroupMembershipRequest from "../../groups/entities/groupMembershipRequest.entity";
 import EventAttendance from "../../events/entities/eventAttendance.entity";
 import EventRegistration from "src/events/entities/eventRegistration.entity";
+import { Tenant } from "../../tenants/entities/tenant.entity";
 
 @Entity()
+@Index(["tenant", "id"])
 export default class Contact {
   @PrimaryGeneratedColumn({ name: "id" })
   id: number;
+
+  @ManyToOne(() => Tenant, (tenant) => tenant.contacts, { nullable: false })
+  tenant: Tenant;
 
   @Column({
     type: "enum",
