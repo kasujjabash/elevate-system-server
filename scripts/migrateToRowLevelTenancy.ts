@@ -160,8 +160,9 @@ function buildSelectWithEnumCasting(
   const columnSelects = columns.map(col => {
     // Check if it's a user-defined type (likely an enum)
     if (col.data_type === 'USER-DEFINED') {
-      // Cast enum to text first to avoid schema-specific enum type issues
-      return `"${col.column_name}"::text`;
+      // Double cast: schema-specific enum -> text -> public enum
+      // This avoids schema-specific enum type issues
+      return `"${col.column_name}"::text::${col.udt_name}`;
     }
     return `"${col.column_name}"`;
   });
