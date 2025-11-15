@@ -5,6 +5,7 @@ import Group from "src/groups/entities/group.entity";
 import GroupCategory from "src/groups/entities/groupCategory.entity";
 import Help from "src/help/entities/help.entity";
 import Roles from "src/users/entities/roles.entity";
+import { Report } from "src/reports/entities/report.entity";
 import { User } from "src/users/entities/user.entity";
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 

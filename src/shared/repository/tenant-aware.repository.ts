@@ -1,19 +1,27 @@
-import { Repository, FindOptionsWhere, FindManyOptions, FindOneOptions } from 'typeorm';
-import { TenantContext } from '../tenant/tenant-context';
+import {
+  Repository,
+  FindOptionsWhere,
+  FindManyOptions,
+  FindOneOptions,
+} from "typeorm";
+import { TenantContext } from "../tenant/tenant-context";
+import { Tenant } from "src/tenants/entities/tenant.entity";
 
 /**
  * Base class for tenant-aware repositories
  *
- * This class automatically adds tenantId filtering to all queries for entities
- * that have a direct tenantId field.
+ * This class automatically adds tenant filtering to all queries for entities
+ * that have a tenant relationship.
  *
  * Usage:
  * ```typescript
  * const contactRepository = new TenantAwareRepository(Contact, connection, tenantContext);
- * const contacts = await contactRepository.find(); // Automatically filtered by tenantId
+ * const contacts = await contactRepository.find(); // Automatically filtered by tenant
  * ```
  */
-export class TenantAwareRepository<Entity extends { tenantId?: number }> extends Repository<Entity> {
+export class TenantAwareRepository<
+  Entity extends { tenant?: Tenant },
+> extends Repository<Entity> {
   constructor(
     target: any,
     manager: any,
@@ -23,7 +31,7 @@ export class TenantAwareRepository<Entity extends { tenantId?: number }> extends
   }
 
   /**
-   * Add tenantId filter to where conditions
+   * Add tenant filter to where conditions
    */
   private addTenantFilter<T extends FindOptionsWhere<Entity>>(
     where?: T | T[],
@@ -34,19 +42,30 @@ export class TenantAwareRepository<Entity extends { tenantId?: number }> extends
       return where;
     }
 
+    const tenantFilter = { tenant: { id: tenantId } } as T;
+
     if (!where) {
-      return { tenantId } as T;
+      return tenantFilter;
     }
 
     if (Array.isArray(where)) {
-      return where.map((w) => ({ ...w, tenantId } as T));
+      return where.map((w) => ({ ...w, tenant: { id: tenantId } }) as T);
     }
 
-    return { ...where, tenantId } as T;
+    return { ...where, tenant: { id: tenantId } } as T;
   }
 
   /**
-   * Override find to automatically add tenantId filter
+   * Create a tenant reference object without loading the full entity
+   */
+  private createTenantReference(tenantId: number): Tenant {
+    const tenant = new Tenant();
+    tenant.id = tenantId;
+    return tenant;
+  }
+
+  /**
+   * Override find to automatically add tenant filter
    */
   async find(options?: FindManyOptions<Entity>): Promise<Entity[]> {
     const tenantId = this.tenantContext.tenantId;
@@ -64,7 +83,7 @@ export class TenantAwareRepository<Entity extends { tenantId?: number }> extends
   }
 
   /**
-   * Override findOne to automatically add tenantId filter
+   * Override findOne to automatically add tenant filter
    */
   async findOne(options: FindOneOptions<Entity>): Promise<Entity | null> {
     const tenantId = this.tenantContext.tenantId;
@@ -82,9 +101,11 @@ export class TenantAwareRepository<Entity extends { tenantId?: number }> extends
   }
 
   /**
-   * Override findAndCount to automatically add tenantId filter
+   * Override findAndCount to automatically add tenant filter
    */
-  async findAndCount(options?: FindManyOptions<Entity>): Promise<[Entity[], number]> {
+  async findAndCount(
+    options?: FindManyOptions<Entity>,
+  ): Promise<[Entity[], number]> {
     const tenantId = this.tenantContext.tenantId;
 
     if (!tenantId) {
@@ -100,7 +121,7 @@ export class TenantAwareRepository<Entity extends { tenantId?: number }> extends
   }
 
   /**
-   * Override save to automatically add tenantId to new entities
+   * Override save to automatically add tenant to new entities
    */
   async save<T extends Entity>(entity: T): Promise<T>;
   async save<T extends Entity>(entities: T[]): Promise<T[]>;
@@ -113,22 +134,22 @@ export class TenantAwareRepository<Entity extends { tenantId?: number }> extends
 
     if (Array.isArray(entityOrEntities)) {
       const entitiesWithTenant = entityOrEntities.map((entity) => {
-        if (!entity.tenantId) {
-          entity.tenantId = tenantId;
+        if (!entity.tenant) {
+          entity.tenant = this.createTenantReference(tenantId);
         }
         return entity;
       });
       return super.save(entitiesWithTenant as any);
     } else {
-      if (!entityOrEntities.tenantId) {
-        entityOrEntities.tenantId = tenantId;
+      if (!entityOrEntities.tenant) {
+        entityOrEntities.tenant = this.createTenantReference(tenantId);
       }
       return super.save(entityOrEntities as any);
     }
   }
 
   /**
-   * Override create to automatically add tenantId
+   * Override create to automatically add tenant
    */
   create(entityLike?: any): Entity;
   create(entityLikes?: any[]): Entity[];
@@ -139,18 +160,18 @@ export class TenantAwareRepository<Entity extends { tenantId?: number }> extends
       const entities = super.create(entityLikeOrLikes as any[]);
       if (tenantId) {
         entities.forEach((entity) => {
-          if (!entity.tenantId) {
-            entity.tenantId = tenantId;
+          if (!entity.tenant) {
+            entity.tenant = this.createTenantReference(tenantId);
           }
         });
       }
       return entities;
-    } else {
-      const entity = super.create(entityLikeOrLikes);
-      if (tenantId && !entity.tenantId) {
-        entity.tenantId = tenantId;
-      }
-      return entity;
     }
+
+    const entity = super.create(entityLikeOrLikes as any) as unknown as Entity;
+    if (tenantId && !entity.tenant) {
+      entity.tenant = this.createTenantReference(tenantId);
+    }
+    return entity;
   }
 }

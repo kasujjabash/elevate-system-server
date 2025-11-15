@@ -2,6 +2,22 @@ import { RegisterUserDto } from "../../auth/dto/register-user.dto";
 import { Gender } from "../../crm/enums/gender";
 import { CivilStatus } from "../../crm/enums/civilStatus";
 import { roleAdmin } from "../../auth/constants";
+import { Tenant } from "src/tenants/entities/tenant.entity";
+
+export const seedTenant: Tenant = {
+  id: 1,
+  name: "demo",
+  description: "",
+  users: [],
+  contacts: [],
+  groups: [],
+  groupCategories: [],
+  eventCategories: [],
+  roles: [],
+  helpArticles: [],
+  chatSessions: [],
+  reports: [],
+};
 
 export const seedUsers: RegisterUserDto[] = [
   {
