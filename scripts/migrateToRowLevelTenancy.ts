@@ -53,9 +53,9 @@ async function migrateToRowLevelTenancy() {
 
     // Step 2: Get all tenants
     console.log("[2/5] Fetching all tenants...");
-    const tenants = await queryRunner.query(
-      'SELECT id, name, description FROM public.tenant ORDER BY id'
-    ) as TenantInfo[];
+    const tenants = (await queryRunner.query(
+      "SELECT id, name, description FROM public.tenant ORDER BY id",
+    )) as TenantInfo[];
 
     if (tenants.length === 0) {
       console.log("⚠️  No tenants found. Exiting...");
@@ -65,37 +65,51 @@ async function migrateToRowLevelTenancy() {
     }
 
     console.log(`   Found ${tenants.length} tenant(s):`);
-    tenants.forEach(t => console.log(`   - ${t.name} (ID: ${t.id})`));
+    tenants.forEach((t) => console.log(`   - ${t.name} (ID: ${t.id})`));
 
     // Step 3: Verify tenant schemas exist
     console.log("\n[3/5] Verifying tenant schemas...");
     const schemasQuery = await queryRunner.query(
-      "SELECT schema_name FROM information_schema.schemata WHERE schema_name NOT LIKE 'pg_%' AND schema_name != 'information_schema' AND schema_name != 'public'"
+      "SELECT schema_name FROM information_schema.schemata WHERE schema_name NOT LIKE 'pg_%' AND schema_name != 'information_schema' AND schema_name != 'public'",
     );
     const existingSchemas = schemasQuery.map((row: any) => row.schema_name);
 
     console.log(`   Found ${existingSchemas.length} tenant schema(s):`);
-    existingSchemas.forEach(s => console.log(`   - ${s}`));
+    existingSchemas.forEach((s) => console.log(`   - ${s}`));
 
     // Step 4: Migrate data for each tenant
     console.log("\n[4/5] Migrating data from tenant schemas to row-level...");
 
     for (const tenant of tenants) {
-      const schemaName = tenant.name.toLowerCase().replace(/\s+/g, '');
+      const schemaName = tenant.name.toLowerCase().replace(/\s+/g, "");
 
-      if (!existingSchemas.includes(schemaName)) {
-        console.log(`   ⚠️  Schema '${schemaName}' not found, skipping tenant ${tenant.name}`);
+      if ("demo" == tenant.name) {
+        console.log(
+          `   ⚠️  Schema '${schemaName}' already migrated, skipping tenant ${tenant.name}`,
+        );
         continue;
       }
 
-      console.log(`\n   Processing tenant: ${tenant.name} (schema: ${schemaName})`);
+      if (!existingSchemas.includes(schemaName)) {
+        console.log(
+          `   ⚠️  Schema '${schemaName}' not found, skipping tenant ${tenant.name}`,
+        );
+        continue;
+      }
+
+      console.log(
+        `\n   Processing tenant: ${tenant.name} (schema: ${schemaName})`,
+      );
       console.log(`   ${"─".repeat(50)}`);
 
       try {
         await migrateTenantData(queryRunner, tenant, schemaName);
         console.log(`   ✓ Successfully migrated tenant: ${tenant.name}`);
       } catch (error) {
-        console.error(`   ✗ Error migrating tenant ${tenant.name}:`, error.message);
+        console.error(
+          `   ✗ Error migrating tenant ${tenant.name}:`,
+          error.message,
+        );
         throw error; // Stop on first error
       }
     }
@@ -110,8 +124,8 @@ async function migrateToRowLevelTenancy() {
     console.log("   2. Test your application thoroughly");
     console.log("   3. Update application code to use new row-level tenancy");
     console.log("   4. After verification, manually drop old schemas:");
-    tenants.forEach(t => {
-      const schemaName = t.name.toLowerCase().replace(/\s+/g, '');
+    tenants.forEach((t) => {
+      const schemaName = t.name.toLowerCase().replace(/\s+/g, "");
       console.log(`      DROP SCHEMA IF EXISTS ${schemaName} CASCADE;`);
     });
 
@@ -121,7 +135,6 @@ async function migrateToRowLevelTenancy() {
     console.log("\n" + "=".repeat(60));
     console.log("MIGRATION COMPLETED SUCCESSFULLY!");
     console.log("=".repeat(60) + "\n");
-
   } catch (error) {
     console.error("\n❌ Migration failed:", error);
     if (publicConnection) {
@@ -137,14 +150,16 @@ async function migrateToRowLevelTenancy() {
 async function getTableColumns(
   queryRunner: QueryRunner,
   schemaName: string,
-  tableName: string
-): Promise<Array<{ column_name: string; data_type: string; udt_name: string }>> {
+  tableName: string,
+): Promise<
+  Array<{ column_name: string; data_type: string; udt_name: string }>
+> {
   return await queryRunner.query(
     `SELECT column_name, data_type, udt_name
      FROM information_schema.columns
      WHERE table_schema = $1 AND table_name = $2
      ORDER BY ordinal_position`,
-    [schemaName, tableName]
+    [schemaName, tableName],
   );
 }
 
@@ -155,11 +170,11 @@ function buildSelectWithEnumCasting(
   columns: Array<{ column_name: string; data_type: string; udt_name: string }>,
   schemaName: string,
   tenantId: number,
-  addTenantId: boolean
+  addTenantId: boolean,
 ): string {
-  const columnSelects = columns.map(col => {
+  const columnSelects = columns.map((col) => {
     // Check if it's a user-defined type (likely an enum)
-    if (col.data_type === 'USER-DEFINED') {
+    if (col.data_type === "USER-DEFINED") {
       // Double cast: schema-specific enum -> text -> public enum
       // This avoids schema-specific enum type issues
       return `"${col.column_name}"::text::${col.udt_name}`;
@@ -171,13 +186,13 @@ function buildSelectWithEnumCasting(
     columnSelects.push(`${tenantId} as "tenantId"`);
   }
 
-  return columnSelects.join(', ');
+  return columnSelects.join(", ");
 }
 
 async function migrateTenantData(
   queryRunner: QueryRunner,
   tenant: TenantInfo,
-  schemaName: string
+  schemaName: string,
 ): Promise<void> {
   const tenantId = tenant.id;
 
@@ -202,7 +217,7 @@ async function migrateTenantData(
     { table: "occasion", hasData: false },
     { table: "relationship", hasData: false },
     { table: "request", hasData: false },
-    { table: "user", hasData: false }, // OneToOne with contact
+    { table: "user", hasData: true }, // OneToOne with contact
 
     // 3. User-dependent entities
     { table: "user_roles", hasData: false },
@@ -239,17 +254,19 @@ async function migrateTenantData(
           SELECT FROM information_schema.tables
           WHERE table_schema = $1 AND table_name = $2
         )`,
-        [schemaName, table]
+        [schemaName, table],
       );
 
       if (!tableExists[0].exists) {
-        console.log(`      ⊘ Table '${table}' not found in schema, skipping...`);
+        console.log(
+          `      ⊘ Table '${table}' not found in schema, skipping...`,
+        );
         continue;
       }
 
       // Get row count
       const countResult = await queryRunner.query(
-        `SELECT COUNT(*) as count FROM "${schemaName}"."${table}"`
+        `SELECT COUNT(*) as count FROM "${schemaName}"."${table}"`,
       );
       const rowCount = parseInt(countResult[0].count);
 
@@ -260,7 +277,12 @@ async function migrateTenantData(
 
       // Get column information to handle enum casting
       const columns = await getTableColumns(queryRunner, schemaName, table);
-      const selectClause = buildSelectWithEnumCasting(columns, schemaName, tenantId, hasData);
+      const selectClause = buildSelectWithEnumCasting(
+        columns,
+        schemaName,
+        tenantId,
+        hasData,
+      );
 
       // Migrate data with proper enum casting
       await queryRunner.query(`
@@ -270,8 +292,11 @@ async function migrateTenantData(
         ON CONFLICT DO NOTHING
       `);
 
-      console.log(`      ✓ Table '${table}': migrated ${rowCount} row(s)${hasData ? ` with tenantId=${tenantId}` : ' (tenantId inferred)'}`);
-
+      console.log(
+        `      ✓ Table '${table}': migrated ${rowCount} row(s)${
+          hasData ? ` with tenantId=${tenantId}` : " (tenantId inferred)"
+        }`,
+      );
     } catch (error) {
       console.error(`      ✗ Error migrating table '${table}':`, error.message);
       throw error;
