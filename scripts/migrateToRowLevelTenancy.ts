@@ -149,29 +149,66 @@ async function getTableColumns(
 }
 
 /**
- * Build SELECT statement with proper enum casting
+ * Get columns that exist in target (public) schema
+ */
+async function getTargetTableColumns(
+  queryRunner: QueryRunner,
+  tableName: string
+): Promise<Set<string>> {
+  const columns = await queryRunner.query(
+    `SELECT column_name
+     FROM information_schema.columns
+     WHERE table_schema = 'public' AND table_name = $1`,
+    [tableName]
+  );
+  return new Set(columns.map((col: any) => col.column_name));
+}
+
+/**
+ * Build SELECT statement with proper enum casting, only for columns that exist in target
  */
 function buildSelectWithEnumCasting(
   columns: Array<{ column_name: string; data_type: string; udt_name: string }>,
+  targetColumns: Set<string>,
   schemaName: string,
   tenantId: number,
   addTenantId: boolean
-): string {
-  const columnSelects = columns.map(col => {
+): { selectClause: string; insertColumns: string } {
+  const columnSelects: string[] = [];
+  const insertColumnNames: string[] = [];
+
+  columns.forEach(col => {
+    // Skip columns that don't exist in target table
+    if (addTenantId && col.column_name === 'tenantId') {
+      // Will add tenantId separately
+      return;
+    }
+
+    if (!targetColumns.has(col.column_name)) {
+      return; // Skip this column
+    }
+
+    insertColumnNames.push(`"${col.column_name}"`);
+
     // Check if it's a user-defined type (likely an enum)
     if (col.data_type === 'USER-DEFINED') {
       // Double cast: schema-specific enum -> text -> public enum
       // This avoids schema-specific enum type issues
-      return `"${col.column_name}"::text::${col.udt_name}`;
+      columnSelects.push(`"${col.column_name}"::text::${col.udt_name}`);
+    } else {
+      columnSelects.push(`"${col.column_name}"`);
     }
-    return `"${col.column_name}"`;
   });
 
-  if (addTenantId) {
+  if (addTenantId && targetColumns.has('tenantId')) {
+    insertColumnNames.push(`"tenantId"`);
     columnSelects.push(`${tenantId} as "tenantId"`);
   }
 
-  return columnSelects.join(', ');
+  return {
+    selectClause: columnSelects.join(', '),
+    insertColumns: `(${insertColumnNames.join(', ')})`
+  };
 }
 
 async function migrateTenantData(
@@ -260,11 +297,18 @@ async function migrateTenantData(
 
       // Get column information to handle enum casting
       const columns = await getTableColumns(queryRunner, schemaName, table);
-      const selectClause = buildSelectWithEnumCasting(columns, schemaName, tenantId, hasData);
+      const targetColumns = await getTargetTableColumns(queryRunner, table);
+      const { selectClause, insertColumns } = buildSelectWithEnumCasting(
+        columns,
+        targetColumns,
+        schemaName,
+        tenantId,
+        hasData
+      );
 
-      // Migrate data with proper enum casting
+      // Migrate data with proper enum casting and explicit column list
       await queryRunner.query(`
-        INSERT INTO public."${table}"
+        INSERT INTO public."${table}" ${insertColumns}
         SELECT ${selectClause}
         FROM "${schemaName}"."${table}"
         ON CONFLICT DO NOTHING
