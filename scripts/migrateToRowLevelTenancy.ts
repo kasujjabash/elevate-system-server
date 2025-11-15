@@ -102,10 +102,13 @@ async function migrateToRowLevelTenancy() {
       );
       console.log(`   ${"─".repeat(50)}`);
 
+      await queryRunner.startTransaction();
       try {
         await migrateTenantData(queryRunner, tenant, schemaName);
+        await queryRunner.commitTransaction();
         console.log(`   ✓ Successfully migrated tenant: ${tenant.name}`);
       } catch (error) {
+        await queryRunner.rollbackTransaction();
         console.error(
           `   ✗ Error migrating tenant ${tenant.name}:`,
           error.message,
