@@ -2,30 +2,37 @@ import { MemberEventActivities } from '../../events/entities/member-event-activi
 import {
   Column,
   Entity,
+  Index,
   JoinColumn,
+  ManyToOne,
   OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
-} from 'typeorm';
-import Person from './person.entity';
-import Company from './company.entity';
-import Email from './email.entity';
-import Request from './request.entity';
-import Phone from './phone.entity';
-import Occasion from './occasion.entity';
-import Address from './address.entity';
-import Identification from './identification.entity';
-import { ContactCategory } from '../enums/contactCategory';
-import GroupMembership from '../../groups/entities/groupMembership.entity';
-import Relationship from './relationship.entity';
-import GroupMembershipRequest from '../../groups/entities/groupMembershipRequest.entity';
-import EventAttendance from '../../events/entities/eventAttendance.entity';
-import EventRegistration from 'src/events/entities/eventRegistration.entity';
+} from "typeorm";
+import Person from "./person.entity";
+import Company from "./company.entity";
+import Email from "./email.entity";
+import Request from "./request.entity";
+import Phone from "./phone.entity";
+import Occasion from "./occasion.entity";
+import Address from "./address.entity";
+import Identification from "./identification.entity";
+import { ContactCategory } from "../enums/contactCategory";
+import GroupMembership from "../../groups/entities/groupMembership.entity";
+import Relationship from "./relationship.entity";
+import GroupMembershipRequest from "../../groups/entities/groupMembershipRequest.entity";
+import EventAttendance from "../../events/entities/eventAttendance.entity";
+import EventRegistration from "src/events/entities/eventRegistration.entity";
+import { Tenant } from "../../tenants/entities/tenant.entity";
 
 @Entity()
+@Index(["tenant", "id"])
 export default class Contact {
   @PrimaryGeneratedColumn({ name: 'id' })
   id: number;
+
+  @ManyToOne(() => Tenant, (tenant) => tenant.contacts, { nullable: false })
+  tenant: Tenant;
 
   @Column({
     type: 'enum',

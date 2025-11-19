@@ -1,6 +1,7 @@
 import {
   Column,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   OneToMany,
@@ -16,12 +17,17 @@ import GroupMembershipRequest from "./groupMembershipRequest.entity";
 import GroupEvent from "../../events/entities/event.entity";
 import InternalAddress from "../../shared/entity/InternalAddress";
 import { ReportSubmission } from "src/reports/entities/report.submission.entity";
+import { Tenant } from "../../tenants/entities/tenant.entity";
 
 @Entity()
 @Tree("closure-table")
+@Index(["tenant", "id"])
 export default class Group {
   @PrimaryGeneratedColumn()
   id: number;
+
+  @ManyToOne(() => Tenant, (tenant) => tenant.groups, { nullable: false })
+  tenant: Tenant;
 
   @Column({
     type: "enum",

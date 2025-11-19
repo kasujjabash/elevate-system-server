@@ -1,4 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
+import { InjectConnection } from "@nestjs/typeorm";
 import { DbService } from "src/shared/db.service";
 import { Tenant } from "./entities/tenant.entity";
 import { TenantDto } from "./dto/tenant.dto";
@@ -15,8 +16,17 @@ import { GroupCategoriesService } from "src/groups/services/group-categories.ser
 import { GroupPermissionsService } from "src/groups/services/group-permissions.service";
 import { GroupsMembershipService } from "src/groups/services/group-membership.service";
 
+/**
+ * TenantsService - Manages tenant creation for row-level multi-tenancy
+ *
+ * Updated to work with row-level tenancy - no longer creates separate schemas
+ */
 @Injectable()
 export class TenantsService {
+  constructor(
+    @InjectConnection() private readonly connection: Connection,
+  ) {}
+
   async create(
     tenantData: TenantDto,
     dbService: DbService,
@@ -29,19 +39,36 @@ export class TenantsService {
     groupsPermissionsService: GroupPermissionsService,
   ): Promise<Tenant> {
     const tenantName = lowerCaseRemoveSpaces(tenantData.name);
+
+    // Create tenant in database
     const tenantDetails = await dbService.createTenant({ name: tenantName });
-    const connection: Connection = await dbService.getConnection(tenantName);
-    const groupCategoriesService = new GroupCategoriesService(connection);
-    const groupMembershipService = new GroupsMembershipService(connection);
+
+    Logger.log(`Tenant created: ${tenantName} (ID: ${tenantDetails.id})`);
+
+    // Create a temporary request-like object with tenant context for seeding
+    const mockRequest = {
+      tenantId: tenantDetails.id,
+      tenantName: tenantDetails.name,
+      headers: {
+        tenant: tenantDetails.name,
+      },
+    };
+
+    // Initialize services with tenant context
+    const groupCategoriesService = new GroupCategoriesService(this.connection);
+    const groupMembershipService = new GroupsMembershipService(this.connection);
     const contactService: ContactsService = new ContactsService(
-      connection,
+      this.connection,
       googleService,
       prisma,
       groupFinderService,
       addressesService,
     );
+
+    // Seed initial data for the new tenant
+    // Note: Services need to be updated to use TenantContext or accept tenantId
     await seedService.createAll(
-      connection,
+      this.connection,
       contactService,
       jwtHelperService,
       groupsPermissionsService,
@@ -49,6 +76,9 @@ export class TenantsService {
       googleService,
       groupMembershipService,
     );
+
+    Logger.log(`Tenant setup completed: ${tenantName}`);
+
     return tenantDetails;
   }
 }
