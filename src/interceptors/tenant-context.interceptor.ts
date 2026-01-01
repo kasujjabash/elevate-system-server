@@ -32,9 +32,6 @@ export class TenantContextInterceptor implements NestInterceptor {
   async intercept(context: ExecutionContext, next: CallHandler): Promise<Observable<any>> {
     const request = context.switchToHttp().getRequest();
     
-    this.logger.debug(`Interceptor running for route: ${request.method} ${request.path}`);
-    this.logger.debug(`Request.user exists: ${!!request.user}`);
-    
     // Check if route is marked as public
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
@@ -42,13 +39,11 @@ export class TenantContextInterceptor implements NestInterceptor {
     ]);
 
     if (isPublic) {
-      this.logger.debug('Skipping tenant context for public route');
       return next.handle();
     }
 
     // If user exists (from JWT auth guard), enrich the request with full user context
     if (request.user) {
-      this.logger.debug(`Processing user: ${JSON.stringify(request.user)}`);
       try {
         // Fetch full user data (should include tenant relation)
         const fullUser = await this.usersService.findById(request.user.sub);
@@ -63,9 +58,6 @@ export class TenantContextInterceptor implements NestInterceptor {
         if (fullUser.contact?.tenant) {
           request.tenant = fullUser.contact.tenant;
           request.tenantId = fullUser.contact.tenant.id;
-          this.logger.log(`User context set: User ${fullUser.id} (${fullUser.username}) - Tenant ${fullUser.contact.tenant.id} (${fullUser.contact.tenant.name})`);
-          this.logger.debug(`Request.tenantId set to: ${request.tenantId}`);
-          this.logger.debug(`Request.tenant.id set to: ${request.tenant?.id}`);
         } else {
           this.logger.warn(`User ${fullUser.id} has no tenant relationship`);
         }
@@ -73,8 +65,6 @@ export class TenantContextInterceptor implements NestInterceptor {
         this.logger.error(`Failed to set user context: ${error.message}`);
         throw new UnauthorizedException(`User context error: ${error.message}`);
       }
-    } else {
-      this.logger.warn(`No request.user found - JWT auth guard may not have run or token is missing`);
     }
 
     return next.handle();

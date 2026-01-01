@@ -232,20 +232,32 @@ export class ContactsService {
   }
 
   async updatePartial(id: number, data: Partial<Contact>): Promise<Contact> {
-    const existingContact = await this.repository.findOne({ where: { id } });
+    const existingContact = await this.repository.findOne({ 
+      where: { id },
+      relations: ['person'] // Load person relation
+    });
     if (!existingContact) {
       throw new BadRequestException('Contact not found');
     }
     
     // Handle nested person update
-    if (data.person && existingContact.person) {
-      // Update fields on the existing loaded entity
-      Object.assign(existingContact.person, data.person);
+    if (data.person) {
+      if (existingContact.person) {
+        // Update existing person - only update the fields that are provided
+        Object.assign(existingContact.person, data.person);
+      } else {
+        // No existing person - this shouldn't happen for person contacts
+        // but if it does, we need to create the person entity
+        const person = this.personRepository.create(data.person);
+        person.contactId = existingContact.id;
+        existingContact.person = person;
+      }
+      
       // Don't pass person in the contact update
       const { person, ...contactData } = data;
       Object.assign(existingContact, contactData);
     } else {
-      // No person data, just update contact
+      // No person data, just update contact fields
       Object.assign(existingContact, data);
     }
     

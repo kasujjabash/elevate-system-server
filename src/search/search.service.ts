@@ -63,7 +63,7 @@ export class SearchService {
 
       if (userGroupIds.length > 0) {
         queryBuilder.leftJoin('contact.groupMemberships', 'membership')
-        .andWhere('membership.groupId IN (:...groupIds)', { userGroupIds })
+        .andWhere('membership.groupId IN (:...groupIds)', { groupIds: userGroupIds })
       }
 
       const contacts = await queryBuilder
