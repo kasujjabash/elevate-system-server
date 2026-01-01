@@ -96,9 +96,9 @@ export class UsersService {
   }
 
   toListModel(user: User): UserListDto {
-    const fullName = getPersonFullName(user.contact.person);
+    const fullName = user.contact?.person ? getPersonFullName(user.contact.person) : 'Unknown User';
     return {
-      avatar: user.contact.person.avatar,
+      avatar: user.contact?.person?.avatar || null,
       contact: {
         id: user.contactId,
         name: fullName,

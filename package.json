@@ -30,7 +30,10 @@
     "command": "ts-node -r tsconfig-paths/register src/commands.ts",
     "sync:schemas": "NODE_OPTIONS='--max-old-space-size=4096' ts-node -r tsconfig-paths/register scripts/syncSchemas.ts",
     "sync:migrateReportSubmissionData": "ts-node -r tsconfig-paths/register scripts/migrateReportData.ts",
-    "migrate:row-level": "ts-node -r tsconfig-paths/register scripts/migrateToRowLevelTenancy.ts"
+    "migrate:row-level": "ts-node -r tsconfig-paths/register scripts/migrateToRowLevelTenancy.ts",
+    "seed:comprehensive": "ts-node -r tsconfig-paths/register src/commands/seed-comprehensive.ts",
+    "seed:clear": "ts-node -r tsconfig-paths/register src/commands/seed-comprehensive.ts --clear",
+    "seed:reset": "ts-node -r tsconfig-paths/register src/commands/seed-comprehensive.ts --clear --seed"
   },
   "dependencies": {
     "@nestjs/axios": "^3.0.0",

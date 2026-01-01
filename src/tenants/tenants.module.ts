@@ -1,4 +1,4 @@
-import { Module, Scope, Global, BadRequestException } from "@nestjs/common";
+import { Module, Scope, Global, BadRequestException, forwardRef } from "@nestjs/common";
 import { REQUEST } from "@nestjs/core";
 import { TenantsService } from "./tenants.service";
 import { DbService } from "src/shared/db.service";
@@ -57,7 +57,7 @@ const connectionFactory = {
 
 @Global()
 @Module({
-  imports: [SeedModule, UsersModule],
+  imports: [forwardRef(() => SeedModule), forwardRef(() => UsersModule)],
   providers: [
     tenantValidationProvider,
     connectionFactory,

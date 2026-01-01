@@ -683,7 +683,7 @@ export class ReportsService {
 
   async getMySubmissions(user: any, options: { limit?: number; offset?: number; reportId?: number }): Promise<any> {
     const { limit = 20, offset = 0, reportId } = options;
-    const where: any = { userId: user.id };
+    const where: any = { user: { id: user.id } };
     
     if (reportId) {
       where.report = { id: reportId };
