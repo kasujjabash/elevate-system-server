@@ -16,6 +16,8 @@ import { HelpModule } from "./help/help.module";
 import { TenantsModule } from "./tenants/tenants.module";
 import { JwtTenantHeaderMiddleware } from "./middleware/jwtTenantHeader.middleware";
 import { ReportsModule } from "./reports/reports.module";
+import { DashboardModule } from "./dashboard/dashboard.module";
+import { SearchModule } from "./search/search.module";
 import { Tenant } from "./tenants/entities/tenant.entity";
 import { nameTenantHeaderMiddleware } from "./middleware/nameTenantHeader.middleware";
 
@@ -45,6 +47,8 @@ import { nameTenantHeaderMiddleware } from "./middleware/nameTenantHeader.middle
     HelpModule,
     TenantsModule, 
     ReportsModule,
+    DashboardModule,
+    SearchModule,
   ],
   exports: [AppService],
   controllers: [AuthController],

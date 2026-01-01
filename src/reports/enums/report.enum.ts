@@ -27,4 +27,6 @@ export enum ReportStatus {
   ACTIVE = "active",
   INACTIVE = "inactive",
   ARCHIVED = "archived",
+  PENDING = "pending",
+  SUBMITTED = "submitted",
 }

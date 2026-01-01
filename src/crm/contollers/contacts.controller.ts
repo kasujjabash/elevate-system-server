@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Put,
   Query,
@@ -36,8 +37,16 @@ export class ContactsController {
   }
 
   @Put()
-  async update(@Body() data: Contact): Promise<Contact> {
+  async updateLegacy(@Body() data: Contact): Promise<Contact> {
     return await this.service.update(data);
+  }
+
+  @Patch(':id')
+  async update(
+    @Param('id') id: number,
+    @Body() data: Partial<Contact>
+  ): Promise<Contact> {
+    return await this.service.updatePartial(id, data);
   }
 
   @Get(':id')

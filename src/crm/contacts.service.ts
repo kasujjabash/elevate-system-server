@@ -222,6 +222,17 @@ export class ContactsService {
     return await this.repository.save(data);
   }
 
+  async updatePartial(id: number, data: Partial<Contact>): Promise<Contact> {
+    const existingContact = await this.repository.findOne({ where: { id } });
+    if (!existingContact) {
+      throw new BadRequestException('Contact not found');
+    }
+    
+    // Merge partial data with existing contact
+    const updatedContact = { ...existingContact, ...data, id };
+    return await this.repository.save(updatedContact);
+  }
+
   async createPerson(createPersonDto: CreatePersonDto): Promise<Contact> {
     //First check if email address exists
     const emailData = await this.emailRepository.find({

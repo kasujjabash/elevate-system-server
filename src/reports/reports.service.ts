@@ -680,4 +680,103 @@ export class ReportsService {
     };
     return sendEmail(mailerData);
   }
+
+  async getMySubmissions(user: any, options: { limit?: number; offset?: number; reportId?: number }): Promise<any> {
+    const { limit = 20, offset = 0, reportId } = options;
+    const where: any = { userId: user.id };
+    
+    if (reportId) {
+      where.report = { id: reportId };
+    }
+
+    const submissions = await this.reportSubmissionRepository.find({
+      where,
+      relations: ['report', 'submissionData', 'submissionData.reportField'],
+      order: { submittedAt: 'DESC' },
+      skip: offset,
+      take: limit,
+    });
+
+    const total = await this.reportSubmissionRepository.count({ where });
+
+    return {
+      submissions: submissions.map(submission => ({
+        id: submission.id,
+        reportId: submission.report.id,
+        reportName: submission.report.name,
+        submittedAt: submission.submittedAt,
+        status: ReportStatus.SUBMITTED,
+        data: submission.submissionData.reduce((acc, curr) => {
+          acc[curr.reportField.name] = curr.fieldValue;
+          return acc;
+        }, {}),
+      })),
+      total,
+      limit,
+      offset,
+    };
+  }
+
+  async getTeamSubmissions(user: any, options: { reportId?: number }): Promise<any> {
+    const { reportId } = options;
+    
+    // Get user's accessible groups (implement based on your permission system)
+    const userGroupIds = []; // TODO: Get from group permissions service
+    
+    const where: any = {};
+    if (reportId) {
+      where.report = { id: reportId };
+    }
+    if (userGroupIds.length > 0) {
+      where.groupId = In(userGroupIds);
+    }
+
+    const submissions = await this.reportSubmissionRepository.find({
+      where,
+      relations: ['report', 'user', 'submissionData', 'submissionData.reportField'],
+      order: { submittedAt: 'DESC' },
+    });
+
+    return {
+      submissions: submissions.map(submission => ({
+        id: submission.id,
+        reportId: submission.report.id,
+        reportName: submission.report.name,
+        submittedAt: submission.submittedAt,
+        submittedBy: getUserDisplayName(submission.user),
+        status: ReportStatus.SUBMITTED,
+        groupId: submission.group?.id,
+      })),
+    };
+  }
+
+  async getSubmissionDetails(submissionId: number, user: any): Promise<any> {
+    const submission = await this.reportSubmissionRepository.findOne({
+      where: { id: submissionId },
+      relations: ['report', 'user', 'submissionData', 'submissionData.reportField'],
+    });
+
+    if (!submission) {
+      throw new NotFoundException('Submission not found');
+    }
+
+    // Check if user has permission to view this submission
+    // TODO: Implement permission check
+
+    const data = submission.submissionData.reduce((acc, curr) => {
+      acc[curr.reportField.name] = curr.fieldValue;
+      return acc;
+    }, {});
+
+    return {
+      id: submission.id,
+      reportId: submission.report.id,
+      reportName: submission.report.name,
+      submittedAt: submission.submittedAt,
+      submittedBy: getUserDisplayName(submission.user),
+      status: ReportStatus.SUBMITTED,
+      groupId: submission.group?.id,
+      data,
+    };
+  }
 }

@@ -43,16 +43,44 @@ export class ReportsController {
     return this.reportService.createReport(reportDto, request.user);
   }
 
-  @Post("submit")
+  @Post(":reportId/submissions")
   async submitReport(
+    @Param("reportId", ParseIntPipe) reportId: number,
     @Body() submissionDto: ReportSubmissionDto,
     @Request() request,
   ): Promise<ApiResponse<ReportSubmissionDataDto>> {
+    submissionDto.reportId = reportId;
     return await this.reportService.submitReport(submissionDto, request.user);
   }
 
-  @Get(":reportId")
-  async getReport(@Param("reportId") reportId: number): Promise<Report> {
+  @Get("submissions/me")
+  async getMySubmissions(
+    @Query("limit") limit: number = 20,
+    @Query("offset") offset: number = 0,
+    @Query("reportId") reportId: number | undefined,
+    @Request() request: any,
+  ): Promise<any> {
+    return await this.reportService.getMySubmissions(request.user, { limit, offset, reportId });
+  }
+
+  @Get("submissions/team")
+  async getTeamSubmissions(
+    @Query("reportId") reportId: number | undefined,
+    @Request() request: any,
+  ): Promise<any> {
+    return await this.reportService.getTeamSubmissions(request.user, { reportId });
+  }
+
+  @Get("submissions/:id")
+  async getSubmissionDetails(
+    @Param("id", ParseIntPipe) id: number,
+    @Request() request,
+  ): Promise<any> {
+    return await this.reportService.getSubmissionDetails(id, request.user);
+  }
+
+  @Get(":id")
+  async getReport(@Param("id") reportId: number): Promise<Report> {
     return await this.reportService.getReport(reportId);
   }
 
