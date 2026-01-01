@@ -8,19 +8,17 @@ import {
   Post,
   Put,
   Query,
-  UseGuards,
   UseInterceptors,
+  Req,
 } from '@nestjs/common';
 import { ContactsService } from '../contacts.service';
 import { ContactSearchDto } from '../dto/contact-search.dto';
 import Contact from '../entities/contact.entity';
 import { ApiTags } from '@nestjs/swagger';
 import ContactListDto from '../dto/contact-list.dto';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { SentryInterceptor } from 'src/utils/sentry.interceptor';
 
 @UseInterceptors(SentryInterceptor)
-@UseGuards(JwtAuthGuard)
 @ApiTags('Crm')
 @Controller('api/crm/contacts')
 export class ContactsController {
@@ -32,8 +30,8 @@ export class ContactsController {
   }
 
   @Post()
-  async create(@Body() data: Contact): Promise<Contact> {
-    return await this.service.create(data);
+  async create(@Body() data: Contact, @Req() req: any): Promise<Contact> {
+    return await this.service.create(data, req);
   }
 
   @Put()

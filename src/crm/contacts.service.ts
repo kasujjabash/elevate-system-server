@@ -4,7 +4,7 @@ import {
   Logger,
   Inject,
 } from "@nestjs/common";
-import { TenantContext } from "../shared/tenant/tenant-context";
+// import { TenantContext } from "../shared/tenant/tenant-context"; // No longer needed
 import { Tenant } from "../tenants/entities/tenant.entity";
 import { intersection } from "lodash";
 import {
@@ -72,7 +72,7 @@ export class ContactsService {
     private prisma: PrismaService,
     private groupFinderService: GroupFinderService,
     private addressesService: AddressesService,
-    private tenantContext: TenantContext,
+    // private tenantContext: TenantContext, // No longer needed
   ) {
     this.repository = connection.getRepository(Contact);
     this.personRepository = connection.getRepository(Person);
@@ -219,16 +219,16 @@ export class ContactsService {
     };
   }
 
-  async create(data: Contact): Promise<Contact> {
-    // Set tenant from context if not already set
-    if (!data.tenant && this.tenantContext.hasTenant()) {
-      const tenantId = this.tenantContext.requireTenant();
-      const tenant = await this.tenantRepository.findOne({ where: { id: tenantId } });
-      if (tenant) {
-        data.tenant = tenant;
-      }
+  async create(data: Contact, request?: any): Promise<Contact> {
+    // Set tenant from request context if not already set
+    if (!data.tenant && request?.tenant) {
+      data.tenant = request.tenant;
     }
-    
+     const tenantId = request.tenantId ||
+                   request.tenant?.id ||
+                   request.fullUser?.contact?.tenant?.id;
+    console.log('tenantId');
+    console.log(tenantId);
     return await this.repository.save(data);
   }
 

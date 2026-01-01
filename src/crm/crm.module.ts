@@ -21,7 +21,7 @@ import { GroupFinderService } from "./group-finder/group-finder.service";
 import { appEntities } from "../config";
 import { PhonesService } from "./phones.service";
 import { AddressesService } from "./addresses.service";
-import { nameTenantHeaderMiddleware } from "src/middleware/nameTenantHeader.middleware";
+import { TenantHeaderMiddleware } from "src/middleware/tenant-header.middleware";
 import { GroupsMembershipService } from "src/groups/services/group-membership.service";
 import { GroupsService } from "src/groups/services/groups.service";
 import { GroupPermissionsService } from "src/groups/services/group-permissions.service";
@@ -58,6 +58,6 @@ import { GroupPermissionsService } from "src/groups/services/group-permissions.s
 })
 export class CrmModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(nameTenantHeaderMiddleware).forRoutes("api/register");
+    consumer.apply(TenantHeaderMiddleware).forRoutes("api/register");
   }
 }

@@ -18,7 +18,7 @@ import { EventsService } from "src/events/events.service";
 import { appEntities } from "../config";
 import { AddressesService } from "src/crm/addresses.service";
 import { GroupPermissionsService } from "./services/group-permissions.service";
-import { nameTenantHeaderMiddleware } from "src/middleware/nameTenantHeader.middleware";
+import { TenantHeaderMiddleware } from "src/middleware/tenant-header.middleware";
 import { MiddlewareConsumer } from "@nestjs/common";
 
 @Module({
@@ -51,7 +51,7 @@ import { MiddlewareConsumer } from "@nestjs/common";
 export class GroupsModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
-      .apply(nameTenantHeaderMiddleware)
+      .apply(TenantHeaderMiddleware)
       .forRoutes("api/groups/combo/locations");
   }
 }

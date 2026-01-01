@@ -1,4 +1,5 @@
 import { Global, Module, MiddlewareConsumer } from "@nestjs/common";
+import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 import { AuthController } from "./auth/auth.controller";
 import { AppService } from "./app.service";
 import { UsersModule } from "./users/users.module";
@@ -14,12 +15,15 @@ import { EventsModule } from "./events/events.module";
 import { ChatModule } from "./chat/chat.module";
 import { HelpModule } from "./help/help.module";
 import { TenantsModule } from "./tenants/tenants.module";
-import { JwtTenantHeaderMiddleware } from "./middleware/jwtTenantHeader.middleware";
 import { ReportsModule } from "./reports/reports.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
 import { SearchModule } from "./search/search.module";
 import { Tenant } from "./tenants/entities/tenant.entity";
-import { nameTenantHeaderMiddleware } from "./middleware/nameTenantHeader.middleware";
+import { TenantHeaderMiddleware } from "./middleware/tenant-header.middleware";
+import { TenantContextInterceptor } from "./interceptors/tenant-context.interceptor";
+import { JwtAuthGuard } from "./auth/guards/jwt-auth.guard";
+import { Reflector } from "@nestjs/core";
+import { UsersService } from "./users/users.service";
 
 @Global()
 @Module({
@@ -52,31 +56,32 @@ import { nameTenantHeaderMiddleware } from "./middleware/nameTenantHeader.middle
   ],
   exports: [AppService],
   controllers: [AuthController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useFactory: (reflector: Reflector, usersService: UsersService) => {
+        return new TenantContextInterceptor(reflector, usersService);
+      },
+      inject: [Reflector, UsersService],
+    },
+  ],
 })
 export class AppModule {
   public configure(consumer: MiddlewareConsumer): void {
     consumer
-      .apply(JwtTenantHeaderMiddleware)
-      .exclude(
-        'api/tenants',
-        'api/tenants/seed',
-        'api/auth/login',
-        'api/auth/forgot-password',
-        'api/auth/reset-password/:token',
-        'api/register',
-      )
-      .forRoutes('*');
-
-    consumer
-      .apply(nameTenantHeaderMiddleware)
+      .apply(TenantHeaderMiddleware)
       .forRoutes(
-        'api/tenants',
-        'api/tenants/seed',
         'api/auth/login',
         'api/auth/forgot-password',
         'api/auth/reset-password/:token',
         'api/register',
+        'api/tenants',
+        'api/tenants/seed',
       );
   }
 }

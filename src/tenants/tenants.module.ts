@@ -16,6 +16,16 @@ const tenantValidationProvider = {
   provide: "TENANT_VALIDATOR",
   scope: Scope.REQUEST,
   useFactory: async (req: any, dbservice: DbService) => {
+    // Check if this is a JWT authenticated request (has Authorization header)
+    const authHeader = req.headers.authorization;
+    const hasJWT = authHeader && authHeader.startsWith('Bearer ');
+
+    // For JWT requests, skip tenant header validation (interceptor will handle it)
+    if (hasJWT) {
+      return null; // Return null to indicate JWT-based tenant resolution
+    }
+
+    // For non-JWT requests, require tenant header (public routes like login, register)
     const tenantName = req.headers[TENANT_HEADER];
 
     if (!tenantName) {
@@ -48,8 +58,9 @@ const tenantValidationProvider = {
 const connectionFactory = {
   provide: "CONNECTION",
   scope: Scope.REQUEST,
-  useFactory: async (req: any, dbservice: DbService, tenantValidator: Tenant) => {
+  useFactory: async (req: any, dbservice: DbService, tenantValidator: Tenant | null) => {
     // tenantValidator dependency ensures tenant is validated before getting connection
+    // tenantValidator can be null for JWT-authenticated requests (handled by interceptor)
     return dbservice.getConnection();
   },
   inject: [REQUEST, DbService, "TENANT_VALIDATOR"],
