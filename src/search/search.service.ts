@@ -62,7 +62,8 @@ export class SearchService {
         .orWhere('emails.value ILIKE :query', { query: searchQuery });
 
       if (userGroupIds.length > 0) {
-        queryBuilder.andWhere('contact.groupId IN (:...groupIds)', { groupIds: userGroupIds });
+        queryBuilder.leftJoin('contact.groupMemberships', 'membership')
+        .andWhere('membership.groupId IN (:...groupIds)', { userGroupIds })
       }
 
       const contacts = await queryBuilder

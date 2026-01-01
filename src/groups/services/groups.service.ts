@@ -58,7 +58,7 @@ export class GroupsService {
       details,
       parentId,
       privacy,
-      category: { name: category.name, id: category.id },
+      category: category ? { name: category.name, id: category.id }: null,
       parent: parent ? { name: parent.name, id: parent.id } : null,
     };
   }
@@ -76,7 +76,7 @@ export class GroupsService {
     const { category, ...rest } = group;
     return {
       ...rest,
-      category: { name: category.name, id: category.id },
+      category: category ? { name: category.name, id: category.id }: null,
     } as any;
   }
 

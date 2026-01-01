@@ -224,11 +224,6 @@ export class ContactsService {
     if (!data.tenant && request?.tenant) {
       data.tenant = request.tenant;
     }
-     const tenantId = request.tenantId ||
-                   request.tenant?.id ||
-                   request.fullUser?.contact?.tenant?.id;
-    console.log('tenantId');
-    console.log(tenantId);
     return await this.repository.save(data);
   }
 
@@ -242,9 +237,19 @@ export class ContactsService {
       throw new BadRequestException('Contact not found');
     }
     
-    // Merge partial data with existing contact
-    const updatedContact = { ...existingContact, ...data, id };
-    return await this.repository.save(updatedContact);
+    // Handle nested person update
+    if (data.person && existingContact.person) {
+      // Update fields on the existing loaded entity
+      Object.assign(existingContact.person, data.person);
+      // Don't pass person in the contact update
+      const { person, ...contactData } = data;
+      Object.assign(existingContact, contactData);
+    } else {
+      // No person data, just update contact
+      Object.assign(existingContact, data);
+    }
+    
+    return await this.repository.save(existingContact);
   }
 
   async createPerson(createPersonDto: CreatePersonDto): Promise<Contact> {
