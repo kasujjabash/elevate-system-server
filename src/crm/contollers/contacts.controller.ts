@@ -17,8 +17,9 @@ import Contact from '../entities/contact.entity';
 import { ApiTags } from '@nestjs/swagger';
 import ContactListDto from '../dto/contact-list.dto';
 import { SentryInterceptor } from 'src/utils/sentry.interceptor';
+import { TenantContextInterceptor } from '../../interceptors/tenant-context.interceptor';
 
-@UseInterceptors(SentryInterceptor)
+@UseInterceptors(SentryInterceptor, TenantContextInterceptor)
 @ApiTags('Crm')
 @Controller('api/crm/contacts')
 export class ContactsController {

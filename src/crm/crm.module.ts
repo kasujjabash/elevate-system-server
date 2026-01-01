@@ -25,6 +25,7 @@ import { TenantHeaderMiddleware } from "src/middleware/tenant-header.middleware"
 import { GroupsMembershipService } from "src/groups/services/group-membership.service";
 import { GroupsService } from "src/groups/services/groups.service";
 import { GroupPermissionsService } from "src/groups/services/group-permissions.service";
+import { TenantContextInterceptor } from "../interceptors/tenant-context.interceptor";
 
 @Global()
 @Module({
@@ -39,6 +40,7 @@ import { GroupPermissionsService } from "src/groups/services/group-permissions.s
     GroupFinderService,
     PhonesService,
     AddressesService,
+    TenantContextInterceptor,
   ],
   controllers: [
     ContactsController,

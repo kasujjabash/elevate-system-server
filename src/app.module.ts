@@ -20,10 +20,7 @@ import { DashboardModule } from "./dashboard/dashboard.module";
 import { SearchModule } from "./search/search.module";
 import { Tenant } from "./tenants/entities/tenant.entity";
 import { TenantHeaderMiddleware } from "./middleware/tenant-header.middleware";
-import { TenantContextInterceptor } from "./interceptors/tenant-context.interceptor";
 import { JwtAuthGuard } from "./auth/guards/jwt-auth.guard";
-import { Reflector } from "@nestjs/core";
-import { UsersService } from "./users/users.service";
 
 @Global()
 @Module({
@@ -61,13 +58,6 @@ import { UsersService } from "./users/users.service";
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
-    },
-    {
-      provide: APP_INTERCEPTOR,
-      useFactory: (reflector: Reflector, usersService: UsersService) => {
-        return new TenantContextInterceptor(reflector, usersService);
-      },
-      inject: [Reflector, UsersService],
     },
   ],
 })
