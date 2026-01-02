@@ -208,7 +208,7 @@ export class AuthService {
         memberCount: group.members?.length || 0,
       }));
 
-      return { myGroups };
+      return { myGroups, "canManageGroupIds": [674],  "canViewGroupIds": [674] };
     } catch (error) {
       console.error('Error getting user hierarchy:', error);
       // Return fallback mock data

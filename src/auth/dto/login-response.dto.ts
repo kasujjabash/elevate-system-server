@@ -16,6 +16,8 @@ export class GroupHierarchyDto {
 export class HierarchyDto {
   @ApiProperty({ type: [GroupHierarchyDto] })
   myGroups: GroupHierarchyDto[];
+  canManageGroupIds?: number[];
+  canViewGroupIds?: number[];
 }
 
 export class LoginResponseDto {
