@@ -11,6 +11,7 @@ import {
   UseGuards,
   Body,
   UseInterceptors,
+  BadRequestException,
 } from "@nestjs/common";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { SentryInterceptor } from "src/utils/sentry.interceptor";
@@ -85,7 +86,15 @@ export class ReportsController {
   @Get(":id")
   async getReport(@Param("id") reportId: number): Promise<Report> {
     console.log('📄 ReportsController.getReport() - Called with reportId:', reportId);
-    return await this.reportService.getReport(reportId);
+    
+    // Handle invalid/NaN IDs
+    const parsedId = parseInt(reportId as any, 10);
+    if (isNaN(parsedId)) {
+      console.log('📄 ReportsController.getReport() - Invalid ID provided:', reportId);
+      throw new BadRequestException('Invalid report ID provided');
+    }
+    
+    return await this.reportService.getReport(parsedId);
   }
 
   @Put(":id")
