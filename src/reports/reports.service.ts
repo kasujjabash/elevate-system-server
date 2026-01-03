@@ -89,7 +89,6 @@ export class ReportsService {
     user: UserDto,
   ): Promise<ApiResponse<ReportSubmissionDataDto>> {
     const { reportId, data } = submissionDto;
-    console.log('🔍 ReportsService.submitReport() - Starting with:', { reportId, data, userId: user.id });
 
     // Retrieve the report by its ID
     const report = await this.reportRepository.findOne({
@@ -99,12 +98,6 @@ export class ReportsService {
     if (!report) {
       throw new NotFoundException(`Report with ID ${reportId} not found`);
     }
-    console.log('🔍 ReportsService.submitReport() - Found report:', { 
-      id: report.id, 
-      name: report.name, 
-      groupFieldName: report.groupFieldName,
-      targetGroupCategory: report.targetGroupCategory?.id 
-    });
 
     // Retrieve the user
     const submittingUser = await this.userRepository.findOne({
@@ -113,31 +106,13 @@ export class ReportsService {
     if (!submittingUser) {
       throw new NotFoundException(`User with ID ${user.id} not found`);
     }
-    console.log('🔍 ReportsService.submitReport() - Found user:', { 
-      id: submittingUser.id, 
-      contactId: submittingUser.contactId,
-      username: submittingUser.username 
-    });
 
     let targetGroup: Group | null = null;
     let selectedGroupId: number | null = null;
     
-    console.log('🔍 ReportsService.submitReport() - Group assignment logic starting');
-    console.log('🔍 ReportsService.submitReport() - Checking conditions:', {
-      hasGroupFieldName: !!report.groupFieldName,
-      groupFieldName: report.groupFieldName,
-      hasDataForGroupField: report.groupFieldName ? !!submissionDto.data[report.groupFieldName] : false,
-      groupFieldValue: report.groupFieldName ? submissionDto.data[report.groupFieldName] : null,
-      hasTargetGroupCategory: !!report.targetGroupCategory
-    });
-    
     // Check if report has a designated group field
     if (report.groupFieldName && submissionDto.data[report.groupFieldName]) {
       selectedGroupId = parseInt(submissionDto.data[report.groupFieldName]);
-      console.log('🔍 ReportsService.submitReport() - Using explicit group field:', { 
-        fieldName: report.groupFieldName, 
-        selectedGroupId 
-      });
       
       // Validate user can submit for this group
       const canSubmitForGroup = await this.validateUserGroupPermission(
@@ -145,7 +120,6 @@ export class ReportsService {
         selectedGroupId, 
         report.targetGroupCategory?.id
       );
-      console.log('🔍 ReportsService.submitReport() - Permission check result:', { canSubmitForGroup });
       
       if (!canSubmitForGroup) {
         throw new BadRequestException(
@@ -154,10 +128,6 @@ export class ReportsService {
       }
       
       targetGroup = await this.treeRepository.findOne({ where: { id: selectedGroupId } });
-      console.log('🔍 ReportsService.submitReport() - Found target group:', { 
-        groupId: targetGroup?.id, 
-        groupName: targetGroup?.name 
-      });
       
       if (!targetGroup) {
         throw new BadRequestException(`Group with ID ${selectedGroupId} not found`);
@@ -165,13 +135,7 @@ export class ReportsService {
     } 
     // Fallback to current automatic detection
     else if (report.targetGroupCategory) {
-      console.log('🔍 ReportsService.submitReport() - Using automatic group detection');
       const userGroups = await this.getUserGroupsInCategory(submittingUser.contactId, report.targetGroupCategory.id);
-      console.log('🔍 ReportsService.submitReport() - User groups in category:', { 
-        categoryId: report.targetGroupCategory.id,
-        groupCount: userGroups.length,
-        groups: userGroups.map(g => ({ id: g.id, name: g.name }))
-      });
       
       if (userGroups.length === 0) {
         throw new BadRequestException(`You don't belong to any groups in the required category`);
@@ -183,18 +147,7 @@ export class ReportsService {
       }
       
       targetGroup = userGroups[0];
-      console.log('🔍 ReportsService.submitReport() - Selected automatic group:', { 
-        groupId: targetGroup?.id, 
-        groupName: targetGroup?.name 
-      });
-    } else {
-      console.log('🔍 ReportsService.submitReport() - No group assignment logic applied - no groupFieldName or targetGroupCategory');
     }
-    
-    console.log('🔍 ReportsService.submitReport() - Final target group:', { 
-      groupId: targetGroup?.id, 
-      groupName: targetGroup?.name 
-    });
 
     // Create and save the report submission
     const reportSubmission = new ReportSubmission();
@@ -203,20 +156,9 @@ export class ReportsService {
     reportSubmission.user = submittingUser;
     if (targetGroup) {
       reportSubmission.group = targetGroup;
-      console.log('🔍 ReportsService.submitReport() - Assigning group to submission:', { 
-        groupId: targetGroup.id, 
-        groupName: targetGroup.name 
-      });
-    } else {
-      console.log('🔍 ReportsService.submitReport() - No group assigned to submission');
     }
     const savedSubmission =
       await this.reportSubmissionRepository.save(reportSubmission);
-    console.log('🔍 ReportsService.submitReport() - Saved submission:', { 
-      submissionId: savedSubmission.id,
-      assignedGroupId: savedSubmission.group?.id,
-      assignedGroupName: savedSubmission.group?.name
-    });
 
     // Retrieve all fields for the report to map field names to their respective entities
     const fields = await this.reportFieldRepository.find({

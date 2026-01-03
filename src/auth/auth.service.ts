@@ -41,6 +41,8 @@ export class AuthService {
       Logger.warn("User Inactive", username);
       return null;
     }
+    
+    
     const roles = [];
     user.userRoles.forEach((it) => roles.push(...it.roles.permissions));
     console.log("Check if user is active", user.isActive);
@@ -177,6 +179,7 @@ export class AuthService {
     try {
       // Get user's contact ID
       const user = await this.usersService.findOne(userId);
+      
       if (!user || !user.contactId) {
         return { myGroups: [] };
       }
@@ -196,6 +199,7 @@ export class AuthService {
 
       // Get group IDs and fetch member counts
       const groupIds = memberships.map(m => m.groupId);
+      
       const groups = await groupRepository.find({
         where: { id: In(groupIds) },
         relations: ['category'],
@@ -208,7 +212,7 @@ export class AuthService {
         memberCount: group.members?.length || 0,
       }));
 
-      return { myGroups, "canManageGroupIds": [674],  "canViewGroupIds": [674] };
+      return { myGroups, "canManageGroupIds": groupIds,  "canViewGroupIds": groupIds };
     } catch (error) {
       console.error('Error getting user hierarchy:', error);
       // Return fallback mock data
