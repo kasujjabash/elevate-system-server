@@ -177,11 +177,44 @@ export class ReportsService {
     return response;
   }
 
-  async getAllReports(): Promise<Report[]> {
-    return await this.reportRepository.find({
-      where: { status: ReportStatus.ACTIVE },
-      relations: ["fields"],
-    });
+  async getAllReports(): Promise<{ reports: any[] }> {
+    console.log('🔧 ReportsService.getAllReports() - Starting execution');
+    
+    try {
+      console.log('🔧 ReportsService.getAllReports() - Querying database...');
+      const reports = await this.reportRepository.find({
+        where: { status: ReportStatus.ACTIVE },
+        relations: ["fields", "targetGroupCategory"],
+      });
+
+      console.log('🔧 ReportsService.getAllReports() - Found reports:', reports.length);
+      console.log('🔧 ReportsService.getAllReports() - Raw reports:', JSON.stringify(reports.map(r => ({ id: r.id, name: r.name })), null, 2));
+
+      console.log('🔧 ReportsService.getAllReports() - Formatting reports...');
+      const formattedReports = reports.map(report => {
+        console.log(`🔧 Formatting report ${report.id}: ${report.name}`);
+        return {
+          id: report.id,
+          name: report.name,
+          description: report.description,
+          submissionFrequency: report.submissionFrequency,
+          active: report.active,
+          status: report.status,
+          targetGroupCategory: report.targetGroupCategory ? {
+            id: report.targetGroupCategory.id,
+            name: report.targetGroupCategory.name
+          } : null,
+          fieldCount: report.fields ? report.fields.length : 0
+        };
+      });
+
+      const result = { reports: formattedReports };
+      console.log('🔧 ReportsService.getAllReports() - Returning result:', JSON.stringify(result, null, 2));
+      return result;
+    } catch (error) {
+      console.error('🔧 ReportsService.getAllReports() - Error:', error);
+      throw error;
+    }
   }
 
   async getReport(reportId: number): Promise<Report> {

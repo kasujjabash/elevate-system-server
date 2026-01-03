@@ -49,6 +49,7 @@ export class ReportsController {
     @Body() submissionDto: ReportSubmissionDto,
     @Request() request,
   ): Promise<ApiResponse<ReportSubmissionDataDto>> {
+    console.log('📝 ReportsController.submitReport() - Called with reportId:', reportId);
     submissionDto.reportId = reportId;
     return await this.reportService.submitReport(submissionDto, request.user);
   }
@@ -60,6 +61,7 @@ export class ReportsController {
     @Query("reportId") reportId: number | undefined,
     @Request() request: any,
   ): Promise<any> {
+    console.log('👤 ReportsController.getMySubmissions() - Called');
     return await this.reportService.getMySubmissions(request.user, { limit, offset, reportId });
   }
 
@@ -76,11 +78,13 @@ export class ReportsController {
     @Param("id", ParseIntPipe) id: number,
     @Request() request,
   ): Promise<any> {
+    console.log('📋 ReportsController.getSubmissionDetails() - Called with id:', id);
     return await this.reportService.getSubmissionDetails(id, request.user);
   }
 
   @Get(":id")
   async getReport(@Param("id") reportId: number): Promise<Report> {
+    console.log('📄 ReportsController.getReport() - Called with reportId:', reportId);
     return await this.reportService.getReport(reportId);
   }
 
@@ -93,8 +97,16 @@ export class ReportsController {
   }
 
   @Get()
-  async getAllReports(): Promise<Report[]> {
-    return await this.reportService.getAllReports();
+  async getAllReports(): Promise<{ reports: any[] }> {
+    console.log('📋 ReportsController.getAllReports() - Starting execution');
+    try {
+      const result = await this.reportService.getAllReports();
+      console.log('📋 ReportsController.getAllReports() - Success, returning:', JSON.stringify(result, null, 2));
+      return result;
+    } catch (error) {
+      console.error('📋 ReportsController.getAllReports() - Error:', error);
+      throw error;
+    }
   }
 
   @Get(":reportId/submissions")
@@ -105,6 +117,7 @@ export class ReportsController {
     @Query("groupIdList") smallGroupIdList?: string,
     @Query("parentGroupIdList") parentGroupIdList?: string,
   ): Promise<ReportSubmissionsApiResponse> {
+    console.log('📊 ReportsController.getReportSubmissions() - Called with reportId:', reportId);
     const formattedStartDate = startDate ? new Date(startDate) : undefined;
     const formattedEndDate = endDate ? new Date(endDate) : undefined;
     return await this.reportService.generateReport(
@@ -121,6 +134,7 @@ export class ReportsController {
     @Param("reportId") reportId: number,
     @Param("submissionId") submissionId: number,
   ) {
+    console.log('🔍 ReportsController.getReportSubmission() - Called with reportId:', reportId, 'submissionId:', submissionId);
     return this.reportService.getReportSubmission(reportId, submissionId);
   }
 
@@ -130,6 +144,7 @@ export class ReportsController {
     @Query("groupIdList") smallGroupIdList?: string,
     @Query("parentGroupIdList") parentGroupIdList?: string,
   ): Promise<string> {
+    console.log('📧 ReportsController.sendReportSubmissionsWeeklyEmail() - Called with reportId:', reportId);
     return await this.reportService.sendWeeklyEmailSummary(
       reportId,
       smallGroupIdList,
