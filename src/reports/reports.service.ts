@@ -744,9 +744,12 @@ export class ReportsService {
           return acc;
         }, {}),
       })),
-      total,
-      limit,
-      offset,
+      pagination: {
+        total,
+        limit,
+        offset,
+        hasMore: total > offset + limit
+      }
     };
   }
 
