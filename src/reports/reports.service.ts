@@ -724,7 +724,7 @@ export class ReportsService {
 
     const submissions = await this.reportSubmissionRepository.find({
       where,
-      relations: ['report', 'submissionData', 'submissionData.reportField'],
+      relations: ['report', 'submissionData', 'submissionData.reportField', 'group', 'user'],
       order: { submittedAt: 'DESC' },
       skip: offset,
       take: limit,
@@ -737,12 +737,19 @@ export class ReportsService {
         id: submission.id,
         reportId: submission.report.id,
         reportName: submission.report.name,
+        groupId: submission.group?.id || null,
+        groupName: submission.group?.name || null,
         submittedAt: submission.submittedAt,
+        submittedBy: {
+          id: submission.user.id,
+          name: getUserDisplayName(submission.user)
+        },
         status: ReportStatus.SUBMITTED,
         data: submission.submissionData.reduce((acc, curr) => {
           acc[curr.reportField.name] = curr.fieldValue;
           return acc;
         }, {}),
+        canEdit: submission.user.id === user.id // User can edit their own submissions
       })),
       pagination: {
         total,
