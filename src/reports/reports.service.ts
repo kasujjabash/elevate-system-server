@@ -220,7 +220,7 @@ export class ReportsService {
   async getReport(reportId: number): Promise<Report> {
     const report = await this.reportRepository.findOne({
       where: { id: reportId, status: ReportStatus.ACTIVE },
-      relations: ["fields"],
+      relations: ["fields", "targetGroupCategory"],
     });
     if (!report) {
       throw new NotFoundException(`Report with ID ${reportId} not found`);
