@@ -3,6 +3,7 @@ import {
   Inject,
   NotFoundException,
   HttpStatus,
+  BadRequestException,
 } from "@nestjs/common";
 import { Connection, Repository, In, Not } from "typeorm";
 import { UserDto } from "src/auth/dto/user.dto";
@@ -106,15 +107,45 @@ export class ReportsService {
     }
 
     let targetGroup: Group | null = null;
-    if (report.targetGroupCategory) {
-      targetGroup = await this.groupMembershipRepo
-        .createQueryBuilder("gm")
-        .innerJoinAndSelect("gm.group", "g")
-        .innerJoin("g.category", "gc")
-        .where("gm.contactId = :cid", { cid: submittingUser.contactId })
-        .andWhere("gc.id = :catId", { catId: report.targetGroupCategory })
-        .getOne()
-        .then((gm) => gm?.group ?? null);
+    let selectedGroupId: number | null = null;
+    
+    // Check if report has a designated group field
+    if (report.groupFieldName && submissionDto.data[report.groupFieldName]) {
+      selectedGroupId = parseInt(submissionDto.data[report.groupFieldName]);
+      
+      // Validate user can submit for this group
+      const canSubmitForGroup = await this.validateUserGroupPermission(
+        submittingUser.contactId, 
+        selectedGroupId, 
+        report.targetGroupCategory?.id
+      );
+      
+      if (!canSubmitForGroup) {
+        throw new BadRequestException(
+          `You don't have permission to submit reports for group ID ${selectedGroupId}`
+        );
+      }
+      
+      targetGroup = await this.treeRepository.findOne({ where: { id: selectedGroupId } });
+      
+      if (!targetGroup) {
+        throw new BadRequestException(`Group with ID ${selectedGroupId} not found`);
+      }
+    } 
+    // Fallback to current automatic detection
+    else if (report.targetGroupCategory) {
+      const userGroups = await this.getUserGroupsInCategory(submittingUser.contactId, report.targetGroupCategory.id);
+      
+      if (userGroups.length === 0) {
+        throw new BadRequestException(`You don't belong to any groups in the required category`);
+      }
+      if (userGroups.length > 1) {
+        throw new BadRequestException(
+          `You belong to multiple groups in this category. Please contact an admin to configure a group selection field for this report.`
+        );
+      }
+      
+      targetGroup = userGroups[0];
     }
 
     // Create and save the report submission
@@ -821,5 +852,32 @@ export class ReportsService {
       groupId: submission.group?.id,
       data,
     };
+  }
+
+  private async validateUserGroupPermission(contactId: string, groupId: number, categoryId?: number): Promise<boolean> {
+    const membership = await this.groupMembershipRepo.findOne({
+      where: { 
+        contactId,
+        group: { id: groupId }
+      },
+      relations: ['group', 'group.category']
+    });
+    
+    if (!membership) return false;
+    if (categoryId && membership.group.category?.id !== categoryId) return false;
+    
+    return true;
+  }
+
+  private async getUserGroupsInCategory(contactId: string, categoryId: number): Promise<Group[]> {
+    const memberships = await this.groupMembershipRepo.find({
+      where: {
+        contactId,
+        group: { category: { id: categoryId } }
+      },
+      relations: ['group', 'group.category']
+    });
+    
+    return memberships.map(membership => membership.group);
   }
 }
