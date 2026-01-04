@@ -39,6 +39,15 @@ export class GroupController {
     return this.service.getCategories();
   }
 
+  @Get('categories/:categoryName')
+  async getGroupsByCategory(
+    @Param('categoryName') categoryName: string,
+    @Request() rawRequest: any,
+  ): Promise<GroupListDto[]> {
+    const groups = await this.service.getGroupsByCategory(categoryName);
+    return groups.map(group => this.service.toListView(group));
+  }
+
   @Get(':id/members')
   async getGroupMembers(
     @Param('id') id: number,
