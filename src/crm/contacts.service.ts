@@ -232,36 +232,112 @@ export class ContactsService {
   }
 
   async updatePartial(id: number, data: Partial<Contact>): Promise<Contact> {
+    Logger.log(`[UpdatePartial] Starting update for contact ID: ${id}`);
+    Logger.log(`[UpdatePartial] Received data keys: ${Object.keys(data).join(', ')}`);
+    Logger.debug(`[UpdatePartial] Full payload: ${JSON.stringify(data)}`);
+    
     const existingContact = await this.repository.findOne({ 
       where: { id },
-      relations: ['person'] // Load person relation
+      relations: ['person', 'emails', 'phones', 'addresses']
     });
     if (!existingContact) {
+      Logger.error(`[UpdatePartial] Contact not found with ID: ${id}`);
       throw new BadRequestException('Contact not found');
     }
     
+    Logger.log(`[UpdatePartial] Found existing contact with ID: ${id}`);
+    Logger.log(`[UpdatePartial] Existing emails count: ${existingContact.emails?.length || 0}`);
+    Logger.log(`[UpdatePartial] Existing phones count: ${existingContact.phones?.length || 0}`);
+    Logger.log(`[UpdatePartial] Existing addresses count: ${existingContact.addresses?.length || 0}`);
+    
     // Handle nested person update
     if (data.person) {
+      Logger.log(`[UpdatePartial] Processing person data`);
       if (existingContact.person) {
-        // Update existing person - only update the fields that are provided
+        Logger.log(`[UpdatePartial] Updating existing person for contact ${id}`);
         Object.assign(existingContact.person, data.person);
       } else {
-        // No existing person - this shouldn't happen for person contacts
-        // but if it does, we need to create the person entity
+        Logger.log(`[UpdatePartial] Creating new person for contact ${id}`);
         const person = this.personRepository.create(data.person);
         person.contactId = existingContact.id;
         existingContact.person = person;
       }
+    }
+
+    // Handle emails update
+    if (data.emails) {
+      Logger.log(`[UpdatePartial] Processing ${data.emails.length} email(s)`);
+      Logger.debug(`[UpdatePartial] Email data: ${JSON.stringify(data.emails)}`);
       
-      // Don't pass person in the contact update
-      const { person, ...contactData } = data;
+      if (existingContact.emails?.length > 0) {
+        Logger.log(`[UpdatePartial] Removing ${existingContact.emails.length} existing email(s)`);
+        await this.emailRepository.remove(existingContact.emails);
+      }
+      
+      existingContact.emails = data.emails.map((emailData, index) => {
+        Logger.debug(`[UpdatePartial] Creating email ${index + 1}: ${JSON.stringify(emailData)}`);
+        const email = this.emailRepository.create(emailData);
+        email.contactId = existingContact.id;
+        Logger.debug(`[UpdatePartial] Email ${index + 1} assigned contactId: ${email.contactId}`);
+        return email;
+      });
+    }
+
+    // Handle phones update
+    if (data.phones) {
+      Logger.log(`[UpdatePartial] Processing ${data.phones.length} phone(s)`);
+      Logger.debug(`[UpdatePartial] Phone data: ${JSON.stringify(data.phones)}`);
+      
+      if (existingContact.phones?.length > 0) {
+        Logger.log(`[UpdatePartial] Removing ${existingContact.phones.length} existing phone(s)`);
+        await this.phoneRepository.remove(existingContact.phones);
+      }
+      
+      existingContact.phones = data.phones.map((phoneData, index) => {
+        Logger.debug(`[UpdatePartial] Creating phone ${index + 1}: ${JSON.stringify(phoneData)}`);
+        const phone = this.phoneRepository.create(phoneData);
+        phone.contactId = existingContact.id;
+        Logger.debug(`[UpdatePartial] Phone ${index + 1} assigned contactId: ${phone.contactId}`);
+        return phone;
+      });
+    }
+
+    // Handle addresses update
+    if (data.addresses) {
+      Logger.log(`[UpdatePartial] Processing ${data.addresses.length} address(es)`);
+      Logger.debug(`[UpdatePartial] Address data: ${JSON.stringify(data.addresses)}`);
+      
+      if (existingContact.addresses?.length > 0) {
+        Logger.log(`[UpdatePartial] Removing ${existingContact.addresses.length} existing address(es)`);
+        await this.addressRepository.remove(existingContact.addresses);
+      }
+      
+      existingContact.addresses = data.addresses.map((addressData, index) => {
+        Logger.debug(`[UpdatePartial] Creating address ${index + 1}: ${JSON.stringify(addressData)}`);
+        const address = this.addressRepository.create(addressData);
+        address.contactId = existingContact.id;
+        Logger.debug(`[UpdatePartial] Address ${index + 1} assigned contactId: ${address.contactId}`);
+        return address;
+      });
+    }
+
+    // Handle other contact fields (excluding nested entities)
+    const { person, emails, phones, addresses, ...contactData } = data;
+    if (Object.keys(contactData).length > 0) {
+      Logger.log(`[UpdatePartial] Updating contact fields: ${Object.keys(contactData).join(', ')}`);
       Object.assign(existingContact, contactData);
-    } else {
-      // No person data, just update contact fields
-      Object.assign(existingContact, data);
     }
     
-    return await this.repository.save(existingContact);
+    try {
+      Logger.log(`[UpdatePartial] Saving contact ID: ${id} to database`);
+      const savedContact = await this.repository.save(existingContact);
+      Logger.log(`[UpdatePartial] Successfully saved contact ID: ${id}`);
+      return savedContact;
+    } catch (error) {
+      Logger.error(`[UpdatePartial] Failed to save contact ID: ${id}`, error.stack);
+      Logger.error(`[UpdatePartial] Error details: ${JSON.stringify(error)}`);
+      throw error;
+    }
   }
 
   async createPerson(createPersonDto: CreatePersonDto): Promise<Contact> {
