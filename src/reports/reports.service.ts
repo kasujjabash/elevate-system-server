@@ -781,7 +781,7 @@ export class ReportsService {
           acc[curr.reportField.name] = curr.fieldValue;
           return acc;
         }, {}),
-        canEdit: submission.user.id === user.id // User can edit their own submissions
+        canEdit: false, // submission.user.id === user.id // User can edit their own submissions. @TODOKEY: Temporarily disabled
       })),
       pagination: {
         total,
