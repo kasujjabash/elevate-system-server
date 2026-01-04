@@ -24,7 +24,13 @@ export class DashboardService {
     // Get groups the user has access to
     const userGroupIds = await this.groupPermissionsService.getUserGroupIds(user);
     
-    // Mock dashboard summary data - replace with real queries
+    // Get primary group for user
+    const primaryGroup = await this.getPrimaryGroup(userGroupIds);
+    
+    // Get weekly metrics
+    const thisWeek = await this.getWeeklyMetrics(userGroupIds, 0);
+    const lastWeek = await this.getWeeklyMetrics(userGroupIds, 1);
+    
     const summary = {
       overview: {
         totalGroups: userGroupIds.length,
@@ -32,6 +38,14 @@ export class DashboardService {
         reportsSubmitted: await this.getReportsSubmittedCount(userGroupIds),
         reportsOverdue: await this.getOverdueReportsCount(userGroupIds),
       },
+      thisWeek,
+      lastWeek,
+      trend: {
+        attendanceChange: thisWeek.attendance - lastWeek.attendance,
+        visitorsChange: thisWeek.visitors - lastWeek.visitors,
+      },
+      group: primaryGroup,
+      pendingReports: await this.getPendingReports(userGroupIds),
       recentActivity: await this.getRecentActivity(userGroupIds),
       upcomingDeadlines: await this.getUpcomingDeadlines(userGroupIds),
     };
@@ -102,5 +116,52 @@ export class DashboardService {
     ];
 
     return mockDeadlines;
+  }
+
+  private async getPrimaryGroup(groupIds: number[]): Promise<any> {
+    if (groupIds.length === 0) return null;
+    
+    // Get the first group or implement logic to determine primary group
+    const group = await this.groupRepository.findOne({ 
+      where: { id: groupIds[0] },
+      relations: ['members', 'category']
+    });
+    
+    if (!group) return null;
+    
+    return {
+      id: group.id,
+      name: group.name,
+      type: group.category?.name || 'Missional Community',
+      memberCount: group.members?.length || 0,
+      activeMembers: group.members?.length || 0, // Assume all members are active for now
+    };
+  }
+
+  private async getWeeklyMetrics(groupIds: number[], weeksAgo: number): Promise<any> {
+    // Calculate date range for the week
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() - (weeksAgo * 7));
+    const startDate = new Date(endDate);
+    startDate.setDate(startDate.getDate() - 7);
+    
+    // Mock weekly metrics - implement real queries based on your report structure
+    return {
+      attendance: 45 - (weeksAgo * 3), // Mock decreasing attendance
+      visitors: 8 - (weeksAgo * 3),
+      newMembers: 2 - weeksAgo,
+      salvations: weeksAgo === 0 ? 1 : 0,
+      baptisms: weeksAgo === 1 ? 1 : 0,
+    };
+  }
+
+  private async getPendingReports(groupIds: number[]): Promise<string[]> {
+    // Mock pending reports - implement real logic based on your reports system
+    const mockPendingReports = [
+      'MC Attendance Report',
+      'Sunday Service Report'
+    ];
+    
+    return groupIds.length > 0 ? mockPendingReports : [];
   }
 }

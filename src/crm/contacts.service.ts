@@ -232,111 +232,56 @@ export class ContactsService {
   }
 
   async updatePartial(id: number, data: Partial<Contact>): Promise<Contact> {
-    Logger.log(`[UpdatePartial] Starting update for contact ID: ${id}`);
-    Logger.log(`[UpdatePartial] Received data keys: ${Object.keys(data).join(', ')}`);
-    Logger.debug(`[UpdatePartial] Full payload: ${JSON.stringify(data)}`);
+    // Input validation
+    this.validateUpdateData(data);
     
     const existingContact = await this.repository.findOne({ 
       where: { id },
       relations: ['person', 'emails', 'phones', 'addresses']
     });
+    
     if (!existingContact) {
-      Logger.error(`[UpdatePartial] Contact not found with ID: ${id}`);
       throw new BadRequestException('Contact not found');
     }
     
-    Logger.log(`[UpdatePartial] Found existing contact with ID: ${id}`);
-    Logger.log(`[UpdatePartial] Existing emails count: ${existingContact.emails?.length || 0}`);
-    Logger.log(`[UpdatePartial] Existing phones count: ${existingContact.phones?.length || 0}`);
-    Logger.log(`[UpdatePartial] Existing addresses count: ${existingContact.addresses?.length || 0}`);
-    
     // Handle nested person update
     if (data.person) {
-      Logger.log(`[UpdatePartial] Processing person data`);
       if (existingContact.person) {
-        Logger.log(`[UpdatePartial] Updating existing person for contact ${id}`);
         Object.assign(existingContact.person, data.person);
       } else {
-        Logger.log(`[UpdatePartial] Creating new person for contact ${id}`);
         const person = this.personRepository.create(data.person);
         person.contactId = existingContact.id;
         existingContact.person = person;
       }
     }
 
-    // Handle emails update
+    // Handle emails update with efficient upsert
     if (data.emails) {
-      Logger.log(`[UpdatePartial] Processing ${data.emails.length} email(s)`);
-      Logger.debug(`[UpdatePartial] Email data: ${JSON.stringify(data.emails)}`);
-      
-      if (existingContact.emails?.length > 0) {
-        Logger.log(`[UpdatePartial] Removing ${existingContact.emails.length} existing email(s)`);
-        await this.emailRepository.remove(existingContact.emails);
-      }
-      
-      existingContact.emails = data.emails.map((emailData, index) => {
-        Logger.debug(`[UpdatePartial] Creating email ${index + 1}: ${JSON.stringify(emailData)}`);
-        const email = this.emailRepository.create(emailData);
-        email.contactId = existingContact.id;
-        Logger.debug(`[UpdatePartial] Email ${index + 1} assigned contactId: ${email.contactId}`);
-        return email;
-      });
+      await this.updateEmailsEfficiently(existingContact, data.emails);
     }
 
-    // Handle phones update
+    // Handle phones update with efficient upsert
     if (data.phones) {
-      Logger.log(`[UpdatePartial] Processing ${data.phones.length} phone(s)`);
-      Logger.debug(`[UpdatePartial] Phone data: ${JSON.stringify(data.phones)}`);
-      
-      if (existingContact.phones?.length > 0) {
-        Logger.log(`[UpdatePartial] Removing ${existingContact.phones.length} existing phone(s)`);
-        await this.phoneRepository.remove(existingContact.phones);
-      }
-      
-      existingContact.phones = data.phones.map((phoneData, index) => {
-        Logger.debug(`[UpdatePartial] Creating phone ${index + 1}: ${JSON.stringify(phoneData)}`);
-        const phone = this.phoneRepository.create(phoneData);
-        phone.contactId = existingContact.id;
-        Logger.debug(`[UpdatePartial] Phone ${index + 1} assigned contactId: ${phone.contactId}`);
-        return phone;
-      });
+      await this.updatePhonesEfficiently(existingContact, data.phones);
     }
 
-    // Handle addresses update
+    // Handle addresses update with efficient upsert
     if (data.addresses) {
-      Logger.log(`[UpdatePartial] Processing ${data.addresses.length} address(es)`);
-      Logger.debug(`[UpdatePartial] Address data: ${JSON.stringify(data.addresses)}`);
-      
-      if (existingContact.addresses?.length > 0) {
-        Logger.log(`[UpdatePartial] Removing ${existingContact.addresses.length} existing address(es)`);
-        await this.addressRepository.remove(existingContact.addresses);
-      }
-      
-      existingContact.addresses = data.addresses.map((addressData, index) => {
-        Logger.debug(`[UpdatePartial] Creating address ${index + 1}: ${JSON.stringify(addressData)}`);
-        const address = this.addressRepository.create(addressData);
-        address.contactId = existingContact.id;
-        Logger.debug(`[UpdatePartial] Address ${index + 1} assigned contactId: ${address.contactId}`);
-        return address;
-      });
+      await this.updateAddressesEfficiently(existingContact, data.addresses);
     }
 
     // Handle other contact fields (excluding nested entities)
     const { person, emails, phones, addresses, ...contactData } = data;
     if (Object.keys(contactData).length > 0) {
-      Logger.log(`[UpdatePartial] Updating contact fields: ${Object.keys(contactData).join(', ')}`);
       Object.assign(existingContact, contactData);
     }
     
     try {
-      Logger.log(`[UpdatePartial] Saving contact ID: ${id} to database`);
       const savedContact = await this.repository.save(existingContact);
-      Logger.log(`[UpdatePartial] Successfully saved contact ID: ${id}`);
       return savedContact;
     } catch (error) {
-      Logger.error(`[UpdatePartial] Failed to save contact ID: ${id}`, error.stack);
-      Logger.error(`[UpdatePartial] Error details: ${JSON.stringify(error)}`);
-      throw error;
+      Logger.error(`Failed to save contact ID: ${id}`, error.stack);
+      throw new BadRequestException(`Failed to update contact: ${error.message}`);
     }
   }
 
@@ -541,5 +486,203 @@ export class ContactsService {
 
   async createCompany(data: CreateCompanyDto): Promise<Contact> {
     throw "Not yet implemented";
+  }
+
+  private validateUpdateData(data: Partial<Contact>): void {
+    if (!data || Object.keys(data).length === 0) {
+      throw new BadRequestException('Update data cannot be empty');
+    }
+
+    // Validate emails
+    if (data.emails) {
+      if (!Array.isArray(data.emails)) {
+        throw new BadRequestException('Emails must be an array');
+      }
+      data.emails.forEach((email, index) => {
+        if (!email.value || typeof email.value !== 'string') {
+          throw new BadRequestException(`Email at index ${index} must have a valid value`);
+        }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
+          throw new BadRequestException(`Email at index ${index} has invalid format`);
+        }
+      });
+    }
+
+    // Validate phones
+    if (data.phones) {
+      if (!Array.isArray(data.phones)) {
+        throw new BadRequestException('Phones must be an array');
+      }
+      data.phones.forEach((phone, index) => {
+        if (!phone.value || typeof phone.value !== 'string') {
+          throw new BadRequestException(`Phone at index ${index} must have a valid value`);
+        }
+      });
+    }
+
+    // Validate addresses
+    if (data.addresses) {
+      if (!Array.isArray(data.addresses)) {
+        throw new BadRequestException('Addresses must be an array');
+      }
+      data.addresses.forEach((address, index) => {
+        if (!address.country || typeof address.country !== 'string') {
+          throw new BadRequestException(`Address at index ${index} must have a country`);
+        }
+        if (!address.district || typeof address.district !== 'string') {
+          throw new BadRequestException(`Address at index ${index} must have a district`);
+        }
+      });
+    }
+  }
+
+  private async updateEmailsEfficiently(existingContact: Contact, newEmails: Partial<Email>[]): Promise<void> {
+    const existingEmails = existingContact.emails || [];
+    const emailsToKeep: Email[] = [];
+    const emailsToUpdate: Email[] = [];
+    const emailsToCreate: Partial<Email>[] = [];
+
+    // Process new emails
+    newEmails.forEach((newEmail, index) => {
+      if (newEmail.id && index < existingEmails.length) {
+        // Update existing email
+        const existingEmail = existingEmails.find(e => e.id === newEmail.id);
+        if (existingEmail) {
+          Object.assign(existingEmail, newEmail);
+          emailsToUpdate.push(existingEmail);
+          emailsToKeep.push(existingEmail);
+        }
+      } else {
+        // Create new email
+        emailsToCreate.push({
+          ...newEmail,
+          contactId: existingContact.id
+        });
+      }
+    });
+
+    // Remove emails that are no longer needed
+    const emailsToRemove = existingEmails.filter(email => 
+      !emailsToKeep.some(kept => kept.id === email.id)
+    );
+
+    if (emailsToRemove.length > 0) {
+      await this.emailRepository.remove(emailsToRemove);
+    }
+
+    // Update existing emails
+    if (emailsToUpdate.length > 0) {
+      await this.emailRepository.save(emailsToUpdate);
+    }
+
+    // Create new emails
+    if (emailsToCreate.length > 0) {
+      const createdEmails = await this.emailRepository.save(
+        emailsToCreate.map(emailData => this.emailRepository.create(emailData))
+      );
+      emailsToKeep.push(...createdEmails);
+    }
+
+    existingContact.emails = emailsToKeep;
+  }
+
+  private async updatePhonesEfficiently(existingContact: Contact, newPhones: Partial<Phone>[]): Promise<void> {
+    const existingPhones = existingContact.phones || [];
+    const phonesToKeep: Phone[] = [];
+    const phonesToUpdate: Phone[] = [];
+    const phonesToCreate: Partial<Phone>[] = [];
+
+    // Process new phones
+    newPhones.forEach((newPhone, index) => {
+      if (newPhone.id && index < existingPhones.length) {
+        // Update existing phone
+        const existingPhone = existingPhones.find(p => p.id === newPhone.id);
+        if (existingPhone) {
+          Object.assign(existingPhone, newPhone);
+          phonesToUpdate.push(existingPhone);
+          phonesToKeep.push(existingPhone);
+        }
+      } else {
+        // Create new phone
+        phonesToCreate.push({
+          ...newPhone,
+          contactId: existingContact.id
+        });
+      }
+    });
+
+    // Remove phones that are no longer needed
+    const phonesToRemove = existingPhones.filter(phone => 
+      !phonesToKeep.some(kept => kept.id === phone.id)
+    );
+
+    if (phonesToRemove.length > 0) {
+      await this.phoneRepository.remove(phonesToRemove);
+    }
+
+    // Update existing phones
+    if (phonesToUpdate.length > 0) {
+      await this.phoneRepository.save(phonesToUpdate);
+    }
+
+    // Create new phones
+    if (phonesToCreate.length > 0) {
+      const createdPhones = await this.phoneRepository.save(
+        phonesToCreate.map(phoneData => this.phoneRepository.create(phoneData))
+      );
+      phonesToKeep.push(...createdPhones);
+    }
+
+    existingContact.phones = phonesToKeep;
+  }
+
+  private async updateAddressesEfficiently(existingContact: Contact, newAddresses: Partial<Address>[]): Promise<void> {
+    const existingAddresses = existingContact.addresses || [];
+    const addressesToKeep: Address[] = [];
+    const addressesToUpdate: Address[] = [];
+    const addressesToCreate: Partial<Address>[] = [];
+
+    // Process new addresses
+    newAddresses.forEach((newAddress, index) => {
+      if (newAddress.id && index < existingAddresses.length) {
+        // Update existing address
+        const existingAddress = existingAddresses.find(a => a.id === newAddress.id);
+        if (existingAddress) {
+          Object.assign(existingAddress, newAddress);
+          addressesToUpdate.push(existingAddress);
+          addressesToKeep.push(existingAddress);
+        }
+      } else {
+        // Create new address
+        addressesToCreate.push({
+          ...newAddress,
+          contactId: existingContact.id
+        });
+      }
+    });
+
+    // Remove addresses that are no longer needed
+    const addressesToRemove = existingAddresses.filter(address => 
+      !addressesToKeep.some(kept => kept.id === address.id)
+    );
+
+    if (addressesToRemove.length > 0) {
+      await this.addressRepository.remove(addressesToRemove);
+    }
+
+    // Update existing addresses
+    if (addressesToUpdate.length > 0) {
+      await this.addressRepository.save(addressesToUpdate);
+    }
+
+    // Create new addresses
+    if (addressesToCreate.length > 0) {
+      const createdAddresses = await this.addressRepository.save(
+        addressesToCreate.map(addressData => this.addressRepository.create(addressData))
+      );
+      addressesToKeep.push(...createdAddresses);
+    }
+
+    existingContact.addresses = addressesToKeep;
   }
 }
