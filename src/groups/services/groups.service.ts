@@ -58,7 +58,7 @@ export class GroupsService {
       details,
       parentId,
       privacy,
-      category: { name: category.name, id: category.id },
+      category: category ? { name: category.name, id: category.id }: null,
       parent: parent ? { name: parent.name, id: parent.id } : null,
     };
   }
@@ -76,7 +76,7 @@ export class GroupsService {
     const { category, ...rest } = group;
     return {
       ...rest,
-      category: { name: category.name, id: category.id },
+      category: category ? { name: category.name, id: category.id }: null,
     } as any;
   }
 
@@ -103,7 +103,9 @@ export class GroupsService {
         const groupCategory = await this.groupCategoryRepository.findOne({
           where: { name: categoryName },
         });
-        categoryIds.push(groupCategory.id);
+        if (groupCategory){
+          categoryIds.push(groupCategory.id);
+        }
       }
 
       findOps.category = { id: In(categoryIds) };
@@ -302,5 +304,63 @@ export class GroupsService {
       .leftJoinAndSelect("group.category", "category")
       .where("category.name = :categoryName", { categoryName })
       .getMany();
+  }
+
+  async getMyGroups(user: any): Promise<GroupListDto[]> {
+    // Get groups that the user has access to based on their role/permissions
+    const groupIds = await this.groupsPermissionsService.getUserGroupIds(user);
+    
+    if (groupIds.length === 0) {
+      return [];
+    }
+
+    const groups = await this.repository.find({
+      where: { id: In(groupIds) },
+      relations: ['category', 'parent'],
+    });
+
+    return groups.map(group => this.toListView(group));
+  }
+
+  async getCategories(): Promise<any[]> {
+    const categories = await this.groupCategoryRepository.find({
+      select: ['id', 'name'],
+    });
+    
+    return categories.map(cat => ({
+      id: cat.id,
+      name: cat.name,
+    }));
+  }
+
+  async getGroupMembers(groupId: number, user: any, limit = 50, offset = 0): Promise<any> {
+    // Check if user has permission to view this group
+    const hasPermission = await this.groupsPermissionsService.hasPermissionForGroup(user, groupId);
+    if (!hasPermission) {
+      throw new ClientFriendlyException('Access denied to this group');
+    }
+
+    const memberships = await this.membershipRepository.find({
+      where: { groupId },
+      relations: ['contact'],
+      skip: offset,
+      take: limit,
+    });
+
+    const members = memberships.map(membership => ({
+      id: membership.contact.id,
+      fullName: membership.contact?.person?.firstName + ' ' + (membership.contact?.person?.lastName || ''),
+      role: membership.role,
+      joinedAt: new Date(), // GroupMembership doesn't have createdAt
+    }));
+
+    const total = await this.membershipRepository.count({ where: { groupId } });
+
+    return {
+      members,
+      total,
+      limit,
+      offset,
+    };
   }
 }

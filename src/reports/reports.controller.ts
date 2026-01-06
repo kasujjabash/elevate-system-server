@@ -11,6 +11,7 @@ import {
   UseGuards,
   Body,
   UseInterceptors,
+  BadRequestException,
 } from "@nestjs/common";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { SentryInterceptor } from "src/utils/sentry.interceptor";
@@ -43,17 +44,57 @@ export class ReportsController {
     return this.reportService.createReport(reportDto, request.user);
   }
 
-  @Post("submit")
+  @Post(":reportId/submissions")
   async submitReport(
+    @Param("reportId", ParseIntPipe) reportId: number,
     @Body() submissionDto: ReportSubmissionDto,
     @Request() request,
   ): Promise<ApiResponse<ReportSubmissionDataDto>> {
+    console.log('📝 ReportsController.submitReport() - Called with reportId:', reportId);
+    submissionDto.reportId = reportId;
     return await this.reportService.submitReport(submissionDto, request.user);
   }
 
-  @Get(":reportId")
-  async getReport(@Param("reportId") reportId: number): Promise<Report> {
-    return await this.reportService.getReport(reportId);
+  @Get("submissions/me")
+  async getMySubmissions(
+    @Query("limit") limit: number = 20,
+    @Query("offset") offset: number = 0,
+    @Query("reportId") reportId: number | undefined,
+    @Request() request: any,
+  ): Promise<any> {
+    console.log('👤 ReportsController.getMySubmissions() - Called');
+    return await this.reportService.getMySubmissions(request.user, { limit, offset, reportId });
+  }
+
+  @Get("submissions/team")
+  async getTeamSubmissions(
+    @Query("reportId") reportId: number | undefined,
+    @Request() request: any,
+  ): Promise<any> {
+    return await this.reportService.getTeamSubmissions(request.user, { reportId });
+  }
+
+  @Get("submissions/:id")
+  async getSubmissionDetails(
+    @Param("id", ParseIntPipe) id: number,
+    @Request() request,
+  ): Promise<any> {
+    console.log('📋 ReportsController.getSubmissionDetails() - Called with id:', id);
+    return await this.reportService.getSubmissionDetails(id, request.user);
+  }
+
+  @Get(":id")
+  async getReport(@Param("id") reportId: number): Promise<Report> {
+    console.log('📄 ReportsController.getReport() - Called with reportId:', reportId);
+    
+    // Handle invalid/NaN IDs
+    const parsedId = parseInt(reportId as any, 10);
+    if (isNaN(parsedId)) {
+      console.log('📄 ReportsController.getReport() - Invalid ID provided:', reportId);
+      throw new BadRequestException('Invalid report ID provided');
+    }
+    
+    return await this.reportService.getReport(parsedId);
   }
 
   @Put(":id")
@@ -65,8 +106,16 @@ export class ReportsController {
   }
 
   @Get()
-  async getAllReports(): Promise<Report[]> {
-    return await this.reportService.getAllReports();
+  async getAllReports(): Promise<{ reports: any[] }> {
+    console.log('📋 ReportsController.getAllReports() - Starting execution');
+    try {
+      const result = await this.reportService.getAllReports();
+      console.log('📋 ReportsController.getAllReports() - Success, returning:', JSON.stringify(result, null, 2));
+      return result;
+    } catch (error) {
+      console.error('📋 ReportsController.getAllReports() - Error:', error);
+      throw error;
+    }
   }
 
   @Get(":reportId/submissions")
@@ -77,6 +126,7 @@ export class ReportsController {
     @Query("groupIdList") smallGroupIdList?: string,
     @Query("parentGroupIdList") parentGroupIdList?: string,
   ): Promise<ReportSubmissionsApiResponse> {
+    console.log('📊 ReportsController.getReportSubmissions() - Called with reportId:', reportId);
     const formattedStartDate = startDate ? new Date(startDate) : undefined;
     const formattedEndDate = endDate ? new Date(endDate) : undefined;
     return await this.reportService.generateReport(
@@ -93,6 +143,7 @@ export class ReportsController {
     @Param("reportId") reportId: number,
     @Param("submissionId") submissionId: number,
   ) {
+    console.log('🔍 ReportsController.getReportSubmission() - Called with reportId:', reportId, 'submissionId:', submissionId);
     return this.reportService.getReportSubmission(reportId, submissionId);
   }
 
@@ -102,6 +153,7 @@ export class ReportsController {
     @Query("groupIdList") smallGroupIdList?: string,
     @Query("parentGroupIdList") parentGroupIdList?: string,
   ): Promise<string> {
+    console.log('📧 ReportsController.sendReportSubmissionsWeeklyEmail() - Called with reportId:', reportId);
     return await this.reportService.sendWeeklyEmailSummary(
       reportId,
       smallGroupIdList,

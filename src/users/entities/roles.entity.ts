@@ -33,7 +33,7 @@ export default class Roles {
   permissions: string[];
 
   @Column({ nullable: false })
-  isActive: Boolean;
+  isActive: boolean;
 
   @CreateDateColumn({
     default: () => "NOW()",

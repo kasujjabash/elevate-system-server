@@ -18,18 +18,40 @@ export class GroupPermissionsService {
   }
 
   async hasPermissionForGroup(user: any, groupId: number) {
-    const ancestors = await this.treeRepository.findAncestors({
-      id: groupId,
-    } as Group);
-    const ancestorsIds = [groupId, ...ancestors.map((it) => it.id)];
-    const result = await this.membershipRepository.count({
+    // Check if user is a leader of the specific group
+    const directLeadership = await this.membershipRepository.count({
       where: {
         contactId: user.contactId,
         role: GroupRole.Leader,
-        groupId: In(ancestorsIds),
+        groupId: groupId,
       },
     });
-    return result >= 1;
+    
+    if (directLeadership >= 1) {
+      return true;
+    }
+    
+    // Check if user is a leader of any parent group (hierarchical permissions)
+    const targetGroup = await this.repository.findOne({ where: { id: groupId } });
+    if (!targetGroup) {
+      return false;
+    }
+    
+    const ancestors = await this.treeRepository.findAncestors(targetGroup);
+    const ancestorIds = ancestors.map((it) => it.id);
+    
+    if (ancestorIds.length > 0) {
+      const parentLeadership = await this.membershipRepository.count({
+        where: {
+          contactId: user.contactId,
+          role: GroupRole.Leader,
+          groupId: In(ancestorIds),
+        },
+      });
+      return parentLeadership >= 1;
+    }
+    
+    return false;
   }
 
   // Is leader of group or one of the ancestors

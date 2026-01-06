@@ -4,22 +4,22 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Put,
   Query,
-  UseGuards,
   UseInterceptors,
+  Req,
 } from '@nestjs/common';
 import { ContactsService } from '../contacts.service';
 import { ContactSearchDto } from '../dto/contact-search.dto';
 import Contact from '../entities/contact.entity';
 import { ApiTags } from '@nestjs/swagger';
 import ContactListDto from '../dto/contact-list.dto';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { SentryInterceptor } from 'src/utils/sentry.interceptor';
+import { TenantContextInterceptor } from '../../interceptors/tenant-context.interceptor';
 
-@UseInterceptors(SentryInterceptor)
-@UseGuards(JwtAuthGuard)
+@UseInterceptors(SentryInterceptor, TenantContextInterceptor)
 @ApiTags('Crm')
 @Controller('api/crm/contacts')
 export class ContactsController {
@@ -31,13 +31,21 @@ export class ContactsController {
   }
 
   @Post()
-  async create(@Body() data: Contact): Promise<Contact> {
-    return await this.service.create(data);
+  async create(@Body() data: Contact, @Req() req: any): Promise<Contact> {
+    return await this.service.create(data, req);
   }
 
   @Put()
-  async update(@Body() data: Contact): Promise<Contact> {
+  async updateLegacy(@Body() data: Contact): Promise<Contact> {
     return await this.service.update(data);
+  }
+
+  @Patch(':id')
+  async update(
+    @Param('id') id: number,
+    @Body() data: Partial<Contact>
+  ): Promise<Contact> {
+    return await this.service.updatePartial(id, data);
   }
 
   @Get(':id')

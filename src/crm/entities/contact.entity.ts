@@ -1,4 +1,4 @@
-import { MemberEventActivities } from "../../events/entities/member-event-activities.entity";
+import { MemberEventActivities } from '../../events/entities/member-event-activities.entity';
 import {
   Column,
   Entity,
@@ -28,14 +28,14 @@ import { Tenant } from "../../tenants/entities/tenant.entity";
 @Entity()
 @Index(["tenant", "id"])
 export default class Contact {
-  @PrimaryGeneratedColumn({ name: "id" })
+  @PrimaryGeneratedColumn({ name: 'id' })
   id: number;
 
   @ManyToOne(() => Tenant, (tenant) => tenant.contacts, { nullable: false })
   tenant: Tenant;
 
   @Column({
-    type: "enum",
+    type: 'enum',
     enum: ContactCategory,
     nullable: false,
     default: ContactCategory.Person,
@@ -44,7 +44,7 @@ export default class Contact {
 
   @OneToOne((type) => Person, (it) => it.contact, {
     cascade: true,
-    onDelete: "CASCADE",
+    onDelete: 'CASCADE',
   })
   person?: Person;
 
@@ -74,18 +74,18 @@ export default class Contact {
 
   @JoinColumn()
   @OneToMany((type) => GroupMembership, (it) => it.contact, {
-    cascade: ["insert"],
+    cascade: ['insert'],
   })
   groupMemberships: GroupMembership[];
 
   @JoinColumn()
   @OneToMany((type) => GroupMembershipRequest, (it) => it.contact, {
-    cascade: ["insert"],
+    cascade: ['insert'],
   })
   groupMembershipRequests: GroupMembershipRequest[];
 
   @OneToMany((type) => EventAttendance, (it) => it.contact, {
-    cascade: ["insert"],
+    cascade: ['insert'],
   })
   attendance: EventAttendance[];
 
@@ -93,7 +93,7 @@ export default class Contact {
   member: MemberEventActivities[];
 
   @OneToMany((type) => EventRegistration, (it) => it.contact, {
-    cascade: ["insert"],
+    cascade: ['insert'],
   })
   registration: EventRegistration[];
 

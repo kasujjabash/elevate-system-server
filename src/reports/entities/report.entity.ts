@@ -94,6 +94,9 @@ export class Report {
   @Column({ default: true })
   active: boolean;
 
+  @Column({ nullable: true })
+  groupFieldName?: string;
+
   @Index()
   @Column({
     type: "enum",

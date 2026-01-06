@@ -23,9 +23,40 @@ import { SentryInterceptor } from "../../utils/sentry.interceptor";
 @UseInterceptors(SentryInterceptor)
 @UseGuards(JwtAuthGuard)
 @ApiTags("Groups")
-@Controller("api/groups/group")
+@Controller("api/groups")
 export class GroupController {
   constructor(private readonly service: GroupsService) {}
+
+  @Get('me')
+  async getMyGroups(
+    @Request() rawRequest: any,
+  ): Promise<GroupListDto[]> {
+    return this.service.getMyGroups(rawRequest.user);
+  }
+
+  @Get('categories')
+  async getCategories(): Promise<any[]> {
+    return this.service.getCategories();
+  }
+
+  @Get('categories/:categoryName')
+  async getGroupsByCategory(
+    @Param('categoryName') categoryName: string,
+    @Request() rawRequest: any,
+  ): Promise<GroupListDto[]> {
+    const groups = await this.service.getGroupsByCategory(categoryName);
+    return groups.map(group => this.service.toListView(group));
+  }
+
+  @Get(':id/members')
+  async getGroupMembers(
+    @Param('id') id: number,
+    @Query('limit') limit: number = 50,
+    @Query('offset') offset: number = 0,
+    @Request() rawRequest: any,
+  ): Promise<any> {
+    return this.service.getGroupMembers(id, rawRequest.user, limit, offset);
+  }
 
   @Get()
   async findAll(

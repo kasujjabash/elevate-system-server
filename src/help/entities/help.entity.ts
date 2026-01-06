@@ -27,20 +27,20 @@ export default class Help {
   url?: string;
 
   @Column({
-    type: "enum",
+    type: 'enum',
     enum: URLCategory,
     nullable: true,
   })
   category: URLCategory;
 
   @CreateDateColumn({
-    default: () => "NOW()",
+    default: () => 'NOW()',
     nullable: false,
   })
   createdOn: Date;
 
   @UpdateDateColumn({
-    default: () => "NOW()",
+    default: () => 'NOW()',
     nullable: false,
   })
   modifiedOn: Date;

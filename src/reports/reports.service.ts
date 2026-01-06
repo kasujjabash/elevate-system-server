@@ -3,8 +3,9 @@ import {
   Inject,
   NotFoundException,
   HttpStatus,
+  BadRequestException,
 } from "@nestjs/common";
-import { Connection, Repository, In } from "typeorm";
+import { Connection, Repository, In, Not } from "typeorm";
 import { UserDto } from "src/auth/dto/user.dto";
 import { Report } from "./entities/report.entity";
 import { ReportSubmission } from "./entities/report.submission.entity";
@@ -92,6 +93,7 @@ export class ReportsService {
     // Retrieve the report by its ID
     const report = await this.reportRepository.findOne({
       where: { id: reportId, status: ReportStatus.ACTIVE },
+      relations: ["targetGroupCategory"],
     });
     if (!report) {
       throw new NotFoundException(`Report with ID ${reportId} not found`);
@@ -106,15 +108,45 @@ export class ReportsService {
     }
 
     let targetGroup: Group | null = null;
-    if (report.targetGroupCategory) {
-      targetGroup = await this.groupMembershipRepo
-        .createQueryBuilder("gm")
-        .innerJoinAndSelect("gm.group", "g")
-        .innerJoin("g.category", "gc")
-        .where("gm.contactId = :cid", { cid: submittingUser.contactId })
-        .andWhere("gc.id = :catId", { catId: report.targetGroupCategory })
-        .getOne()
-        .then((gm) => gm?.group ?? null);
+    let selectedGroupId: number | null = null;
+    
+    // Check if report has a designated group field
+    if (report.groupFieldName && submissionDto.data[report.groupFieldName]) {
+      selectedGroupId = parseInt(submissionDto.data[report.groupFieldName]);
+      
+      // Validate user can submit for this group
+      const canSubmitForGroup = await this.validateUserGroupPermission(
+        submittingUser.contactId, 
+        selectedGroupId, 
+        report.targetGroupCategory?.id
+      );
+      
+      if (!canSubmitForGroup) {
+        throw new BadRequestException(
+          `You don't have permission to submit reports for group ID ${selectedGroupId}`
+        );
+      }
+      
+      targetGroup = await this.treeRepository.findOne({ where: { id: selectedGroupId } });
+      
+      if (!targetGroup) {
+        throw new BadRequestException(`Group with ID ${selectedGroupId} not found`);
+      }
+    } 
+    // Fallback to current automatic detection
+    else if (report.targetGroupCategory) {
+      const userGroups = await this.getUserGroupsInCategory(submittingUser.contactId, report.targetGroupCategory.id);
+      
+      if (userGroups.length === 0) {
+        throw new BadRequestException(`You don't belong to any groups in the required category`);
+      }
+      if (userGroups.length > 1) {
+        throw new BadRequestException(
+          `You belong to multiple groups in this category. Please contact an admin to configure a group selection field for this report.`
+        );
+      }
+      
+      targetGroup = userGroups[0];
     }
 
     // Create and save the report submission
@@ -177,17 +209,50 @@ export class ReportsService {
     return response;
   }
 
-  async getAllReports(): Promise<Report[]> {
-    return await this.reportRepository.find({
-      where: { status: ReportStatus.ACTIVE },
-      relations: ["fields"],
-    });
+  async getAllReports(): Promise<{ reports: any[] }> {
+    console.log('🔧 ReportsService.getAllReports() - Starting execution');
+    
+    try {
+      console.log('🔧 ReportsService.getAllReports() - Querying database...');
+      const reports = await this.reportRepository.find({
+        where: { status: ReportStatus.ACTIVE },
+        relations: ["fields", "targetGroupCategory"],
+      });
+
+      console.log('🔧 ReportsService.getAllReports() - Found reports:', reports.length);
+      console.log('🔧 ReportsService.getAllReports() - Raw reports:', JSON.stringify(reports.map(r => ({ id: r.id, name: r.name })), null, 2));
+
+      console.log('🔧 ReportsService.getAllReports() - Formatting reports...');
+      const formattedReports = reports.map(report => {
+        console.log(`🔧 Formatting report ${report.id}: ${report.name}`);
+        return {
+          id: report.id,
+          name: report.name,
+          description: report.description,
+          submissionFrequency: report.submissionFrequency,
+          active: report.active,
+          status: report.status,
+          targetGroupCategory: report.targetGroupCategory ? {
+            id: report.targetGroupCategory.id,
+            name: report.targetGroupCategory.name
+          } : null,
+          fieldCount: report.fields ? report.fields.length : 0
+        };
+      });
+
+      const result = { reports: formattedReports };
+      console.log('🔧 ReportsService.getAllReports() - Returning result:', JSON.stringify(result, null, 2));
+      return result;
+    } catch (error) {
+      console.error('🔧 ReportsService.getAllReports() - Error:', error);
+      throw error;
+    }
   }
 
   async getReport(reportId: number): Promise<Report> {
     const report = await this.reportRepository.findOne({
       where: { id: reportId, status: ReportStatus.ACTIVE },
-      relations: ["fields"],
+      relations: ["fields", "targetGroupCategory"],
     });
     if (!report) {
       throw new NotFoundException(`Report with ID ${reportId} not found`);
@@ -679,5 +744,141 @@ export class ReportsService {
         `,
     };
     return sendEmail(mailerData);
+  }
+
+  async getMySubmissions(user: any, options: { limit?: number; offset?: number; reportId?: number }): Promise<any> {
+    const { limit = 20, offset = 0, reportId } = options;
+    const where: any = { user: { id: user.id } };
+    
+    if (reportId) {
+      where.report = { id: reportId };
+    }
+
+    const submissions = await this.reportSubmissionRepository.find({
+      where,
+      relations: ['report', 'submissionData', 'submissionData.reportField', 'group', 'user'],
+      order: { submittedAt: 'DESC' },
+      skip: offset,
+      take: limit,
+    });
+
+    const total = await this.reportSubmissionRepository.count({ where });
+
+    return {
+      submissions: submissions.map(submission => ({
+        id: submission.id,
+        reportId: submission.report.id,
+        reportName: submission.report.name,
+        groupId: submission.group?.id || null,
+        groupName: submission.group?.name || null,
+        submittedAt: submission.submittedAt,
+        submittedBy: {
+          id: submission.user.id,
+          name: getUserDisplayName(submission.user)
+        },
+        status: ReportStatus.SUBMITTED,
+        data: submission.submissionData.reduce((acc, curr) => {
+          acc[curr.reportField.name] = curr.fieldValue;
+          return acc;
+        }, {}),
+        canEdit: false, // submission.user.id === user.id // User can edit their own submissions. @TODOKEY: Temporarily disabled
+      })),
+      pagination: {
+        total,
+        limit,
+        offset,
+        hasMore: total > offset + limit
+      }
+    };
+  }
+
+  async getTeamSubmissions(user: any, options: { reportId?: number }): Promise<any> {
+    const { reportId } = options;
+    
+    // Get user's accessible groups (implement based on your permission system)
+    const userGroupIds = []; // TODO: Get from group permissions service
+    
+    const where: any = {};
+    if (reportId) {
+      where.report = { id: reportId };
+    }
+    if (userGroupIds.length > 0) {
+      where.groupId = In(userGroupIds);
+    }
+
+    const submissions = await this.reportSubmissionRepository.find({
+      where,
+      relations: ['report', 'user', 'submissionData', 'submissionData.reportField'],
+      order: { submittedAt: 'DESC' },
+    });
+
+    return {
+      submissions: submissions.map(submission => ({
+        id: submission.id,
+        reportId: submission.report.id,
+        reportName: submission.report.name,
+        submittedAt: submission.submittedAt,
+        submittedBy: getUserDisplayName(submission.user),
+        status: ReportStatus.SUBMITTED,
+        groupId: submission.group?.id,
+      })),
+    };
+  }
+
+  async getSubmissionDetails(submissionId: number, user: any): Promise<any> {
+    const submission = await this.reportSubmissionRepository.findOne({
+      where: { id: submissionId },
+      relations: ['report', 'user', 'submissionData', 'submissionData.reportField'],
+    });
+
+    if (!submission) {
+      throw new NotFoundException('Submission not found');
+    }
+
+    // Check if user has permission to view this submission
+    // TODO: Implement permission check
+
+    const data = submission.submissionData.reduce((acc, curr) => {
+      acc[curr.reportField.name] = curr.fieldValue;
+      return acc;
+    }, {});
+
+    return {
+      id: submission.id,
+      reportId: submission.report.id,
+      reportName: submission.report.name,
+      submittedAt: submission.submittedAt,
+      submittedBy: getUserDisplayName(submission.user),
+      status: ReportStatus.SUBMITTED,
+      groupId: submission.group?.id,
+      data,
+    };
+  }
+
+  private async validateUserGroupPermission(contactId: number, groupId: number, categoryId?: number): Promise<boolean> {
+    const membership = await this.groupMembershipRepo.findOne({
+      where: { 
+        contactId,
+        group: { id: groupId }
+      },
+      relations: ['group', 'group.category']
+    });
+    
+    if (!membership) return false;
+    if (categoryId && membership.group.category?.id !== categoryId) return false;
+    
+    return true;
+  }
+
+  private async getUserGroupsInCategory(contactId: number, categoryId: number): Promise<Group[]> {
+    const memberships = await this.groupMembershipRepo.find({
+      where: {
+        contactId,
+        group: { category: { id: categoryId } }
+      },
+      relations: ['group', 'group.category']
+    });
+    
+    return memberships.map(membership => membership.group);
   }
 }

@@ -25,6 +25,7 @@ import { GroupsMembershipService } from "src/groups/services/group-membership.se
 export class TenantsService {
   constructor(
     @InjectConnection() private readonly connection: Connection,
+    private readonly dbService: DbService,
   ) {}
 
   async create(
@@ -80,5 +81,19 @@ export class TenantsService {
     Logger.log(`Tenant setup completed: ${tenantName}`);
 
     return tenantDetails;
+  }
+
+  /**
+   * Find tenant by ID
+   */
+  async findOne(id: number): Promise<Tenant | null> {
+    return await this.dbService.getTenantById(id);
+  }
+
+  /**
+   * Find tenant by name
+   */
+  async findByName(name: string): Promise<Tenant | null> {
+    return await this.dbService.getTenantByName(name);
   }
 }

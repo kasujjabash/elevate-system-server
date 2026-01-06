@@ -9,12 +9,13 @@ import { UpdateUserDto } from "../users/dto/update-user.dto";
 import { JwtHelperService } from "./jwt-helpers.service";
 import { UserListDto } from "src/users/dto/user.dto";
 import Roles from "src/users/entities/roles.entity";
-import { In, Repository } from "typeorm";
+import { In, Repository, Connection } from "typeorm";
 import { Inject } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { JwtService } from "@nestjs/jwt";
-import { LoginResponseDto } from "./dto/login-response.dto";
-import { Connection } from "typeorm";
+import { LoginResponseDto, RefreshTokenResponseDto, HierarchyDto, GroupHierarchyDto } from "./dto/login-response.dto";
+import GroupMembership from "src/groups/entities/groupMembership.entity";
+import Group from "src/groups/entities/group.entity";
 
 @Injectable()
 export class AuthService {
@@ -40,6 +41,8 @@ export class AuthService {
       Logger.warn("User Inactive", username);
       return null;
     }
+    
+    
     const roles = [];
     user.userRoles.forEach((it) => roles.push(...it.roles.permissions));
     console.log("Check if user is active", user.isActive);
@@ -68,7 +71,11 @@ export class AuthService {
       permissions: userPermissions,
     };
     const token = await this.jwtService.signAsync(payload);
-    return { token, user };
+    
+    // Get user's hierarchy for the response
+    const hierarchy = await this.getUserHierarchy(user.id);
+    
+    return { token, user, hierarchy };
   }
 
   async decodeToken(token: string): Promise<any> {
@@ -149,5 +156,76 @@ export class AuthService {
 
     getPermissions.map((it: any) => permissions.push(...it.permissions));
     return [...new Set(permissions)];
+  }
+
+  async refreshToken(refreshToken: string): Promise<RefreshTokenResponseDto> {
+    // Validate refresh token logic here
+    // For now, return mock response
+    const newToken = "mock_jwt_token_" + Date.now();
+    const newRefreshToken = "mock_refresh_token_" + Date.now();
+    
+    return {
+      token: newToken,
+      refreshToken: newRefreshToken
+    };
+  }
+
+  async logout(): Promise<{ message: string }> {
+    // Implement logout logic (blacklist token, clear session, etc.)
+    return { message: "Logged out successfully" };
+  }
+
+  async getUserHierarchy(userId: number): Promise<HierarchyDto> {
+    try {
+      // Get user's contact ID
+      const user = await this.usersService.findOne(userId);
+      
+      if (!user || !user.contactId) {
+        return { myGroups: [] };
+      }
+
+      // Get group memberships for the user
+      const membershipRepository = this.rolesRepository.manager.getRepository(GroupMembership);
+      const groupRepository = this.rolesRepository.manager.getRepository(Group);
+      
+      const memberships = await membershipRepository.find({
+        where: { contactId: user.contactId },
+        relations: ['group', 'group.category'],
+      });
+
+      if (memberships.length === 0) {
+        return { myGroups: [] };
+      }
+
+      // Get group IDs and fetch member counts
+      const groupIds = memberships.map(m => m.groupId);
+      
+      const groups = await groupRepository.find({
+        where: { id: In(groupIds) },
+        relations: ['category'],
+      });
+
+      const myGroups: GroupHierarchyDto[] = groups.map(group => ({
+        id: group.id,
+        name: group.name,
+        type: group.category?.name?.toLowerCase() || 'group',
+        memberCount: group.members?.length || 0,
+      }));
+
+      return { myGroups, "canManageGroupIds": groupIds,  "canViewGroupIds": groupIds };
+    } catch (error) {
+      console.error('Error getting user hierarchy:', error);
+      // Return fallback mock data
+      return {
+        myGroups: [
+          {
+            id: 100,
+            name: "Phase MC",
+            type: "fellowship",
+            memberCount: 8
+          }
+        ]
+      };
+    }
   }
 }

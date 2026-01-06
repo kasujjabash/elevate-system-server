@@ -96,9 +96,13 @@ export class UsersService {
   }
 
   toListModel(user: User): UserListDto {
-    const fullName = getPersonFullName(user.contact.person);
+    if (!user) {
+      throw new Error('User is null or undefined');
+    }
+    
+    const fullName = user.contact?.person ? getPersonFullName(user.contact.person) : 'Unknown User';
     return {
-      avatar: user.contact.person.avatar,
+      avatar: user.contact?.person?.avatar || null,
       contact: {
         id: user.contactId,
         name: fullName,
@@ -207,9 +211,13 @@ export class UsersService {
 
   async findOne(id: number): Promise<UserListDto> {
     const data = await this.repository.findOne({
-      relations: ["contact", "contact.person", "userRoles", "userRoles.roles"],
+      relations: ["contact", "contact.person", "contact.tenant", "userRoles", "userRoles.roles"],
       where: { id: id },
     });
+
+    if (!data) {
+      throw new Error(`User with ID ${id} not found`);
+    }
 
     return this.toListModel(data);
   }
@@ -289,7 +297,14 @@ export class UsersService {
   async findByName(username: string): Promise<User | undefined> {
     return this.repository.findOne({
       where: { username: ILike(username) },
-      relations: ["contact", "contact.person", "userRoles", "userRoles.roles"],
+      relations: ["contact", "contact.person", "contact.tenant", "userRoles", "userRoles.roles"],
+    });
+  }
+
+  async findById(id: number): Promise<User | undefined> {
+    return this.repository.findOne({
+      where: { id: id },
+      relations: ["contact", "contact.person", "contact.tenant", "userRoles", "userRoles.roles"],
     });
   }
 
