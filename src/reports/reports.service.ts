@@ -4,34 +4,34 @@ import {
   NotFoundException,
   HttpStatus,
   BadRequestException,
-} from "@nestjs/common";
-import { Connection, Repository, In, Not } from "typeorm";
-import { UserDto } from "src/auth/dto/user.dto";
-import { Report } from "./entities/report.entity";
-import { ReportSubmission } from "./entities/report.submission.entity";
-import { ReportSubmissionDto } from "./dto/report-submission.dto";
-import { ReportDto } from "./dto/report.dto";
-import { User } from "src/users/entities/user.entity";
-import { IEmail, sendEmail } from "src/utils/mailer";
+} from '@nestjs/common';
+import { Connection, Repository, In, Not } from 'typeorm';
+import { UserDto } from 'src/auth/dto/user.dto';
+import { Report } from './entities/report.entity';
+import { ReportSubmission } from './entities/report.submission.entity';
+import { ReportSubmissionDto } from './dto/report-submission.dto';
+import { ReportDto } from './dto/report.dto';
+import { User } from 'src/users/entities/user.entity';
+import { IEmail, sendEmail } from 'src/utils/mailer';
 import {
   getUserDisplayName,
   getHumanReadableDate,
-} from "src/utils/stringHelpers";
+} from 'src/utils/stringHelpers';
 
 import {
   ReportSubmissionsApiResponse,
   ApiResponse,
   ReportSubmissionDataDto,
-} from "./types/report-api.types";
-import { TreeRepository } from "typeorm";
-import Group from "src/groups/entities/group.entity";
-import { UsersService } from "src/users/users.service";
-import { GroupsService } from "src/groups/services/groups.service";
-import { ReportField } from "./entities/report.field.entity";
-import { ReportSubmissionData } from "./entities/report.submission.data.entity";
-import { GroupCategoryNames } from "src/groups/enums/groups";
-import GroupMembership from "src/groups/entities/groupMembership.entity";
-import { ReportStatus } from "./enums/report.enum";
+} from './types/report-api.types';
+import { TreeRepository } from 'typeorm';
+import Group from 'src/groups/entities/group.entity';
+import { UsersService } from 'src/users/users.service';
+import { GroupsService } from 'src/groups/services/groups.service';
+import { ReportField } from './entities/report.field.entity';
+import { ReportSubmissionData } from './entities/report.submission.data.entity';
+import { GroupCategoryNames } from 'src/groups/enums/groups';
+import GroupMembership from 'src/groups/entities/groupMembership.entity';
+import { ReportStatus } from './enums/report.enum';
 
 @Injectable()
 export class ReportsService {
@@ -44,7 +44,7 @@ export class ReportsService {
   private readonly treeRepository: TreeRepository<Group>;
 
   constructor(
-    @Inject("CONNECTION") connection: Connection,
+    @Inject('CONNECTION') connection: Connection,
     private readonly usersService: UsersService,
     private readonly groupsService: GroupsService,
   ) {
@@ -93,7 +93,7 @@ export class ReportsService {
     // Retrieve the report by its ID
     const report = await this.reportRepository.findOne({
       where: { id: reportId, status: ReportStatus.ACTIVE },
-      relations: ["targetGroupCategory"],
+      relations: ['targetGroupCategory'],
     });
     if (!report) {
       throw new NotFoundException(`Report with ID ${reportId} not found`);
@@ -109,43 +109,52 @@ export class ReportsService {
 
     let targetGroup: Group | null = null;
     let selectedGroupId: number | null = null;
-    
+
     // Check if report has a designated group field
     if (report.groupFieldName && submissionDto.data[report.groupFieldName]) {
       selectedGroupId = parseInt(submissionDto.data[report.groupFieldName]);
-      
+
       // Validate user can submit for this group
       const canSubmitForGroup = await this.validateUserGroupPermission(
-        submittingUser.contactId, 
-        selectedGroupId, 
-        report.targetGroupCategory?.id
+        submittingUser.contactId,
+        selectedGroupId,
+        report.targetGroupCategory?.id,
       );
-      
+
       if (!canSubmitForGroup) {
         throw new BadRequestException(
-          `You don't have permission to submit reports for group ID ${selectedGroupId}`
+          `You don't have permission to submit reports for group ID ${selectedGroupId}`,
         );
       }
-      
-      targetGroup = await this.treeRepository.findOne({ where: { id: selectedGroupId } });
-      
+
+      targetGroup = await this.treeRepository.findOne({
+        where: { id: selectedGroupId },
+      });
+
       if (!targetGroup) {
-        throw new BadRequestException(`Group with ID ${selectedGroupId} not found`);
+        throw new BadRequestException(
+          `Group with ID ${selectedGroupId} not found`,
+        );
       }
-    } 
+    }
     // Fallback to current automatic detection
     else if (report.targetGroupCategory) {
-      const userGroups = await this.getUserGroupsInCategory(submittingUser.contactId, report.targetGroupCategory.id);
-      
+      const userGroups = await this.getUserGroupsInCategory(
+        submittingUser.contactId,
+        report.targetGroupCategory.id,
+      );
+
       if (userGroups.length === 0) {
-        throw new BadRequestException(`You don't belong to any groups in the required category`);
+        throw new BadRequestException(
+          "You don't belong to any groups in the required category",
+        );
       }
       if (userGroups.length > 1) {
         throw new BadRequestException(
-          `You belong to multiple groups in this category. Please contact an admin to configure a group selection field for this report.`
+          'You belong to multiple groups in this category. Please contact an admin to configure a group selection field for this report.',
         );
       }
-      
+
       targetGroup = userGroups[0];
     }
 
@@ -194,7 +203,7 @@ export class ReportsService {
         submittedBy: savedSubmission.user.username,
       },
       status: HttpStatus.OK,
-      message: "Report submitted successfully.",
+      message: 'Report submitted successfully.',
     };
 
     // Send confirmation email (assuming sendMail is an asynchronous operation)
@@ -202,7 +211,7 @@ export class ReportsService {
     const fullName = getUserDisplayName(savedSubmission.user);
     await this.sendMail(
       savedSubmission.user.username,
-      "Project Zoe - Report Submitted",
+      'Project Zoe - Report Submitted',
       { submissionDate: formattedDate, fullName },
     );
 
@@ -211,19 +220,29 @@ export class ReportsService {
 
   async getAllReports(): Promise<{ reports: any[] }> {
     console.log('🔧 ReportsService.getAllReports() - Starting execution');
-    
+
     try {
       console.log('🔧 ReportsService.getAllReports() - Querying database...');
       const reports = await this.reportRepository.find({
         where: { status: ReportStatus.ACTIVE },
-        relations: ["fields", "targetGroupCategory"],
+        relations: ['fields', 'targetGroupCategory'],
       });
 
-      console.log('🔧 ReportsService.getAllReports() - Found reports:', reports.length);
-      console.log('🔧 ReportsService.getAllReports() - Raw reports:', JSON.stringify(reports.map(r => ({ id: r.id, name: r.name })), null, 2));
+      console.log(
+        '🔧 ReportsService.getAllReports() - Found reports:',
+        reports.length,
+      );
+      console.log(
+        '🔧 ReportsService.getAllReports() - Raw reports:',
+        JSON.stringify(
+          reports.map((r) => ({ id: r.id, name: r.name })),
+          null,
+          2,
+        ),
+      );
 
       console.log('🔧 ReportsService.getAllReports() - Formatting reports...');
-      const formattedReports = reports.map(report => {
+      const formattedReports = reports.map((report) => {
         console.log(`🔧 Formatting report ${report.id}: ${report.name}`);
         return {
           id: report.id,
@@ -232,16 +251,21 @@ export class ReportsService {
           submissionFrequency: report.submissionFrequency,
           active: report.active,
           status: report.status,
-          targetGroupCategory: report.targetGroupCategory ? {
-            id: report.targetGroupCategory.id,
-            name: report.targetGroupCategory.name
-          } : null,
-          fieldCount: report.fields ? report.fields.length : 0
+          targetGroupCategory: report.targetGroupCategory
+            ? {
+                id: report.targetGroupCategory.id,
+                name: report.targetGroupCategory.name,
+              }
+            : null,
+          fieldCount: report.fields ? report.fields.length : 0,
         };
       });
 
       const result = { reports: formattedReports };
-      console.log('🔧 ReportsService.getAllReports() - Returning result:', JSON.stringify(result, null, 2));
+      console.log(
+        '🔧 ReportsService.getAllReports() - Returning result:',
+        JSON.stringify(result, null, 2),
+      );
       return result;
     } catch (error) {
       console.error('🔧 ReportsService.getAllReports() - Error:', error);
@@ -252,7 +276,7 @@ export class ReportsService {
   async getReport(reportId: number): Promise<Report> {
     const report = await this.reportRepository.findOne({
       where: { id: reportId, status: ReportStatus.ACTIVE },
-      relations: ["fields", "targetGroupCategory"],
+      relations: ['fields', 'targetGroupCategory'],
     });
     if (!report) {
       throw new NotFoundException(`Report with ID ${reportId} not found`);
@@ -280,7 +304,7 @@ export class ReportsService {
   ): Promise<any> {
     const report = await this.reportRepository.findOne({
       where: { id: reportId },
-      relations: ["fields", "submissions"],
+      relations: ['fields', 'submissions'],
     });
 
     if (!report) {
@@ -289,7 +313,7 @@ export class ReportsService {
 
     // For now, all the reports are aggregate reports.
     switch (report.functionName) {
-      case "getSmallGroupSummaryAttendance":
+      case 'getSmallGroupSummaryAttendance':
         return this.getSmallGroupSummaryAttendance(
           report,
           startDate,
@@ -297,7 +321,7 @@ export class ReportsService {
           smallGroupIdList,
           parentGroupIdList,
         );
-      case "getSmallGroupReportSubmissionStatus":
+      case 'getSmallGroupReportSubmissionStatus':
         return this.getSmallGroupReportSubmissionStatus(
           report,
           startDate,
@@ -317,13 +341,13 @@ export class ReportsService {
     smallGroupIds?: number[],
   ) {
     let query = this.reportSubmissionRepository
-      .createQueryBuilder("submission")
-      .leftJoinAndSelect("submission.report", "report")
-      .leftJoinAndSelect("submission.user", "user")
-      .leftJoinAndSelect("submission.submissionData", "submissionData")
-      .leftJoinAndSelect("submissionData.reportField", "reportField")
-      .where("report.id = :reportId", { reportId })
-      .andWhere("submission.submittedAt BETWEEN :startDate AND :endDate", {
+      .createQueryBuilder('submission')
+      .leftJoinAndSelect('submission.report', 'report')
+      .leftJoinAndSelect('submission.user', 'user')
+      .leftJoinAndSelect('submission.submissionData', 'submissionData')
+      .leftJoinAndSelect('submissionData.reportField', 'reportField')
+      .where('report.id = :reportId', { reportId })
+      .andWhere('submission.submittedAt BETWEEN :startDate AND :endDate', {
         startDate,
         endDate,
       });
@@ -354,7 +378,7 @@ export class ReportsService {
     }
     let smallGroupIds: number[] = [];
     if (smallGroupIdList) {
-      smallGroupIds = smallGroupIdList.split(",").map(Number); // Convert CSV to an array of numbers
+      smallGroupIds = smallGroupIdList.split(',').map(Number); // Convert CSV to an array of numbers
     }
 
     if (parentGroupIdList && parentGroupIdList.length) {
@@ -362,13 +386,13 @@ export class ReportsService {
         ? parentGroupIdList
         : [parentGroupIdList];
       const smallGroupEntities = await this.treeRepository.find({
-        select: ["id"],
+        select: ['id'],
         where: { parentId: In(parentGroupIds) },
       });
       smallGroupIds = smallGroupEntities.map((smallGroup) => smallGroup.id);
     }
 
-    let query = await this.buildSubmissionQuery(
+    const query = await this.buildSubmissionQuery(
       report.id,
       startDate,
       endDate,
@@ -387,18 +411,18 @@ export class ReportsService {
         };
 
         const smallGroupFieldData = submission.submissionData.find(
-          (sd) => sd.reportField.name === "smallGroupId",
+          (sd) => sd.reportField.name === 'smallGroupId',
         );
 
         // Ensure we handle the case where smallGroupFieldData might be undefined
         if (smallGroupFieldData) {
           const smallGroup = await this.treeRepository.findOne({
             where: { id: parseInt(smallGroupFieldData.fieldValue) },
-            relations: ["parent"],
+            relations: ['parent'],
           });
 
           // Add the small group parent
-          transformedData["parentGroupName"] = smallGroup?.parent?.name || "";
+          transformedData['parentGroupName'] = smallGroup?.parent?.name || '';
         }
 
         // Aggregate submission data into a single object
@@ -417,8 +441,8 @@ export class ReportsService {
       data: submissionResponses,
       columns: [
         ...reportColumns,
-        { label: "Submitted At", name: "submittedAt" },
-        { label: "Submitted By", name: "submittedBy" },
+        { label: 'Submitted At', name: 'submittedAt' },
+        { label: 'Submitted By', name: 'submittedBy' },
       ],
       footer: report.footer,
     };
@@ -441,7 +465,7 @@ export class ReportsService {
     const allSmallGroups = await this.getAllSmallGroups();
     const smallGroupIds = allSmallGroups.map((group) => group.id);
     const smallGroupReportId = 1; // TODO: Retrieve this from the DB
-    let query = await this.buildSubmissionQuery(
+    const query = await this.buildSubmissionQuery(
       smallGroupReportId,
       startDate,
       endDate,
@@ -453,22 +477,22 @@ export class ReportsService {
       const submission = submissions.find((sub) =>
         sub.submissionData.some(
           (sd) =>
-            sd.reportField.name === "smallGroupId" &&
+            sd.reportField.name === 'smallGroupId' &&
             sd.fieldValue === group.id.toString(),
         ),
       );
 
       const isSubmitted = !!submission;
       const smallGroupFieldData = submission?.submissionData.find(
-        (sd) => sd.reportField.name === "smallGroupId",
+        (sd) => sd.reportField.name === 'smallGroupId',
       );
 
       return {
         smallGroupName: group.name,
         weekNumber,
-        reportSubmissionStatus: isSubmitted ? "Submitted" : "Not Submitted",
-        submittedAt: isSubmitted ? submission.submittedAt.toISOString() : "-",
-        submittedBy: isSubmitted ? getUserDisplayName(submission.user) : "-",
+        reportSubmissionStatus: isSubmitted ? 'Submitted' : 'Not Submitted',
+        submittedAt: isSubmitted ? submission.submittedAt.toISOString() : '-',
+        submittedBy: isSubmitted ? getUserDisplayName(submission.user) : '-',
         missingReports: isSubmitted ? 0 : 1,
       };
     });
@@ -480,8 +504,8 @@ export class ReportsService {
       data: submissionResponses,
       columns: [
         ...reportColumns,
-        { label: "Submitted At", name: "submittedAt" },
-        { label: "Submitted By", name: "submittedBy" },
+        { label: 'Submitted At', name: 'submittedAt' },
+        { label: 'Submitted By', name: 'submittedBy' },
       ],
       footer: report.footer,
     };
@@ -491,7 +515,7 @@ export class ReportsService {
     // Fetch the submission with its related user and submissionData (including the reportField for each submissionData)
     const submission = await this.reportSubmissionRepository.findOne({
       where: { id: submissionId, report: { id: reportId } },
-      relations: ["user", "submissionData", "submissionData.reportField"],
+      relations: ['user', 'submissionData', 'submissionData.reportField'],
     });
 
     if (!submission) {
@@ -539,7 +563,7 @@ export class ReportsService {
     // Note: You may need to reload the report from the database to reflect the updates
     const updatedReport = await this.reportRepository.findOne({
       where: { id },
-      relations: ["fields"],
+      relations: ['fields'],
     });
 
     if (!updatedReport) {
@@ -619,7 +643,7 @@ export class ReportsService {
 
     const report = await this.reportRepository.findOne({
       where: { id: reportId },
-      relations: ["fields", "submissions"],
+      relations: ['fields', 'submissions'],
     });
 
     if (!report) {
@@ -640,7 +664,7 @@ export class ReportsService {
     const reportsByZone: { [key: string]: Record<string, any>[] } = {};
 
     reportData.data.forEach((report) => {
-      const zoneName = report.parentGroupName || "Other"; // Use 'Other' as the default zone name if not specified
+      const zoneName = report.parentGroupName || 'Other'; // Use 'Other' as the default zone name if not specified
       if (!reportsByZone[zoneName]) {
         reportsByZone[zoneName] = [];
       }
@@ -652,7 +676,7 @@ export class ReportsService {
       <table>
         <thead>
           <tr>
-            ${columns.map((column) => `<th>${column.label}</th>`).join("")}
+            ${columns.map((column) => `<th>${column.label}</th>`).join('')}
           </tr>
         </thead>
         <tbody>
@@ -666,7 +690,7 @@ export class ReportsService {
           <tr>
             ${columns
               .map((column) => `<td>${report[column.name]}</td>`)
-              .join("")}
+              .join('')}
           </tr>
         `;
       });
@@ -719,19 +743,19 @@ export class ReportsService {
       </html>
     `;
 
-    const usersWithRole = await this.usersService.findByRole("Report Champion");
+    const usersWithRole = await this.usersService.findByRole('Report Champion');
     const emailAddresses = usersWithRole.map((user) => user.username);
     if (!emailAddresses.length) {
-      return "Error | Weekly email not sent";
+      return 'Error | Weekly email not sent';
     }
     const mailerData = {
-      to: emailAddresses.join(", "),
-      subject: "Project Zoe | Weekly MC Reports Submitted",
+      to: emailAddresses.join(', '),
+      subject: 'Project Zoe | Weekly MC Reports Submitted',
       html: fullHTML,
     };
 
     sendEmail(mailerData);
-    return "Weekly email sent successfully";
+    return 'Weekly email sent successfully';
   }
 
   sendMail(to: string, subject: string, mailArgs: any) {
@@ -746,17 +770,26 @@ export class ReportsService {
     return sendEmail(mailerData);
   }
 
-  async getMySubmissions(user: any, options: { limit?: number; offset?: number; reportId?: number }): Promise<any> {
+  async getMySubmissions(
+    user: any,
+    options: { limit?: number; offset?: number; reportId?: number },
+  ): Promise<any> {
     const { limit = 20, offset = 0, reportId } = options;
     const where: any = { user: { id: user.id } };
-    
+
     if (reportId) {
       where.report = { id: reportId };
     }
 
     const submissions = await this.reportSubmissionRepository.find({
       where,
-      relations: ['report', 'submissionData', 'submissionData.reportField', 'group', 'user'],
+      relations: [
+        'report',
+        'submissionData',
+        'submissionData.reportField',
+        'group',
+        'user',
+      ],
       order: { submittedAt: 'DESC' },
       skip: offset,
       take: limit,
@@ -765,7 +798,7 @@ export class ReportsService {
     const total = await this.reportSubmissionRepository.count({ where });
 
     return {
-      submissions: submissions.map(submission => ({
+      submissions: submissions.map((submission) => ({
         id: submission.id,
         reportId: submission.report.id,
         reportName: submission.report.name,
@@ -774,7 +807,7 @@ export class ReportsService {
         submittedAt: submission.submittedAt,
         submittedBy: {
           id: submission.user.id,
-          name: getUserDisplayName(submission.user)
+          name: getUserDisplayName(submission.user),
         },
         status: ReportStatus.SUBMITTED,
         data: submission.submissionData.reduce((acc, curr) => {
@@ -787,17 +820,20 @@ export class ReportsService {
         total,
         limit,
         offset,
-        hasMore: total > offset + limit
-      }
+        hasMore: total > offset + limit,
+      },
     };
   }
 
-  async getTeamSubmissions(user: any, options: { reportId?: number }): Promise<any> {
+  async getTeamSubmissions(
+    user: any,
+    options: { reportId?: number },
+  ): Promise<any> {
     const { reportId } = options;
-    
+
     // Get user's accessible groups (implement based on your permission system)
     const userGroupIds = []; // TODO: Get from group permissions service
-    
+
     const where: any = {};
     if (reportId) {
       where.report = { id: reportId };
@@ -808,12 +844,17 @@ export class ReportsService {
 
     const submissions = await this.reportSubmissionRepository.find({
       where,
-      relations: ['report', 'user', 'submissionData', 'submissionData.reportField'],
+      relations: [
+        'report',
+        'user',
+        'submissionData',
+        'submissionData.reportField',
+      ],
       order: { submittedAt: 'DESC' },
     });
 
     return {
-      submissions: submissions.map(submission => ({
+      submissions: submissions.map((submission) => ({
         id: submission.id,
         reportId: submission.report.id,
         reportName: submission.report.name,
@@ -828,7 +869,12 @@ export class ReportsService {
   async getSubmissionDetails(submissionId: number, user: any): Promise<any> {
     const submission = await this.reportSubmissionRepository.findOne({
       where: { id: submissionId },
-      relations: ['report', 'user', 'submissionData', 'submissionData.reportField'],
+      relations: [
+        'report',
+        'user',
+        'submissionData',
+        'submissionData.reportField',
+      ],
     });
 
     if (!submission) {
@@ -855,30 +901,38 @@ export class ReportsService {
     };
   }
 
-  private async validateUserGroupPermission(contactId: number, groupId: number, categoryId?: number): Promise<boolean> {
+  private async validateUserGroupPermission(
+    contactId: number,
+    groupId: number,
+    categoryId?: number,
+  ): Promise<boolean> {
     const membership = await this.groupMembershipRepo.findOne({
-      where: { 
+      where: {
         contactId,
-        group: { id: groupId }
+        group: { id: groupId },
       },
-      relations: ['group', 'group.category']
+      relations: ['group', 'group.category'],
     });
-    
+
     if (!membership) return false;
-    if (categoryId && membership.group.category?.id !== categoryId) return false;
-    
+    if (categoryId && membership.group.category?.id !== categoryId)
+      return false;
+
     return true;
   }
 
-  private async getUserGroupsInCategory(contactId: number, categoryId: number): Promise<Group[]> {
+  private async getUserGroupsInCategory(
+    contactId: number,
+    categoryId: number,
+  ): Promise<Group[]> {
     const memberships = await this.groupMembershipRepo.find({
       where: {
         contactId,
-        group: { category: { id: categoryId } }
+        group: { category: { id: categoryId } },
       },
-      relations: ['group', 'group.category']
+      relations: ['group', 'group.category'],
     });
-    
-    return memberships.map(membership => membership.group);
+
+    return memberships.map((membership) => membership.group);
   }
 }

@@ -13,7 +13,7 @@ import { IS_PUBLIC_KEY } from '../auth/decorators/public.decorator';
 
 /**
  * TenantContextInterceptor - Runs after JWT auth guard to enrich request with user context
- * 
+ *
  * This interceptor:
  * - Skips processing for routes marked with @Public() decorator
  * - For authenticated requests, fetches full user data (including tenant relation)
@@ -29,9 +29,12 @@ export class TenantContextInterceptor implements NestInterceptor {
     private readonly usersService: UsersService,
   ) {}
 
-  async intercept(context: ExecutionContext, next: CallHandler): Promise<Observable<any>> {
+  async intercept(
+    context: ExecutionContext,
+    next: CallHandler,
+  ): Promise<Observable<any>> {
     const request = context.switchToHttp().getRequest();
-    
+
     // Check if route is marked as public
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
@@ -53,7 +56,7 @@ export class TenantContextInterceptor implements NestInterceptor {
 
         // Add enriched data to request
         request.fullUser = fullUser;
-        
+
         // Get tenant information from user's contact
         if (fullUser.contact?.tenant) {
           request.tenant = fullUser.contact.tenant;

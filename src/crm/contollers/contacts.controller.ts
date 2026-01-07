@@ -43,7 +43,7 @@ export class ContactsController {
   @Patch(':id')
   async update(
     @Param('id') id: number,
-    @Body() data: Partial<Contact>
+    @Body() data: Partial<Contact>,
   ): Promise<Contact> {
     return await this.service.updatePartial(id, data);
   }

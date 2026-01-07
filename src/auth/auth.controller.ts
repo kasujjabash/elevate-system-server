@@ -15,7 +15,10 @@ import { LocalAuthGuard } from './guards/local-auth.guard';
 import { AuthService } from './auth.service';
 import { ApiBody, ApiTags } from '@nestjs/swagger';
 import LoginDto from './dto/login.dto';
-import { LoginResponseDto, RefreshTokenResponseDto } from './dto/login-response.dto';
+import {
+  LoginResponseDto,
+  RefreshTokenResponseDto,
+} from './dto/login-response.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import {
   ValidateEmailDto,
@@ -52,7 +55,9 @@ export class AuthController {
   }
 
   @Post('refresh')
-  async refreshToken(@Body() refreshTokenDto: RefreshTokenDto): Promise<RefreshTokenResponseDto> {
+  async refreshToken(
+    @Body() refreshTokenDto: RefreshTokenDto,
+  ): Promise<RefreshTokenResponseDto> {
     return this.authService.refreshToken(refreshTokenDto.refreshToken);
   }
 

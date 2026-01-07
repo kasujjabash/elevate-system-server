@@ -1,4 +1,4 @@
-import { Injectable, Logger, Inject } from "@nestjs/common";
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import {
   ILike,
   In,
@@ -7,24 +7,24 @@ import {
   Repository,
   Connection,
   TreeRepository,
-} from "typeorm";
-import Group from "../entities/group.entity";
-import GroupEvent from "../../events/entities/event.entity";
-import SearchDto from "../../shared/dto/search.dto";
-import { GroupSearchDto } from "../dto/group-search.dto";
-import GroupListDto from "../dto/group-list.dto";
-import CreateGroupDto from "../dto/create-group.dto";
-import UpdateGroupDto from "../dto/update-group.dto";
-import { GroupDetailDto } from "../dto/group-detail.dto";
-import GooglePlaceDto from "../../vendor/google-place.dto";
-import { GoogleService } from "../../vendor/google.service";
-import ClientFriendlyException from "../../shared/exceptions/client-friendly.exception";
-import GroupMembership from "../entities/groupMembership.entity";
-import { GroupRole } from "../enums/groupRole";
-import { hasValue } from "../../utils/validation";
-import { endOfMonth, startOfMonth } from "date-fns";
-import { GroupPermissionsService } from "./group-permissions.service";
-import GroupCategory from "../entities/groupCategory.entity";
+} from 'typeorm';
+import Group from '../entities/group.entity';
+import GroupEvent from '../../events/entities/event.entity';
+import SearchDto from '../../shared/dto/search.dto';
+import { GroupSearchDto } from '../dto/group-search.dto';
+import GroupListDto from '../dto/group-list.dto';
+import CreateGroupDto from '../dto/create-group.dto';
+import UpdateGroupDto from '../dto/update-group.dto';
+import { GroupDetailDto } from '../dto/group-detail.dto';
+import GooglePlaceDto from '../../vendor/google-place.dto';
+import { GoogleService } from '../../vendor/google.service';
+import ClientFriendlyException from '../../shared/exceptions/client-friendly.exception';
+import GroupMembership from '../entities/groupMembership.entity';
+import { GroupRole } from '../enums/groupRole';
+import { hasValue } from '../../utils/validation';
+import { endOfMonth, startOfMonth } from 'date-fns';
+import { GroupPermissionsService } from './group-permissions.service';
+import GroupCategory from '../entities/groupCategory.entity';
 
 @Injectable()
 export class GroupsService {
@@ -35,7 +35,7 @@ export class GroupsService {
   private readonly groupCategoryRepository: Repository<GroupCategory>;
 
   constructor(
-    @Inject("CONNECTION") connection: Connection,
+    @Inject('CONNECTION') connection: Connection,
     private groupsPermissionsService: GroupPermissionsService,
     private googleService: GoogleService,
   ) {
@@ -58,7 +58,7 @@ export class GroupsService {
       details,
       parentId,
       privacy,
-      category: category ? { name: category.name, id: category.id }: null,
+      category: category ? { name: category.name, id: category.id } : null,
       parent: parent ? { name: parent.name, id: parent.id } : null,
     };
   }
@@ -76,7 +76,7 @@ export class GroupsService {
     const { category, ...rest } = group;
     return {
       ...rest,
-      category: category ? { name: category.name, id: category.id }: null,
+      category: category ? { name: category.name, id: category.id } : null,
     } as any;
   }
 
@@ -103,7 +103,7 @@ export class GroupsService {
         const groupCategory = await this.groupCategoryRepository.findOne({
           where: { name: categoryName },
         });
-        if (groupCategory){
+        if (groupCategory) {
           categoryIds.push(groupCategory.id);
         }
       }
@@ -115,7 +115,7 @@ export class GroupsService {
       findOps.name = ILike(`%${req.query}%`);
     }
     const data = await this.treeRepository.find({
-      select: ["id", "name", "category", "parent"],
+      select: ['id', 'name', 'category', 'parent'],
       where: findOps,
       skip: req.skip,
       take: req.limit,
@@ -165,7 +165,7 @@ export class GroupsService {
   async findOne(id: number, full = true, user: any = null) {
     const data = await this.treeRepository.findOne({
       where: { id },
-      relations: ["category", "parent"],
+      relations: ['category', 'parent'],
     });
     if (!data) {
       return null;
@@ -190,7 +190,7 @@ export class GroupsService {
         totalMem = 0;
       await (
         await this.eventRepository.find({
-          relations: ["attendance", "group", "group.members"],
+          relations: ['attendance', 'group', 'group.members'],
           where: filter,
         })
       ).forEach((it) => {
@@ -202,15 +202,15 @@ export class GroupsService {
 
       const membership = await this.membershipRepository.find({
         where: { role: GroupRole.Leader, groupId: id },
-        select: ["contactId"],
+        select: ['contactId'],
       });
       groupData.leaders = membership.map((it) => it.contactId);
       groupData.canEditGroup =
         await this.groupsPermissionsService.hasPermissionForGroup(user, id);
       groupData.reports = await this.eventRepository.find({
-        relations: ["category", "attendance"],
+        relations: ['category', 'attendance'],
         where: { groupId: In(groupData.children) },
-        select: ["id", "name", "startDate"],
+        select: ['id', 'name', 'startDate'],
       });
 
       return groupData;
@@ -228,7 +228,7 @@ export class GroupsService {
 
     const currGroup = await this.repository
       .createQueryBuilder()
-      .where("id = :id", { id: dto.id })
+      .where('id = :id', { id: dto.id })
       .getOne();
 
     if (!currGroup)
@@ -275,7 +275,7 @@ export class GroupsService {
         category: category,
         address: place,
       })
-      .where("id = :id", { id: dto.id })
+      .where('id = :id', { id: dto.id })
       .execute();
     if (result.affected)
       Logger.log(
@@ -300,16 +300,16 @@ export class GroupsService {
 
   async getGroupsByCategory(categoryName: string): Promise<Group[]> {
     return this.repository
-      .createQueryBuilder("group")
-      .leftJoinAndSelect("group.category", "category")
-      .where("category.name = :categoryName", { categoryName })
+      .createQueryBuilder('group')
+      .leftJoinAndSelect('group.category', 'category')
+      .where('category.name = :categoryName', { categoryName })
       .getMany();
   }
 
   async getMyGroups(user: any): Promise<GroupListDto[]> {
     // Get groups that the user has access to based on their role/permissions
     const groupIds = await this.groupsPermissionsService.getUserGroupIds(user);
-    
+
     if (groupIds.length === 0) {
       return [];
     }
@@ -319,23 +319,29 @@ export class GroupsService {
       relations: ['category', 'parent'],
     });
 
-    return groups.map(group => this.toListView(group));
+    return groups.map((group) => this.toListView(group));
   }
 
   async getCategories(): Promise<any[]> {
     const categories = await this.groupCategoryRepository.find({
       select: ['id', 'name'],
     });
-    
-    return categories.map(cat => ({
+
+    return categories.map((cat) => ({
       id: cat.id,
       name: cat.name,
     }));
   }
 
-  async getGroupMembers(groupId: number, user: any, limit = 50, offset = 0): Promise<any> {
+  async getGroupMembers(
+    groupId: number,
+    user: any,
+    limit = 50,
+    offset = 0,
+  ): Promise<any> {
     // Check if user has permission to view this group
-    const hasPermission = await this.groupsPermissionsService.hasPermissionForGroup(user, groupId);
+    const hasPermission =
+      await this.groupsPermissionsService.hasPermissionForGroup(user, groupId);
     if (!hasPermission) {
       throw new ClientFriendlyException('Access denied to this group');
     }
@@ -347,9 +353,12 @@ export class GroupsService {
       take: limit,
     });
 
-    const members = memberships.map(membership => ({
+    const members = memberships.map((membership) => ({
       id: membership.contact.id,
-      fullName: membership.contact?.person?.firstName + ' ' + (membership.contact?.person?.lastName || ''),
+      fullName:
+        membership.contact?.person?.firstName +
+        ' ' +
+        (membership.contact?.person?.lastName || ''),
       role: membership.role,
       joinedAt: new Date(), // GroupMembership doesn't have createdAt
     }));

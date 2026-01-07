@@ -17,7 +17,12 @@ export class SearchService {
     this.groupRepository = connection.getRepository(Group);
   }
 
-  async search(query: string, type: string, limit: number, user: any): Promise<any> {
+  async search(
+    query: string,
+    type: string,
+    limit: number,
+    user: any,
+  ): Promise<any> {
     const results = {
       contacts: [],
       groups: [],
@@ -47,11 +52,16 @@ export class SearchService {
     return results;
   }
 
-  private async searchContacts(searchQuery: string, limit: number, user: any): Promise<any[]> {
+  private async searchContacts(
+    searchQuery: string,
+    limit: number,
+    user: any,
+  ): Promise<any[]> {
     try {
       // Get user's accessible group IDs for contact filtering
-      const userGroupIds = await this.groupPermissionsService.getUserGroupIds(user);
-      
+      const userGroupIds =
+        await this.groupPermissionsService.getUserGroupIds(user);
+
       const queryBuilder = this.contactRepository
         .createQueryBuilder('contact')
         .leftJoinAndSelect('contact.person', 'person')
@@ -62,18 +72,21 @@ export class SearchService {
         .orWhere('emails.value ILIKE :query', { query: searchQuery });
 
       if (userGroupIds.length > 0) {
-        queryBuilder.leftJoin('contact.groupMemberships', 'membership')
-        .andWhere('membership.groupId IN (:...groupIds)', { groupIds: userGroupIds })
+        queryBuilder
+          .leftJoin('contact.groupMemberships', 'membership')
+          .andWhere('membership.groupId IN (:...groupIds)', {
+            groupIds: userGroupIds,
+          });
       }
 
-      const contacts = await queryBuilder
-        .take(limit)
-        .getMany();
+      const contacts = await queryBuilder.take(limit).getMany();
 
-      return contacts.map(contact => ({
+      return contacts.map((contact) => ({
         id: contact.id,
         type: 'contact',
-        fullName: `${contact.person?.firstName || ''} ${contact.person?.lastName || ''}`.trim(),
+        fullName: `${contact.person?.firstName || ''} ${
+          contact.person?.lastName || ''
+        }`.trim(),
         email: contact.emails?.[0]?.value || null,
         phone: contact.phones?.[0]?.value || null,
         category: contact.category,
@@ -84,11 +97,16 @@ export class SearchService {
     }
   }
 
-  private async searchGroups(searchQuery: string, limit: number, user: any): Promise<any[]> {
+  private async searchGroups(
+    searchQuery: string,
+    limit: number,
+    user: any,
+  ): Promise<any[]> {
     try {
       // Get user's accessible group IDs
-      const userGroupIds = await this.groupPermissionsService.getUserGroupIds(user);
-      
+      const userGroupIds =
+        await this.groupPermissionsService.getUserGroupIds(user);
+
       if (userGroupIds.length === 0) {
         return [];
       }
@@ -102,7 +120,7 @@ export class SearchService {
         take: limit,
       });
 
-      return groups.map(group => ({
+      return groups.map((group) => ({
         id: group.id,
         type: 'group',
         name: group.name,

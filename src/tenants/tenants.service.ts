@@ -1,20 +1,20 @@
-import { Injectable, Logger } from "@nestjs/common";
-import { InjectConnection } from "@nestjs/typeorm";
-import { DbService } from "src/shared/db.service";
-import { Tenant } from "./entities/tenant.entity";
-import { TenantDto } from "./dto/tenant.dto";
-import { SeedService } from "src/seed/seed.service";
-import { lowerCaseRemoveSpaces } from "src/utils/stringHelpers";
-import { Connection } from "typeorm";
-import { JwtHelperService } from "src/auth/jwt-helpers.service";
-import { ContactsService } from "src/crm/contacts.service";
-import { GoogleService } from "src/vendor/google.service";
-import { PrismaService } from "src/shared/prisma.service";
-import { GroupFinderService } from "src/crm/group-finder/group-finder.service";
-import { AddressesService } from "src/crm/addresses.service";
-import { GroupCategoriesService } from "src/groups/services/group-categories.service";
-import { GroupPermissionsService } from "src/groups/services/group-permissions.service";
-import { GroupsMembershipService } from "src/groups/services/group-membership.service";
+import { Injectable, Logger } from '@nestjs/common';
+import { InjectConnection } from '@nestjs/typeorm';
+import { DbService } from 'src/shared/db.service';
+import { Tenant } from './entities/tenant.entity';
+import { TenantDto } from './dto/tenant.dto';
+import { SeedService } from 'src/seed/seed.service';
+import { lowerCaseRemoveSpaces } from 'src/utils/stringHelpers';
+import { Connection } from 'typeorm';
+import { JwtHelperService } from 'src/auth/jwt-helpers.service';
+import { ContactsService } from 'src/crm/contacts.service';
+import { GoogleService } from 'src/vendor/google.service';
+import { PrismaService } from 'src/shared/prisma.service';
+import { GroupFinderService } from 'src/crm/group-finder/group-finder.service';
+import { AddressesService } from 'src/crm/addresses.service';
+import { GroupCategoriesService } from 'src/groups/services/group-categories.service';
+import { GroupPermissionsService } from 'src/groups/services/group-permissions.service';
+import { GroupsMembershipService } from 'src/groups/services/group-membership.service';
 
 /**
  * TenantsService - Manages tenant creation for row-level multi-tenancy

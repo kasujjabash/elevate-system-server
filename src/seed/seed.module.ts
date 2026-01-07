@@ -19,7 +19,7 @@ import { eventEntities } from '../events/events.helpers';
     UsersModule,
     GroupsModule,
     EventsModule,
-    ReportsModule, 
+    ReportsModule,
     forwardRef(() => TenantsModule),
     TypeOrmModule.forFeature([
       ...usersEntities,

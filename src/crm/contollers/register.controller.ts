@@ -31,7 +31,7 @@ export class RegisterController {
     this.personRepository = connection.getRepository(Person);
     this.userRepository = connection.getRepository(User);
   }
-  
+
   @Public()
   @Post()
   async create(@Body() data: CreatePersonDto): Promise<ContactListDto | Error> {

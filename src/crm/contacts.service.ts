@@ -3,10 +3,10 @@ import {
   Injectable,
   Logger,
   Inject,
-} from "@nestjs/common";
+} from '@nestjs/common';
 // import { TenantContext } from "../shared/tenant/tenant-context"; // No longer needed
-import { Tenant } from "../tenants/entities/tenant.entity";
-import { intersection } from "lodash";
+import { Tenant } from '../tenants/entities/tenant.entity';
+import { intersection } from 'lodash';
 import {
   getRepository,
   ILike,
@@ -15,43 +15,43 @@ import {
   Repository,
   Connection,
   TreeRepository,
-} from "typeorm";
-import Contact from "./entities/contact.entity";
-import { CreatePersonDto } from "./dto/create-person.dto";
+} from 'typeorm';
+import Contact from './entities/contact.entity';
+import { CreatePersonDto } from './dto/create-person.dto';
 import {
   getCellGroup,
   getEmail,
   getLocation,
   getPersonFullName,
   getPhone,
-} from "./crm.helpers";
-import { ContactSearchDto } from "./dto/contact-search.dto";
-import Phone from "./entities/phone.entity";
-import Email from "./entities/email.entity";
-import Person from "./entities/person.entity";
-import Company from "./entities/company.entity";
-import { CreateCompanyDto } from "./dto/create-company.dto";
-import { hasNoValue, hasValue } from "src/utils/validation";
-import Address from "./entities/address.entity";
-import GroupMembership from "../groups/entities/groupMembership.entity";
-import { GroupRole } from "../groups/enums/groupRole";
-import ContactListDto from "./dto/contact-list.dto";
-import Group from "../groups/entities/group.entity";
-import { GoogleService } from "src/vendor/google.service";
-import GooglePlaceDto from "src/vendor/google-place.dto";
-import { getPreciseDistance } from "geolib";
-import GroupMembershipRequest from "src/groups/entities/groupMembershipRequest.entity";
-import { IEmail, sendEmail } from "src/utils/mailer";
+} from './crm.helpers';
+import { ContactSearchDto } from './dto/contact-search.dto';
+import Phone from './entities/phone.entity';
+import Email from './entities/email.entity';
+import Person from './entities/person.entity';
+import Company from './entities/company.entity';
+import { CreateCompanyDto } from './dto/create-company.dto';
+import { hasNoValue, hasValue } from 'src/utils/validation';
+import Address from './entities/address.entity';
+import GroupMembership from '../groups/entities/groupMembership.entity';
+import { GroupRole } from '../groups/enums/groupRole';
+import ContactListDto from './dto/contact-list.dto';
+import Group from '../groups/entities/group.entity';
+import { GoogleService } from 'src/vendor/google.service';
+import GooglePlaceDto from 'src/vendor/google-place.dto';
+import { getPreciseDistance } from 'geolib';
+import GroupMembershipRequest from 'src/groups/entities/groupMembershipRequest.entity';
+import { IEmail, sendEmail } from 'src/utils/mailer';
 import {
   GetClosestGroupDto,
   GetGroupResponseDto,
-} from "src/groups/dto/membershipRequest/new-request.dto";
-import { PrismaService } from "../shared/prisma.service";
-import { getContactModel } from "./utils/creationUtils";
-import { GroupFinderService } from "./group-finder/group-finder.service";
-import { AddressesService } from "./addresses.service";
-import GroupCategory from "src/groups/entities/groupCategory.entity";
-import { groupCategories } from "src/groups/groups.constants";
+} from 'src/groups/dto/membershipRequest/new-request.dto';
+import { PrismaService } from '../shared/prisma.service';
+import { getContactModel } from './utils/creationUtils';
+import { GroupFinderService } from './group-finder/group-finder.service';
+import { AddressesService } from './addresses.service';
+import GroupCategory from 'src/groups/entities/groupCategory.entity';
+import { groupCategories } from 'src/groups/groups.constants';
 
 @Injectable()
 export class ContactsService {
@@ -67,12 +67,11 @@ export class ContactsService {
   private readonly tenantRepository: Repository<Tenant>;
 
   constructor(
-    @Inject("CONNECTION") connection: Connection,
+    @Inject('CONNECTION') connection: Connection,
     private googleService: GoogleService,
     private prisma: PrismaService,
     private groupFinderService: GroupFinderService,
-    private addressesService: AddressesService,
-    // private tenantContext: TenantContext, // No longer needed
+    private addressesService: AddressesService, // private tenantContext: TenantContext, // No longer needed
   ) {
     this.repository = connection.getRepository(Contact);
     this.personRepository = connection.getRepository(Person);
@@ -96,10 +95,10 @@ export class ContactsService {
         ...(req.churchLocations || []),
       ];
       if (hasValue(groups)) {
-        Logger.log(`searching by groups: ${groups.join(",")}`);
+        Logger.log(`searching by groups: ${groups.join(',')}`);
         hasFilter = true;
         const resp = await this.membershipRepository.find({
-          select: ["contactId"],
+          select: ['contactId'],
           where: { groupId: In(groups) },
         });
         if (hasValue(idList)) {
@@ -115,7 +114,7 @@ export class ContactsService {
       if (hasValue(req.query)) {
         hasFilter = true;
         const resp = await this.personRepository.find({
-          select: ["contactId"],
+          select: ['contactId'],
           where: [
             {
               firstName: ILike(`%${req.query.trim()}%`),
@@ -141,10 +140,10 @@ export class ContactsService {
       if (hasValue(req.phone)) {
         hasFilter = true;
         const resp = await this.phoneRepository.find({
-          select: ["contactId"],
+          select: ['contactId'],
           where: { value: Like(`%${req.phone}%`) },
         });
-        console.log("resp", resp);
+        console.log('resp', resp);
         if (hasValue(idList)) {
           idList = intersection(
             idList,
@@ -158,10 +157,10 @@ export class ContactsService {
       if (hasValue(req.email)) {
         hasFilter = true;
         const resp = await this.emailRepository.find({
-          select: ["contactId"],
+          select: ['contactId'],
           where: { value: ILike(`%${req.email.trim().toLowerCase()}%`) },
         });
-        Logger.log(`searching by email: ${resp.join(",")}`);
+        Logger.log(`searching by email: ${resp.join(',')}`);
         if (hasValue(idList)) {
           idList = intersection(
             idList,
@@ -172,18 +171,18 @@ export class ContactsService {
         }
       }
 
-      console.log("IdList", idList);
+      console.log('IdList', idList);
       if (hasFilter && hasNoValue(idList)) {
         return [];
       }
       const data = await this.repository.find({
         relations: [
-          "person",
-          "emails",
-          "phones",
-          "groupMemberships",
-          "groupMemberships.group",
-          "groupMemberships.group.category",
+          'person',
+          'emails',
+          'phones',
+          'groupMemberships',
+          'groupMemberships.group',
+          'groupMemberships.group.category',
         ],
         skip: req.skip,
         take: req.limit,
@@ -234,16 +233,16 @@ export class ContactsService {
   async updatePartial(id: number, data: Partial<Contact>): Promise<Contact> {
     // Input validation
     this.validateUpdateData(data);
-    
-    const existingContact = await this.repository.findOne({ 
+
+    const existingContact = await this.repository.findOne({
       where: { id },
-      relations: ['person', 'emails', 'phones', 'addresses']
+      relations: ['person', 'emails', 'phones', 'addresses'],
     });
-    
+
     if (!existingContact) {
       throw new BadRequestException('Contact not found');
     }
-    
+
     // Handle nested person update
     if (data.person) {
       if (existingContact.person) {
@@ -275,13 +274,15 @@ export class ContactsService {
     if (Object.keys(contactData).length > 0) {
       Object.assign(existingContact, contactData);
     }
-    
+
     try {
       const savedContact = await this.repository.save(existingContact);
       return savedContact;
     } catch (error) {
       Logger.error(`Failed to save contact ID: ${id}`, error.stack);
-      throw new BadRequestException(`Failed to update contact: ${error.message}`);
+      throw new BadRequestException(
+        `Failed to update contact: ${error.message}`,
+      );
     }
   }
 
@@ -293,7 +294,7 @@ export class ContactsService {
     if (emailData.length > 0) {
       throw new BadRequestException({
         message:
-          "Email already exists. This email has already been registered.",
+          'Email already exists. This email has already been registered.',
       });
     }
 
@@ -310,8 +311,8 @@ export class ContactsService {
   async getGroupRequest(createPersonDto: CreatePersonDto): Promise<void> {
     try {
       const groupMembershipRequests: GroupMembershipRequest[] = [];
-      if (createPersonDto.joinCell === "Yes") {
-        Logger.log(`Attempt to add person to MC`);
+      if (createPersonDto.joinCell === 'Yes') {
+        Logger.log('Attempt to add person to MC');
         const groupRequest = new GroupMembershipRequest();
         const details = {
           placeId: createPersonDto.residence.placeId,
@@ -332,7 +333,7 @@ export class ContactsService {
         }
       }
     } catch (e) {
-      console.log("Failed to attach to group");
+      console.log('Failed to attach to group');
     }
   }
 
@@ -348,18 +349,18 @@ export class ContactsService {
       }
 
       const groupCategory = getRepository(GroupCategory)
-        .createQueryBuilder("groupCategory")
-        .where("groupCategory.name = :groupCategoryName", {
+        .createQueryBuilder('groupCategory')
+        .where('groupCategory.name = :groupCategoryName', {
           groupCategoryName: groupCategories.MC,
         })
         .getOne();
 
       const groupsAtLocation = await getRepository(Group)
-        .createQueryBuilder("group")
-        .where("group.parentId = :churchLocationId", {
+        .createQueryBuilder('group')
+        .where('group.parentId = :churchLocationId', {
           churchLocationId: parentGroupId,
         })
-        .andWhere("group.category = :groupCategory", {
+        .andWhere('group.category = :groupCategory', {
           groupCategory: groupCategory,
         })
         .getMany();
@@ -408,7 +409,7 @@ export class ContactsService {
       };
     } catch (e) {
       console.log(e);
-      Logger.error("Failed to create member request", e);
+      Logger.error('Failed to create member request', e);
       return [];
     }
   }
@@ -416,7 +417,7 @@ export class ContactsService {
   async notifyLeader(closestGroup: any, personDto: CreatePersonDto) {
     try {
       if (!hasValue(closestGroup)) {
-        Logger.log(`Invalid group data`);
+        Logger.log('Invalid group data');
       }
       const leader = await this.prisma.group_membership.findFirst({
         where: { groupId: closestGroup.id, role: GroupRole.Leader },
@@ -438,7 +439,7 @@ export class ContactsService {
       const closestCellData = JSON.parse(closestGroup.groupMeta);
       const mailerData: IEmail = {
         to: `${closestCellData.email}`,
-        subject: "Join MC Request",
+        subject: 'Join MC Request',
         html: `
           <h3>Hello ${closestCellData.leaders},</h3></br>
           <h4>I hope all is well on your end.<h4></br>
@@ -450,7 +451,7 @@ export class ContactsService {
       };
       await sendEmail(mailerData);
     } catch (e) {
-      Logger.error("Failed to notify leader");
+      Logger.error('Failed to notify leader');
     }
   }
 
@@ -458,15 +459,15 @@ export class ContactsService {
     return await this.repository.findOne({
       where: { id },
       relations: [
-        "person",
-        "emails",
-        "phones",
-        "addresses",
-        "identifications",
-        "requests",
-        "relationships",
-        "groupMemberships",
-        "groupMemberships.group",
+        'person',
+        'emails',
+        'phones',
+        'addresses',
+        'identifications',
+        'requests',
+        'relationships',
+        'groupMemberships',
+        'groupMemberships.group',
       ],
     });
   }
@@ -477,15 +478,15 @@ export class ContactsService {
 
   async findByName(username: string): Promise<Contact | undefined> {
     return await this.repository
-      .createQueryBuilder("user")
-      .where("user.username = :username", { username })
-      .leftJoinAndSelect("user.contact", "contact")
-      .leftJoinAndSelect("contact.person", "person")
+      .createQueryBuilder('user')
+      .where('user.username = :username', { username })
+      .leftJoinAndSelect('user.contact', 'contact')
+      .leftJoinAndSelect('contact.person', 'person')
       .getOne();
   }
 
   async createCompany(data: CreateCompanyDto): Promise<Contact> {
-    throw "Not yet implemented";
+    throw 'Not yet implemented';
   }
 
   private validateUpdateData(data: Partial<Contact>): void {
@@ -500,10 +501,14 @@ export class ContactsService {
       }
       data.emails.forEach((email, index) => {
         if (!email.value || typeof email.value !== 'string') {
-          throw new BadRequestException(`Email at index ${index} must have a valid value`);
+          throw new BadRequestException(
+            `Email at index ${index} must have a valid value`,
+          );
         }
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
-          throw new BadRequestException(`Email at index ${index} has invalid format`);
+          throw new BadRequestException(
+            `Email at index ${index} has invalid format`,
+          );
         }
       });
     }
@@ -515,7 +520,9 @@ export class ContactsService {
       }
       data.phones.forEach((phone, index) => {
         if (!phone.value || typeof phone.value !== 'string') {
-          throw new BadRequestException(`Phone at index ${index} must have a valid value`);
+          throw new BadRequestException(
+            `Phone at index ${index} must have a valid value`,
+          );
         }
       });
     }
@@ -527,16 +534,23 @@ export class ContactsService {
       }
       data.addresses.forEach((address, index) => {
         if (!address.country || typeof address.country !== 'string') {
-          throw new BadRequestException(`Address at index ${index} must have a country`);
+          throw new BadRequestException(
+            `Address at index ${index} must have a country`,
+          );
         }
         if (!address.district || typeof address.district !== 'string') {
-          throw new BadRequestException(`Address at index ${index} must have a district`);
+          throw new BadRequestException(
+            `Address at index ${index} must have a district`,
+          );
         }
       });
     }
   }
 
-  private async updateEmailsEfficiently(existingContact: Contact, newEmails: Partial<Email>[]): Promise<void> {
+  private async updateEmailsEfficiently(
+    existingContact: Contact,
+    newEmails: Partial<Email>[],
+  ): Promise<void> {
     const existingEmails = existingContact.emails || [];
     const emailsToKeep: Email[] = [];
     const emailsToUpdate: Email[] = [];
@@ -546,7 +560,7 @@ export class ContactsService {
     newEmails.forEach((newEmail, index) => {
       if (newEmail.id && index < existingEmails.length) {
         // Update existing email
-        const existingEmail = existingEmails.find(e => e.id === newEmail.id);
+        const existingEmail = existingEmails.find((e) => e.id === newEmail.id);
         if (existingEmail) {
           Object.assign(existingEmail, newEmail);
           emailsToUpdate.push(existingEmail);
@@ -556,14 +570,14 @@ export class ContactsService {
         // Create new email
         emailsToCreate.push({
           ...newEmail,
-          contactId: existingContact.id
+          contactId: existingContact.id,
         });
       }
     });
 
     // Remove emails that are no longer needed
-    const emailsToRemove = existingEmails.filter(email => 
-      !emailsToKeep.some(kept => kept.id === email.id)
+    const emailsToRemove = existingEmails.filter(
+      (email) => !emailsToKeep.some((kept) => kept.id === email.id),
     );
 
     if (emailsToRemove.length > 0) {
@@ -578,7 +592,9 @@ export class ContactsService {
     // Create new emails
     if (emailsToCreate.length > 0) {
       const createdEmails = await this.emailRepository.save(
-        emailsToCreate.map(emailData => this.emailRepository.create(emailData))
+        emailsToCreate.map((emailData) =>
+          this.emailRepository.create(emailData),
+        ),
       );
       emailsToKeep.push(...createdEmails);
     }
@@ -586,7 +602,10 @@ export class ContactsService {
     existingContact.emails = emailsToKeep;
   }
 
-  private async updatePhonesEfficiently(existingContact: Contact, newPhones: Partial<Phone>[]): Promise<void> {
+  private async updatePhonesEfficiently(
+    existingContact: Contact,
+    newPhones: Partial<Phone>[],
+  ): Promise<void> {
     const existingPhones = existingContact.phones || [];
     const phonesToKeep: Phone[] = [];
     const phonesToUpdate: Phone[] = [];
@@ -596,7 +615,7 @@ export class ContactsService {
     newPhones.forEach((newPhone, index) => {
       if (newPhone.id && index < existingPhones.length) {
         // Update existing phone
-        const existingPhone = existingPhones.find(p => p.id === newPhone.id);
+        const existingPhone = existingPhones.find((p) => p.id === newPhone.id);
         if (existingPhone) {
           Object.assign(existingPhone, newPhone);
           phonesToUpdate.push(existingPhone);
@@ -606,14 +625,14 @@ export class ContactsService {
         // Create new phone
         phonesToCreate.push({
           ...newPhone,
-          contactId: existingContact.id
+          contactId: existingContact.id,
         });
       }
     });
 
     // Remove phones that are no longer needed
-    const phonesToRemove = existingPhones.filter(phone => 
-      !phonesToKeep.some(kept => kept.id === phone.id)
+    const phonesToRemove = existingPhones.filter(
+      (phone) => !phonesToKeep.some((kept) => kept.id === phone.id),
     );
 
     if (phonesToRemove.length > 0) {
@@ -628,7 +647,9 @@ export class ContactsService {
     // Create new phones
     if (phonesToCreate.length > 0) {
       const createdPhones = await this.phoneRepository.save(
-        phonesToCreate.map(phoneData => this.phoneRepository.create(phoneData))
+        phonesToCreate.map((phoneData) =>
+          this.phoneRepository.create(phoneData),
+        ),
       );
       phonesToKeep.push(...createdPhones);
     }
@@ -636,7 +657,10 @@ export class ContactsService {
     existingContact.phones = phonesToKeep;
   }
 
-  private async updateAddressesEfficiently(existingContact: Contact, newAddresses: Partial<Address>[]): Promise<void> {
+  private async updateAddressesEfficiently(
+    existingContact: Contact,
+    newAddresses: Partial<Address>[],
+  ): Promise<void> {
     const existingAddresses = existingContact.addresses || [];
     const addressesToKeep: Address[] = [];
     const addressesToUpdate: Address[] = [];
@@ -646,7 +670,9 @@ export class ContactsService {
     newAddresses.forEach((newAddress, index) => {
       if (newAddress.id && index < existingAddresses.length) {
         // Update existing address
-        const existingAddress = existingAddresses.find(a => a.id === newAddress.id);
+        const existingAddress = existingAddresses.find(
+          (a) => a.id === newAddress.id,
+        );
         if (existingAddress) {
           Object.assign(existingAddress, newAddress);
           addressesToUpdate.push(existingAddress);
@@ -656,14 +682,14 @@ export class ContactsService {
         // Create new address
         addressesToCreate.push({
           ...newAddress,
-          contactId: existingContact.id
+          contactId: existingContact.id,
         });
       }
     });
 
     // Remove addresses that are no longer needed
-    const addressesToRemove = existingAddresses.filter(address => 
-      !addressesToKeep.some(kept => kept.id === address.id)
+    const addressesToRemove = existingAddresses.filter(
+      (address) => !addressesToKeep.some((kept) => kept.id === address.id),
     );
 
     if (addressesToRemove.length > 0) {
@@ -678,7 +704,9 @@ export class ContactsService {
     // Create new addresses
     if (addressesToCreate.length > 0) {
       const createdAddresses = await this.addressRepository.save(
-        addressesToCreate.map(addressData => this.addressRepository.create(addressData))
+        addressesToCreate.map((addressData) =>
+          this.addressRepository.create(addressData),
+        ),
       );
       addressesToKeep.push(...createdAddresses);
     }

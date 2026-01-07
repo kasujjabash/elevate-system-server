@@ -126,6 +126,6 @@ describe('GroupController', () => {
                 name: expect.any(String)
             },
         });
-    })
-})
+    });
+});
 

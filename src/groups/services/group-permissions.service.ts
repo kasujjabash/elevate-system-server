@@ -1,9 +1,9 @@
-import { Inject, Injectable } from "@nestjs/common";
-import { Connection, In, Repository, TreeRepository } from "typeorm";
-import Group from "../entities/group.entity";
-import GroupMembership from "../entities/groupMembership.entity";
-import { GroupRole } from "../enums/groupRole";
-import ClientFriendlyException from "../../shared/exceptions/client-friendly.exception";
+import { Inject, Injectable } from '@nestjs/common';
+import { Connection, In, Repository, TreeRepository } from 'typeorm';
+import Group from '../entities/group.entity';
+import GroupMembership from '../entities/groupMembership.entity';
+import { GroupRole } from '../enums/groupRole';
+import ClientFriendlyException from '../../shared/exceptions/client-friendly.exception';
 
 @Injectable()
 export class GroupPermissionsService {
@@ -11,7 +11,7 @@ export class GroupPermissionsService {
   private readonly treeRepository: TreeRepository<Group>;
   private readonly membershipRepository: Repository<GroupMembership>;
 
-  constructor(@Inject("CONNECTION") connection: Connection) {
+  constructor(@Inject('CONNECTION') connection: Connection) {
     this.repository = connection.getRepository(Group);
     this.treeRepository = connection.getTreeRepository(Group);
     this.membershipRepository = connection.getRepository(GroupMembership);
@@ -26,20 +26,22 @@ export class GroupPermissionsService {
         groupId: groupId,
       },
     });
-    
+
     if (directLeadership >= 1) {
       return true;
     }
-    
+
     // Check if user is a leader of any parent group (hierarchical permissions)
-    const targetGroup = await this.repository.findOne({ where: { id: groupId } });
+    const targetGroup = await this.repository.findOne({
+      where: { id: groupId },
+    });
     if (!targetGroup) {
       return false;
     }
-    
+
     const ancestors = await this.treeRepository.findAncestors(targetGroup);
     const ancestorIds = ancestors.map((it) => it.id);
-    
+
     if (ancestorIds.length > 0) {
       const parentLeadership = await this.membershipRepository.count({
         where: {
@@ -50,7 +52,7 @@ export class GroupPermissionsService {
       });
       return parentLeadership >= 1;
     }
-    
+
     return false;
   }
 
@@ -59,14 +61,14 @@ export class GroupPermissionsService {
     const hasPerms = await this.hasPermissionForGroup(user, groupId);
     if (!hasPerms) {
       throw new ClientFriendlyException(
-        `You have no permissions to modify this group`,
+        'You have no permissions to modify this group',
       );
     }
   }
 
   async getUserGroupIds(user: any) {
     const membershipData = await this.membershipRepository.find({
-      select: ["groupId"],
+      select: ['groupId'],
       where: {
         contactId: user.contactId,
         role: GroupRole.Leader,
