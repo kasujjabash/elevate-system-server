@@ -7,12 +7,12 @@ import {
   Index,
   ManyToOne,
   JoinColumn,
-} from "typeorm";
-import { URLCategory } from "../enums/URLCategory";
-import { Tenant } from "../../tenants/entities/tenant.entity";
+} from 'typeorm';
+import { URLCategory } from '../enums/URLCategory';
+import { Tenant } from '../../tenants/entities/tenant.entity';
 
-@Entity({ name: "help" })
-@Index(["tenant", "id"])
+@Entity({ name: 'help' })
+@Index(['tenant', 'id'])
 export default class Help {
   @PrimaryGeneratedColumn()
   id: number;
@@ -27,20 +27,20 @@ export default class Help {
   url?: string;
 
   @Column({
-    type: "enum",
+    type: 'enum',
     enum: URLCategory,
     nullable: true,
   })
   category: URLCategory;
 
   @CreateDateColumn({
-    default: () => "NOW()",
+    default: () => 'NOW()',
     nullable: false,
   })
   createdOn: Date;
 
   @UpdateDateColumn({
-    default: () => "NOW()",
+    default: () => 'NOW()',
     nullable: false,
   })
   modifiedOn: Date;

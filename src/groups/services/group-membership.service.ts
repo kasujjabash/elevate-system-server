@@ -1,15 +1,15 @@
-import { Injectable, Logger, Inject } from "@nestjs/common";
-import { Connection, In, Repository, TreeRepository } from "typeorm";
-import GroupMembership from "../entities/groupMembership.entity";
-import GroupMembershipDto from "../dto/membership/group-membership.dto";
-import { getPersonFullName } from "../../crm/crm.helpers";
-import GroupMembershipSearchDto from "../dto/membership/group-membership-search.dto";
-import ClientFriendlyException from "../../shared/exceptions/client-friendly.exception";
-import UpdateGroupMembershipDto from "../dto/membership/update-group-membership.dto";
-import BatchGroupMembershipDto from "../dto/membership/batch-group-membership.dto";
-import { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity";
-import { hasNoValue, hasValue } from "../../utils/validation";
-import Group from "../entities/group.entity";
+import { Injectable, Logger, Inject } from '@nestjs/common';
+import { Connection, In, Repository, TreeRepository } from 'typeorm';
+import GroupMembership from '../entities/groupMembership.entity';
+import GroupMembershipDto from '../dto/membership/group-membership.dto';
+import { getPersonFullName } from '../../crm/crm.helpers';
+import GroupMembershipSearchDto from '../dto/membership/group-membership-search.dto';
+import ClientFriendlyException from '../../shared/exceptions/client-friendly.exception';
+import UpdateGroupMembershipDto from '../dto/membership/update-group-membership.dto';
+import BatchGroupMembershipDto from '../dto/membership/batch-group-membership.dto';
+import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
+import { hasNoValue, hasValue } from '../../utils/validation';
+import Group from '../entities/group.entity';
 
 @Injectable()
 export class GroupsMembershipService {
@@ -17,7 +17,7 @@ export class GroupsMembershipService {
   private readonly groupTreeRepository: TreeRepository<Group>;
   private readonly connection: Connection;
 
-  constructor(@Inject("CONNECTION") connection: Connection) {
+  constructor(@Inject('CONNECTION') connection: Connection) {
     this.repository = connection.getRepository(GroupMembership);
     this.groupTreeRepository = connection.getTreeRepository(Group);
     this.connection = connection;
@@ -44,11 +44,11 @@ export class GroupsMembershipService {
     }
 
     if (hasNoValue(filter)) {
-      throw new ClientFriendlyException("Please specify groupId or contactId");
+      throw new ClientFriendlyException('Please specify groupId or contactId');
     }
 
     const data = await this.repository.find({
-      relations: ["contact", "contact.person", "group", "group.category"],
+      relations: ['contact', 'contact.person', 'group', 'group.category'],
       skip: req.skip,
       take: req.limit,
       where: filter,
@@ -87,7 +87,7 @@ export class GroupsMembershipService {
   async findOne(id: number): Promise<GroupMembershipDto> {
     const data = await this.repository.findOne({
       where: { id },
-      relations: ["group", "contact", "contact.person"],
+      relations: ['group', 'contact', 'contact.person'],
     });
     return this.toDto(data, 0);
   }
@@ -99,7 +99,7 @@ export class GroupsMembershipService {
       .set({
         role: dto.role,
       })
-      .where("id = :id", { id: dto.id })
+      .where('id = :id', { id: dto.id })
       .execute();
     Logger.log(`Updated data ${update.affected} ${JSON.stringify(update.raw)}`);
     return await this.findOne(dto.id);

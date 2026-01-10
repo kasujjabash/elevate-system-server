@@ -1,36 +1,30 @@
-import { Global, Module, MiddlewareConsumer } from "@nestjs/common";
-import { HttpModule } from "@nestjs/axios";
-import { AuthController } from "./auth/auth.controller";
-import { AppService } from "./app.service";
-import { UsersModule } from "./users/users.module";
-import { ConfigModule } from "@nestjs/config";
-import { TypeOrmModule } from "@nestjs/typeorm";
-import { AuthModule } from "./auth/auth.module";
-import { CrmModule } from "./crm/crm.module";
-import { GroupsModule } from "./groups/groups.module";
-import config, { appEntities } from "./config";
-import { ServeStaticModule } from "@nestjs/serve-static";
-import { join } from "path";
-import { SeedModule } from "./seed/seed.module";
-import { VendorModule } from "./vendor/vendor.module";
-import { EventsModule } from "./events/events.module";
-import { EmailSchedulerService } from "./shared/email-scheduler.service";
-import { ChatModule } from "./chat/chat.module";
-import { HelpModule } from "./help/help.module";
-import { TenantsModule } from "./tenants/tenants.module";
-import { JwtTenantHeaderMiddleware } from "./middleware/jwtTenantHeader.middleware";
-import { ReportsModule } from "./reports/reports.module";
-import { BotModule } from "./bot/bot.module";
-import { Tenant } from "./tenants/entities/tenant.entity";
+import { Global, Module, MiddlewareConsumer } from '@nestjs/common';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { AuthController } from './auth/auth.controller';
+import { AppService } from './app.service';
+import { UsersModule } from './users/users.module';
+import { ConfigModule } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuthModule } from './auth/auth.module';
+import { CrmModule } from './crm/crm.module';
+import { GroupsModule } from './groups/groups.module';
+import config, { appEntities } from './config';
+import { SeedModule } from './seed/seed.module';
+import { VendorModule } from './vendor/vendor.module';
+import { EventsModule } from './events/events.module';
+import { ChatModule } from './chat/chat.module';
+import { HelpModule } from './help/help.module';
+import { TenantsModule } from './tenants/tenants.module';
+import { ReportsModule } from './reports/reports.module';
+import { DashboardModule } from './dashboard/dashboard.module';
+import { SearchModule } from './search/search.module';
+import { Tenant } from './tenants/entities/tenant.entity';
+import { TenantHeaderMiddleware } from './middleware/tenant-header.middleware';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 
 @Global()
 @Module({
   imports: [
-    HttpModule,
-
-    ServeStaticModule.forRoot({
-      rootPath: join(__dirname, "..", "public"),
-    }),
     ConfigModule.forRoot({
       isGlobal: true,
       expandVariables: true,
@@ -52,23 +46,30 @@ import { Tenant } from "./tenants/entities/tenant.entity";
     HelpModule,
     TenantsModule,
     ReportsModule,
-    BotModule,
+    DashboardModule,
+    SearchModule,
   ],
   exports: [AppService],
   controllers: [AuthController],
-  providers: [AppService, EmailSchedulerService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+  ],
 })
 export class AppModule {
   public configure(consumer: MiddlewareConsumer): void {
     consumer
-      .apply(JwtTenantHeaderMiddleware)
-      .exclude(
-        "api/auth/login",
-        "api/auth/forgot-password",
-        "api/groups/combo/locations",
-        "api/auth/reset-password/:token",
-        "api/register",
-      )
-      .forRoutes("*");
+      .apply(TenantHeaderMiddleware)
+      .forRoutes(
+        'api/auth/login',
+        'api/auth/forgot-password',
+        'api/auth/reset-password/:token',
+        'api/register',
+        'api/tenants',
+        'api/tenants/seed',
+      );
   }
 }
