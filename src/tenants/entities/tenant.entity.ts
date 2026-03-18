@@ -1,8 +1,4 @@
-import { ChatSession } from 'src/bot/entities/chat-session.entity';
 import Contact from 'src/crm/entities/contact.entity';
-import EventCategory from 'src/events/entities/eventCategory.entity';
-import Group from 'src/groups/entities/group.entity';
-import GroupCategory from 'src/groups/entities/groupCategory.entity';
 import Help from 'src/help/entities/help.entity';
 import Roles from 'src/users/entities/roles.entity';
 import { Report } from 'src/reports/entities/report.entity';
@@ -26,14 +22,9 @@ export class Tenant {
   @OneToMany(() => Contact, (contact) => contact.tenant)
   contacts: Contact[];
 
-  @OneToMany(() => Group, (group) => group.tenant)
-  groups: Group[];
-
-  @OneToMany(() => GroupCategory, (groupCategory) => groupCategory.tenant)
-  groupCategories: GroupCategory[];
-
-  @OneToMany(() => EventCategory, (eventCategory) => eventCategory.tenant)
-  eventCategories: EventCategory[];
+  groups: any[];
+  groupCategories: any[];
+  eventCategories: any[];
 
   @OneToMany(() => Roles, (role) => role.tenant)
   roles: Roles[];
@@ -41,8 +32,7 @@ export class Tenant {
   @OneToMany(() => Help, (help) => help.tenant)
   helpArticles: Help[];
 
-  @OneToMany(() => ChatSession, (chatSession) => chatSession.tenant)
-  chatSessions: ChatSession[];
+  chatSessions: any[];
 
   @OneToMany(() => Report, (report) => report.tenant)
   reports: Report[];

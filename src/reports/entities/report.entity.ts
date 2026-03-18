@@ -10,7 +10,7 @@ import {
 import { ReportSubmission } from './report.submission.entity';
 import { User } from 'src/users/entities/user.entity';
 import { ReportField } from './report.field.entity';
-import GroupCategory from 'src/groups/entities/groupCategory.entity';
+// import GroupCategory from 'src/groups/entities/groupCategory.entity';
 import { ReportStatus } from '../enums/report.enum';
 import { Tenant } from '../../tenants/entities/tenant.entity';
 
@@ -20,7 +20,7 @@ export class Report {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => Tenant, (tenant) => tenant.reports, { nullable: false })
+  @ManyToOne(() => Tenant, (tenant) => tenant.reports, { nullable: true })
   tenant: Tenant;
 
   @Column()
@@ -85,8 +85,8 @@ export class Report {
   @OneToMany(() => ReportSubmission, (submission) => submission.report)
   submissions: ReportSubmission[];
 
-  @ManyToOne(() => GroupCategory, { nullable: true })
-  targetGroupCategory?: GroupCategory;
+  // @ManyToOne(() => GroupCategory, { nullable: true })
+  // targetGroupCategory?: GroupCategory;
 
   @ManyToOne(() => User, (user) => user.reports)
   user: User;

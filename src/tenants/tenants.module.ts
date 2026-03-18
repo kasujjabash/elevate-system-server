@@ -22,21 +22,27 @@ const tenantValidationProvider = {
   provide: 'TENANT_VALIDATOR',
   scope: Scope.REQUEST,
   useFactory: async (req: any, dbservice: DbService) => {
+    // Auth routes handle their own validation — skip tenant check entirely
+    const url: string = req.url || '';
+    if (url.startsWith('/api/auth/')) {
+      return null;
+    }
+
     // Check if this is a JWT authenticated request (has Authorization header)
     const authHeader = req.headers.authorization;
     const hasJWT = authHeader && authHeader.startsWith('Bearer ');
 
     // For JWT requests, skip tenant header validation (interceptor will handle it)
     if (hasJWT) {
-      return null; // Return null to indicate JWT-based tenant resolution
+      return null;
     }
 
-    // For non-JWT requests, require tenant header (public routes like login, register)
-    const tenantName = req.headers[TENANT_HEADER];
+    // For non-JWT, non-auth requests require a valid tenant header
+    const tenantName = req.headers[TENANT_HEADER] || req.body?.hubName;
 
     if (!tenantName) {
       throw new BadRequestException(
-        'No church name provided. A valid church name must be provided.',
+        'No hub name provided. A valid hub name must be provided.',
       );
     }
 
@@ -44,7 +50,7 @@ const tenantValidationProvider = {
 
     if (!tenantDetails) {
       throw new BadRequestException(
-        'Invalid church name provided. Please provide a valid church name',
+        'Invalid hub name provided. Please provide a valid hub name',
       );
     }
 

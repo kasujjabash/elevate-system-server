@@ -3,7 +3,7 @@ import { UsersService } from './users.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { usersEntities } from './users.helpers';
 import { crmEntities } from '../crm/crm.helpers';
-import { groupEntities } from '../groups/groups.helpers';
+// import { groupEntities } from '../groups/groups.helpers';
 import { User } from './entities/user.entity';
 import { ContactsService } from '../crm/contacts.service';
 import { CrmModule } from '../crm/crm.module';

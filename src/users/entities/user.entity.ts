@@ -46,7 +46,10 @@ export class User {
   @Column()
   isActive: boolean;
 
-  @ManyToOne(() => Tenant, (tenant) => tenant.users, { nullable: false })
+  @Column({ nullable: true, length: 50 })
+  roles: string;
+
+  @ManyToOne(() => Tenant, (tenant) => tenant.users, { nullable: true })
   tenant: Tenant;
 
   @OneToMany((type) => UserRoles, (it) => it.user)

@@ -1,8 +1,8 @@
 {
-  "name": "project-zoe-server",
-  "version": "0.0.2",
-  "description": "The Project Zoe church RMS backend",
-  "author": "Kanzu Code Foundation",
+  "name": "elevate-academy-server",
+  "version": "1.0.0",
+  "description": "Elevate Academy - Digital Skills School Management System",
+  "author": "Elevate Academy",
   "license": "MIT",
   "engines": {
     "npm": "7.5.2",
@@ -15,7 +15,7 @@
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "format:fix": "npm run lint:fix && npm run format",
     "start": "nest start",
-    "start:dev": "NODE_ENV=development nest start --watch",
+    "start:dev": "lsof -ti :4002 | xargs kill -9 2>/dev/null; NODE_ENV=development nest start --watch",
     "start:debug": "NODE_ENV=development nest start --debug --watch",
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\"",
@@ -35,7 +35,11 @@
     "migrate:row-level": "ts-node -r tsconfig-paths/register scripts/migrateToRowLevelTenancy.ts",
     "seed:comprehensive": "ts-node -r tsconfig-paths/register src/commands/seed-comprehensive.ts",
     "seed:clear": "ts-node -r tsconfig-paths/register src/commands/seed-comprehensive.ts --clear",
-    "seed:reset": "ts-node -r tsconfig-paths/register src/commands/seed-comprehensive.ts --clear --seed"
+    "seed:reset": "ts-node -r tsconfig-paths/register src/commands/seed-comprehensive.ts --clear --seed",
+    "seed:hub": "ts-node -r tsconfig-paths/register src/commands/seed-comprehensive.ts --hub",
+    "seed": "ts-node -r tsconfig-paths/register prisma/seed.ts",
+    "seed:elevate": "ts-node -r tsconfig-paths/register prisma/seed.ts",
+    "seed:admin": "ts-node -r tsconfig-paths/register prisma/seed-admin.ts"
   },
   "dependencies": {
     "@nestjs/axios": "^3.0.0",

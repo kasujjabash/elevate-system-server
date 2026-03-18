@@ -1,265 +1,263 @@
-# Project Zoe Server - Local Setup Guide
+# Elevate Academy Server — Local Setup Guide
 
-This guide documents the complete setup process for the Project Zoe Server on macOS, including all issues encountered and their solutions.
+This guide covers the complete setup process for the Elevate Academy Server on macOS.
 
 ## Overview
 
-Project Zoe Server is a NestJS-based church management system with multi-tenant architecture. This guide covers the local development setup process and troubleshooting steps.
+Elevate Academy Server is a NestJS backend for managing digital skills training across multiple hubs. It uses both **TypeORM** (for CRM/contacts/users) and **Prisma** (for students, courses, hubs, and enrollments).
+
+- **Server:** `http://localhost:4002`
+- **Client:** `http://localhost:3000`
+- **Database:** PostgreSQL — `elevate-academy-db`
+
+---
 
 ## Prerequisites
 
-- Node.js 12.22.5 (as specified in package.json)
-- npm 6.14.5 (as specified in package.json)
+- Node.js 18+
+- npm
 - PostgreSQL (installed via Homebrew)
-- macOS environment
 
-## Setup Process
+---
 
-### 1. Initial Environment Setup
+## Setup Steps
 
-```bash
-# Copy environment template
-cp .env.sample .env
-```
-
-**Issue**: Missing `APP_ENVIRONMENT` variable mentioned in setup instructions.
-
-**Solution**: Added the missing environment variable to `.env`:
-
-```properties
-APP_ENVIRONMENT=local
-```
-
-### 2. Dependency Installation
+### 1. Install Dependencies
 
 ```bash
-# Install dependencies with specific npm version
-npx npm@6.14.5 install
+# Server
+cd "elevater server"
+npm install
+
+# Client
+cd "elevate client"
+npm install
 ```
 
-**Issue**: Using modern npm version (10.9.0) with lockfile compatibility warnings.
+### 2. Environment Configuration
 
-**Solution**: Used the specified npm version 6.14.5 as required by the project, which resolved lockfile version conflicts.
-
-### 3. TypeScript Compilation Errors
-
-**Issue**: Axios version incompatibility causing TypeScript compilation failures:
-
-```
-error TS2315: Type 'AxiosRequestConfig' is not generic.
-error TS2707: Generic type 'AxiosResponse<T>' requires between 0 and 1 type arguments.
-```
-
-**Root Cause**: The project had axios@0.19.2 (deprecated and insecure) while @nestjs/axios required axios@^1.3.1.
-
-**Solution**:
-
-```bash
-npm install axios@^1.6.0
-```
-
-This resolved all TypeScript compilation errors related to axios generics.
-
-### 4. Database Setup
-
-#### PostgreSQL Service Management
-
-```bash
-# Check PostgreSQL status
-brew services list | grep postgresql
-
-# Start PostgreSQL service
-brew services start postgresql@14
-
-# Create project database
-createdb projectzoe-db
-```
-
-#### Database Connection Issues
-
-**Issue**: SSL connection errors when creating tenant:
-
-```
-Error: The server does not support SSL connections
-```
-
-**Root Cause**: Multiple SSL configuration conflicts:
-
-1. Local PostgreSQL had SSL disabled (`SHOW ssl;` returned `off`)
-2. Application was trying to force SSL connections in two places
-
-**Solutions Applied**:
-
-1. **Updated `src/config.ts`**:
-
-```typescript
-// Before
-ssl: process.env.DB_PORT === '25060'
-  ? { rejectUnauthorized: false }
-  : undefined,
-
-// After
-ssl: process.env.DB_PORT === '25060'
-  ? { rejectUnauthorized: false }
-  : false,
-```
-
-2. **Updated `src/shared/db.service.ts`**:
-
-```typescript
-// Before
-ssl: {
-  rejectUnauthorized: false, // Required for DigitalOcean & Heroku
-},
-
-// After
-ssl: process.env.DB_PORT === '25060'
-  ? { rejectUnauthorized: false }
-  : false,
-```
-
-3. **Updated DATABASE_URL in `.env`**:
-
-```properties
-DATABASE_URL="postgresql://macbookpro:@localhost:5432/projectzoe-db?schema=public&ssl=false"
-```
-
-4. **Updated database credentials**:
-
-```properties
-DB_USERNAME=macbookpro  # macOS username instead of 'postgres'
-DB_PASSWORD=            # Empty for local trust authentication
-```
-
-### 5. Tenant Creation
-
-```bash
-npm run command create-tenant demo
-```
-
-After resolving SSL issues, this command successfully:
-
-- Created database schemas
-- Seeded initial data (users, roles, groups, categories)
-- Set up the "demo" tenant
-
-### 6. Development Server
-
-```bash
-npm run start:dev
-```
-
-**Issue**: Express package missing error:
-
-```
-[Nest] ERROR [PackageLoader] The "express" package is missing. Please, make sure to install it to take advantage of ServeStaticModule.
-```
-
-**Root Cause**: The `ServeStaticModule` requires the `express` package as a peer dependency, but it wasn't installed.
-
-**Solution**:
-
-```bash
-npx npm@6.14.5 install express
-```
-
-After resolving this, the server successfully starts on port 4002 with hot reload enabled.
-
-## Configuration Summary
-
-### Final `.env` Configuration
+Edit `elevater server/.env`:
 
 ```properties
 PORT=4002
 APP_ENVIRONMENT=local
-DB_TYPE=postgres
-DB_USERNAME=macbookpro
-DB_PASSWORD=
+
+# TypeORM (CRM / Auth tables)
 DB_HOST=localhost
 DB_PORT=5432
-DB_DATABASE=projectzoe-db
+DB_USERNAME=<your-mac-username>
+DB_PASSWORD=
+DB_DATABASE=elevate-academy-db
 DB_SYNCHRONIZE=true
-MAPS_URL=https://maps.googleapis.com/maps/api/place/details/json
-MAPS_KEY=your-api-key-here
-APP_URL=http://localhost:3000
-SENDGRID_API=your-api-key-here
-EMAIL_SENDER=example@email.com
-DATABASE_URL="postgresql://macbookpro:@localhost:5432/projectzoe-db?schema=public&ssl=false"
-REACT_APP_SENTRY_DSN=sentry_dsn
 
-# Google Spreadsheet Config
-GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-acc-auth.json
-GOOGLE_SPREADSHEET_ID=spread-sheet-id-here
-GOOGLE_SPREADSHEET_SHEET_NAME=Sheet1
+# Prisma (Students / Courses / Hubs)
+DATABASE_URL="postgresql://<your-mac-username>:@localhost:5432/elevate-academy-db?schema=public&ssl=false"
+
+# JWT
+JWT_SECRET=elevate-academy-jwt-secret-2024
+JWT_EXPIRY=24h
+APP_URL=http://localhost:3000
 ```
+
+> Run `whoami` in terminal to get your macOS username.
+
+### 3. PostgreSQL Setup
+
+```bash
+brew services start postgresql@14
+createdb elevate-academy-db
+```
+
+### 4. Push Prisma Schema
+
+```bash
+cd "elevater server"
+npx prisma db push --accept-data-loss
+npx prisma generate
+```
+
+### 5. Seed the Database
+
+```bash
+npm run seed:elevate
+```
+
+This seeds: 5 hubs, 4 skill categories, 2 instructors, 6 courses, 11 students, course modules and content.
+
+### 6. Start Both Apps
+
+```bash
+# Terminal 1 — Server (port 4002)
+cd "elevater server"
+npm run start:dev
+
+# Terminal 2 — Client (port 3000)
+cd "elevate client"
+npm start
+```
+
+---
 
 ## Login Credentials
 
-After tenant creation, use these credentials to login to the "demo" tenant:
+### Admin
+| Email | Password | Notes |
+|-------|----------|-------|
+| `admin@era92elevate.org` | `admin2024` | Full admin access |
+| `instructor@era92elevate.org` | `admin2024` | Admin + Instructor |
+| `trainer@era92elevate.org` | `admin2024` | Admin + Instructor |
 
-**Admin User 1:**
+### Students — all use password `student2024`
 
-- Email: `john.doe@kanzucodefoundation.org`
-- Password: `Xpass@123`
+| Name | Email | Hub | Course |
+|------|-------|-----|--------|
+| Jane Nakato | `jane.nakato@student.elevate.org` | Katanga | Website Development |
+| Brian Ssekandi | `brian.ssekandi@student.elevate.org` | Katanga | Website Development |
+| Mercy Apio | `mercy.apio@student.elevate.org` | Katanga | Graphic Design |
+| David Okello | `david.okello@student.elevate.org` | Kosovo | Graphic Design |
+| Grace Namugga | `grace.namugga@student.elevate.org` | Kosovo | Graphic Design |
+| Peter Mugisha | `peter.mugisha@student.elevate.org` | Jinja | Film & Photography |
+| Annet Akello | `annet.akello@student.elevate.org` | Jinja | Film & Photography |
+| Moses Waiswa | `moses.waiswa@student.elevate.org` | Namayemba | ALX Course |
+| Esther Nanyanzi | `esther.nanyanzi@student.elevate.org` | Lyantode | Website Development |
+| Samuel Kato | `samuel.kato@student.elevate.org` | Lyantode | Website Development |
+| Generic Student | `student@era92elevate.org` | Katanga | Website Development |
 
-**Admin User 2:**
+---
 
-- Email: `jane.doe@kanzucodefoundation.org`
-- Password: `Password@1`
+## Course Content (Website Development)
+
+The **Website Development** course is fully seeded with 4 weeks:
+
+| Week | Title | Content |
+|------|-------|---------|
+| 1 | HTML Foundations | Lesson (w/ YouTube video), Video lesson, Text lesson, Assignment |
+| 2 | CSS Styling | Text lesson, Video lesson, Text lesson |
+| 3 | JavaScript Basics | Text lesson, Video lesson, Text lesson |
+| 4 | React Basics | Video lesson |
+
+- **Current week** auto-opens to the first week with incomplete content
+- Each lesson can have a **video** (YouTube embed) + **text** body
+- Assignments appear separately at the bottom of each week
+- Progress updates automatically when a student marks a lesson complete
+
+### Admin: Add Content via API
+
+```bash
+# Add a new week/module
+POST /api/courses/:courseId/modules
+{ "title": "Week 5: Deployment", "weekNumber": 5, "order": 5 }
+
+# Add content to a module
+POST /api/courses/modules/:moduleId/content
+{
+  "title": "Deploying to Netlify",
+  "type": "Video",          # Lesson | Video | Quiz | Assignment | Resource
+  "videoUrl": "https://www.youtube.com/watch?v=...",
+  "body": "<h2>...</h2><p>...</p>",
+  "durationMin": 10
+}
+```
+
+---
 
 ## API Endpoints
 
-The server runs at `http://localhost:4002` with these main endpoints:
+### Auth
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/auth/login` | Login — returns JWT token |
+| GET | `/api/auth/me` | Current user profile |
+| GET | `/api/auth/profile` | Alias for /me |
+| POST | `/api/auth/forgot-password` | Send reset email |
+| POST | `/api/auth/reset-password` | Reset with token |
 
-- **Authentication**: `POST /api/auth/login`
-- **User Management**: `/api/users/*`
-- **CRM**: `/api/crm/*`
-- **Groups**: `/api/groups/*`
-- **Events**: `/api/events/*`
-- **Reports**: `/api/reports/*`
-- **Bot**: `/api/bot/*`
+### Courses
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/courses/course` | All courses (supports `?hub=&isActive=`) |
+| GET | `/api/courses/combo` | Course name/id list for dropdowns |
+| GET | `/api/courses/category` | Skill categories |
+| GET | `/api/courses/enrollment` | Enrollments (supports `?contactId=`) |
+| POST | `/api/courses/enrollment` | Enroll a student |
+| GET | `/api/courses/coursereports` | Course stats |
+| GET | `/api/courses/:id` | Single course with modules |
+| GET | `/api/courses/:id/modules` | Weekly modules + content list |
+| GET | `/api/courses/:id/progress` | Student progress for a course |
+| POST | `/api/courses/:id/modules` | Create a module (admin) |
+| GET | `/api/courses/modules/:moduleId` | Single module with content |
+| POST | `/api/courses/modules/:moduleId/content` | Add content (admin) |
+| GET | `/api/courses/content/:contentId` | Single content item |
+| POST | `/api/courses/content/:contentId/complete` | Mark content complete |
 
-## Issues Resolution Summary
+### Students
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/students` | All students |
+| GET | `/api/students/people` | People list for autocomplete |
+| GET | `/api/students/people/combo` | Name/id pairs for dropdowns |
+| GET | `/api/students/:id` | Single student profile |
+| PUT | `/api/students/:id` | Update student |
+| GET | `/api/student/hub` | Students grouped by hub |
 
-| Issue                         | Root Cause                                 | Solution                      |
-| ----------------------------- | ------------------------------------------ | ----------------------------- |
-| Missing APP_ENVIRONMENT       | Incomplete .env template                   | Added `APP_ENVIRONMENT=local` |
-| TypeScript compilation errors | Axios version incompatibility              | Upgraded axios to 1.6.0       |
-| SSL connection failures       | Hardcoded SSL configs for cloud deployment | Conditional SSL based on port |
-| Database authentication       | Wrong username assumption                  | Used macOS username           |
-| Dependency conflicts          | npm version mismatch                       | Used specified npm 6.14.5     |
-| Express package missing       | ServeStaticModule peer dependency          | Installed express package     |
+### Hubs
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/hubs` | All hubs |
+| GET | `/api/hubs/:id` | Single hub |
+| POST | `/api/hubs` | Create hub |
 
-## Development Notes
+### Dashboard
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/dashboard/stats` | Total students, courses, enrollments |
+| GET | `/api/dashboard/hub-stats` | Per-hub student counts |
+| GET | `/api/dashboard/summary` | Combined dashboard summary |
 
-1. **SSL Configuration**: The application is designed for cloud deployment (DigitalOcean/Heroku) with SSL, but requires conditional logic for local development.
+---
 
-2. **Multi-tenant Architecture**: Each tenant gets its own database schema. The "public" schema contains tenant metadata.
+## SSL Fix (Local Development)
 
-3. **Prisma Integration**: The application uses both TypeORM and Prisma, requiring both to be configured correctly.
+If you see SSL errors, ensure `DATABASE_URL` in `.env` has `ssl=false`:
 
-4. **Hot Reload**: Development server supports hot reload for rapid development.
+```properties
+DATABASE_URL="postgresql://macbookpro:@localhost:5432/elevate-academy-db?schema=public&ssl=false"
+```
+
+---
 
 ## Troubleshooting
 
-### Common Issues
+| Issue | Solution |
+|-------|----------|
+| Port already in use | Change `PORT` in `.env` |
+| PostgreSQL not running | `brew services start postgresql@14` |
+| SSL connection error | Add `ssl=false` to `DATABASE_URL` |
+| Prisma client not found | `npx prisma generate` |
+| Schema not in sync | `npx prisma db push --accept-data-loss` |
+| Login returns 401 | Check password hash — re-run seed |
+| Null roles error | Run the fix-roles script (see below) |
 
-1. **Port Already in Use**: If port 4002 is busy, change `PORT` in `.env`
-2. **PostgreSQL Not Running**: Run `brew services start postgresql@14`
-3. **Permission Errors**: Ensure your user has database creation privileges
-4. **SSL Errors**: Verify SSL is set to `false` in all configuration files
-
-### Verification Commands
+### Fix Null Roles (if login fails)
 
 ```bash
-# Check PostgreSQL status
-psql -h localhost -p 5432 -U macbookpro -d projectzoe-db -c "SELECT version();"
-
-# Check server health
-curl http://localhost:4002/api/auth/login
-
-# View application logs
-npm run start:dev
+node -e "
+const { Pool } = require('pg');
+const pool = new Pool({ host: 'localhost', port: 5432, database: 'elevate-academy-db', user: process.env.USER, password: '' });
+pool.query('UPDATE \"user\" SET roles = \$1 WHERE username IN (\$2,\$3,\$4)', ['RoleAdmin','admin@era92elevate.org','instructor@era92elevate.org','trainer@era92elevate.org'])
+  .then(() => pool.query('UPDATE \"user\" SET roles = \$1 WHERE roles IS NULL OR roles NOT LIKE \$2', ['STUDENT','Role%']))
+  .then(() => { console.log('Done'); pool.end(); });
+"
 ```
 
-This setup process ensures a fully functional local development environment for the Project Zoe Server.
+### Verification
+
+```bash
+# Check server is running
+curl http://localhost:4002/api/courses/course
+
+# Test login
+curl -s -X POST http://localhost:4002/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin@era92elevate.org","password":"admin2024"}'
+```

@@ -23,14 +23,9 @@ import {
   ApiResponse,
   ReportSubmissionDataDto,
 } from './types/report-api.types';
-import { TreeRepository } from 'typeorm';
-import Group from 'src/groups/entities/group.entity';
 import { UsersService } from 'src/users/users.service';
-import { GroupsService } from 'src/groups/services/groups.service';
 import { ReportField } from './entities/report.field.entity';
 import { ReportSubmissionData } from './entities/report.submission.data.entity';
-import { GroupCategoryNames } from 'src/groups/enums/groups';
-import GroupMembership from 'src/groups/entities/groupMembership.entity';
 import { ReportStatus } from './enums/report.enum';
 
 @Injectable()
@@ -40,22 +35,17 @@ export class ReportsService {
   private readonly reportSubmissionDataRepository: Repository<ReportSubmissionData>;
   private readonly userRepository: Repository<User>;
   private readonly reportFieldRepository: Repository<ReportField>;
-  private readonly groupMembershipRepo: Repository<GroupMembership>;
-  private readonly treeRepository: TreeRepository<Group>;
 
   constructor(
     @Inject('CONNECTION') connection: Connection,
     private readonly usersService: UsersService,
-    private readonly groupsService: GroupsService,
   ) {
     this.reportRepository = connection.getRepository(Report);
     this.reportFieldRepository = connection.getRepository(ReportField);
-    this.groupMembershipRepo = connection.getRepository(GroupMembership);
     this.reportSubmissionDataRepository =
       connection.getRepository(ReportSubmissionData);
     this.reportSubmissionRepository =
       connection.getRepository(ReportSubmission);
-    this.treeRepository = connection.getTreeRepository(Group);
     this.userRepository = connection.getRepository(User);
   }
 
@@ -93,7 +83,6 @@ export class ReportsService {
     // Retrieve the report by its ID
     const report = await this.reportRepository.findOne({
       where: { id: reportId, status: ReportStatus.ACTIVE },
-      relations: ['targetGroupCategory'],
     });
     if (!report) {
       throw new NotFoundException(`Report with ID ${reportId} not found`);
@@ -107,65 +96,11 @@ export class ReportsService {
       throw new NotFoundException(`User with ID ${user.id} not found`);
     }
 
-    let targetGroup: Group | null = null;
-    let selectedGroupId: number | null = null;
-
-    // Check if report has a designated group field
-    if (report.groupFieldName && submissionDto.data[report.groupFieldName]) {
-      selectedGroupId = parseInt(submissionDto.data[report.groupFieldName]);
-
-      // Validate user can submit for this group
-      const canSubmitForGroup = await this.validateUserGroupPermission(
-        submittingUser.contactId,
-        selectedGroupId,
-        report.targetGroupCategory?.id,
-      );
-
-      if (!canSubmitForGroup) {
-        throw new BadRequestException(
-          `You don't have permission to submit reports for group ID ${selectedGroupId}`,
-        );
-      }
-
-      targetGroup = await this.treeRepository.findOne({
-        where: { id: selectedGroupId },
-      });
-
-      if (!targetGroup) {
-        throw new BadRequestException(
-          `Group with ID ${selectedGroupId} not found`,
-        );
-      }
-    }
-    // Fallback to current automatic detection
-    else if (report.targetGroupCategory) {
-      const userGroups = await this.getUserGroupsInCategory(
-        submittingUser.contactId,
-        report.targetGroupCategory.id,
-      );
-
-      if (userGroups.length === 0) {
-        throw new BadRequestException(
-          "You don't belong to any groups in the required category",
-        );
-      }
-      if (userGroups.length > 1) {
-        throw new BadRequestException(
-          'You belong to multiple groups in this category. Please contact an admin to configure a group selection field for this report.',
-        );
-      }
-
-      targetGroup = userGroups[0];
-    }
-
     // Create and save the report submission
     const reportSubmission = new ReportSubmission();
     reportSubmission.report = report;
     reportSubmission.submittedAt = new Date();
     reportSubmission.user = submittingUser;
-    if (targetGroup) {
-      reportSubmission.group = targetGroup;
-    }
     const savedSubmission =
       await this.reportSubmissionRepository.save(reportSubmission);
 
@@ -251,12 +186,7 @@ export class ReportsService {
           submissionFrequency: report.submissionFrequency,
           active: report.active,
           status: report.status,
-          targetGroupCategory: report.targetGroupCategory
-            ? {
-                id: report.targetGroupCategory.id,
-                name: report.targetGroupCategory.name,
-              }
-            : null,
+          targetGroupCategory: null,
           fieldCount: report.fields ? report.fields.length : 0,
         };
       });
@@ -291,8 +221,8 @@ export class ReportsService {
     return Math.ceil((date.getDate() + offset) / 7);
   }
 
-  async getAllSmallGroups(): Promise<Group[]> {
-    return this.groupsService.getGroupsByCategory(GroupCategoryNames.MC);
+  async getAllSmallGroups(): Promise<any[]> {
+    return [];
   }
 
   async generateReport(
@@ -381,16 +311,7 @@ export class ReportsService {
       smallGroupIds = smallGroupIdList.split(',').map(Number); // Convert CSV to an array of numbers
     }
 
-    if (parentGroupIdList && parentGroupIdList.length) {
-      const parentGroupIds = Array.isArray(parentGroupIdList)
-        ? parentGroupIdList
-        : [parentGroupIdList];
-      const smallGroupEntities = await this.treeRepository.find({
-        select: ['id'],
-        where: { parentId: In(parentGroupIds) },
-      });
-      smallGroupIds = smallGroupEntities.map((smallGroup) => smallGroup.id);
-    }
+    // parentGroupIdList filtering removed (groups module deleted)
 
     const query = await this.buildSubmissionQuery(
       report.id,
@@ -414,16 +335,7 @@ export class ReportsService {
           (sd) => sd.reportField.name === 'smallGroupId',
         );
 
-        // Ensure we handle the case where smallGroupFieldData might be undefined
-        if (smallGroupFieldData) {
-          const smallGroup = await this.treeRepository.findOne({
-            where: { id: parseInt(smallGroupFieldData.fieldValue) },
-            relations: ['parent'],
-          });
-
-          // Add the small group parent
-          transformedData['parentGroupName'] = smallGroup?.parent?.name || '';
-        }
+        transformedData['parentGroupName'] = '';
 
         // Aggregate submission data into a single object
         submission.submissionData.forEach((sd) => {
@@ -802,8 +714,8 @@ export class ReportsService {
         id: submission.id,
         reportId: submission.report.id,
         reportName: submission.report.name,
-        groupId: submission.group?.id || null,
-        groupName: submission.group?.name || null,
+        groupId: null,
+        groupName: null,
         submittedAt: submission.submittedAt,
         submittedBy: {
           id: submission.user.id,
@@ -861,7 +773,7 @@ export class ReportsService {
         submittedAt: submission.submittedAt,
         submittedBy: getUserDisplayName(submission.user),
         status: ReportStatus.SUBMITTED,
-        groupId: submission.group?.id,
+        groupId: null,
       })),
     };
   }
@@ -896,43 +808,23 @@ export class ReportsService {
       submittedAt: submission.submittedAt,
       submittedBy: getUserDisplayName(submission.user),
       status: ReportStatus.SUBMITTED,
-      groupId: submission.group?.id,
+      groupId: null,
       data,
     };
   }
 
   private async validateUserGroupPermission(
-    contactId: number,
-    groupId: number,
-    categoryId?: number,
+    _contactId: number,
+    _groupId: number,
+    _categoryId?: number,
   ): Promise<boolean> {
-    const membership = await this.groupMembershipRepo.findOne({
-      where: {
-        contactId,
-        group: { id: groupId },
-      },
-      relations: ['group', 'group.category'],
-    });
-
-    if (!membership) return false;
-    if (categoryId && membership.group.category?.id !== categoryId)
-      return false;
-
     return true;
   }
 
   private async getUserGroupsInCategory(
-    contactId: number,
-    categoryId: number,
-  ): Promise<Group[]> {
-    const memberships = await this.groupMembershipRepo.find({
-      where: {
-        contactId,
-        group: { category: { id: categoryId } },
-      },
-      relations: ['group', 'group.category'],
-    });
-
-    return memberships.map((membership) => membership.group);
+    _contactId: number,
+    _categoryId: number,
+  ): Promise<any[]> {
+    return [];
   }
 }

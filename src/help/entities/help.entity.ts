@@ -17,7 +17,7 @@ export default class Help {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => Tenant, (tenant) => tenant.helpArticles, { nullable: false })
+  @ManyToOne(() => Tenant, (tenant) => tenant.helpArticles, { nullable: true })
   tenant: Tenant;
 
   @Column({ length: 300 })

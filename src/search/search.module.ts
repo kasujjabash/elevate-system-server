@@ -1,10 +1,12 @@
 import { Module } from '@nestjs/common';
 import { SearchController } from './search.controller';
 import { SearchService } from './search.service';
-import { GroupsModule } from '../groups/groups.module';
+// import { GroupsModule } from '../groups/groups.module';
 
 @Module({
-  imports: [GroupsModule],
+  imports: [
+    /* GroupsModule */
+  ],
   controllers: [SearchController],
   providers: [SearchService],
   exports: [SearchService],

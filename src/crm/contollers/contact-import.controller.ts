@@ -21,12 +21,12 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { parseContact } from '../utils/importUtils';
 import { SentryInterceptor } from 'src/utils/sentry.interceptor';
-import { GroupsMembershipService } from 'src/groups/services/group-membership.service';
-import { GroupRole } from 'src/groups/enums/groupRole';
+// import { GroupsMembershipService } from 'src/groups/services/group-membership.service';
+// import { GroupRole } from 'src/groups/enums/groupRole';
 import { AddressCategory } from '../enums/addressCategory';
-import { GroupsService } from 'src/groups/services/groups.service';
-import { GroupPrivacy } from 'src/groups/enums/groupPrivacy';
-import { GroupCategoryNames } from 'src/groups/enums/groups';
+// import { GroupsService } from 'src/groups/services/groups.service';
+// import { GroupPrivacy } from 'src/groups/enums/groupPrivacy';
+// import { GroupCategoryNames } from 'src/groups/enums/groups';
 import { UsersService } from 'src/users/users.service';
 import { generateRandomPassword } from 'src/utils/stringHelpers';
 
@@ -56,8 +56,6 @@ export class ContactImportController {
     @Inject('CONNECTION') connection: Connection,
     private readonly service: ContactsService,
     private readonly csvParser: CsvParser,
-    private readonly groupMembershipService: GroupsMembershipService,
-    private readonly groupsService: GroupsService,
     private readonly usersService: UsersService,
   ) {
     this.companyRepository = connection.getRepository(Company);
@@ -93,23 +91,7 @@ export class ContactImportController {
             freeForm: uploadedContact.address,
           };
 
-          const groupData = await this.groupsService.findOne(
-            uploadedContact.groupid,
-            false,
-          );
-          if (!groupData) {
-            throw new BadRequestException({
-              message: `Specified Group with ID ${uploadedContact.groupid} does not exist. Please specify a valid group ID.`,
-            });
-          }
-
           const newPerson = await this.service.createPerson(contactModel);
-          const newPersonsGroup = {
-            groupId: uploadedContact.groupid,
-            members: [newPerson.id],
-            role: GroupRole.Member,
-          };
-          await this.groupMembershipService.create(newPersonsGroup);
           created.push(newPerson);
         }
       } catch (err) {
@@ -153,41 +135,7 @@ export class ContactImportController {
             freeForm: uploadedContact.address,
           };
 
-          let groupData;
-          if (uploadedContact.groupid) {
-            groupData = await this.groupsService.findOne(
-              uploadedContact.groupid,
-              false,
-            );
-            if (!groupData) {
-              throw new BadRequestException({
-                message: `Specified Group with ID ${uploadedContact.groupid} does not exist. Please specify a valid group ID.`,
-              });
-            }
-          } else {
-            const newGroup = {
-              parentId: uploadedContact.groupParentId,
-              privacy: GroupPrivacy.Public,
-              details: null,
-              name: uploadedContact.groupName,
-              categoryName: GroupCategoryNames.MC,
-            };
-            groupData = await this.groupsService.create(newGroup, {}, true);
-          }
-
-          if (!groupData) {
-            throw new BadRequestException({
-              message: `Specified Group with name ${uploadedContact.groupName} was not created.`,
-            });
-          }
-
           const newPerson = await this.service.createPerson(contactModel);
-          const newPersonsGroup = {
-            groupId: groupData.id,
-            members: [newPerson.id],
-            role: GroupRole.Leader,
-          };
-          await this.groupMembershipService.create(newPersonsGroup);
           created.push(newPerson);
           const newUserObj = {
             contactId: newPerson.id,

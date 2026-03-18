@@ -10,7 +10,7 @@ import {
 import { User } from 'src/users/entities/user.entity';
 import { Report } from './report.entity';
 import { ReportSubmissionData } from './report.submission.data.entity';
-import Group from 'src/groups/entities/group.entity';
+// import Group from 'src/groups/entities/group.entity';
 
 @Entity()
 @Index(['submittedAt'])
@@ -28,11 +28,11 @@ export class ReportSubmission {
   @ManyToOne(() => Report, (report) => report.submissions)
   report: Report;
 
-  @ManyToOne(() => Group, (group) => group.reportSubmissions, {
-    onDelete: 'SET NULL',
-    nullable: true,
-  })
-  group: Group;
+  // @ManyToOne(() => Group, (group) => group.reportSubmissions, {
+  //   onDelete: 'SET NULL',
+  //   nullable: true,
+  // })
+  // group: Group;
 
   @Column({ type: 'jsonb', nullable: true })
   data: Record<string, any>;

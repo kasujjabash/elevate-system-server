@@ -1,12 +1,15 @@
-# 🌱 Database Seeding Guide
+# Database Seeding Guide — Elevate Academy
 
-This guide explains how to seed your NestJS backend with realistic data that exactly matches the MirageJS mock server structure.
+This guide explains how to seed your NestJS backend with realistic Elevate Academy data.
 
 ## Quick Start
 
 ```bash
-# Seed database with all test data
-npm run seed:comprehensive
+# Seed all Elevate Academy data (hubs, courses, instructors, students)
+npm run seed:elevate
+
+# Seed admin + instructor TypeORM accounts
+npm run seed:admin
 
 # Clear existing data and re-seed
 npm run seed:reset
@@ -17,193 +20,150 @@ npm run seed:clear
 
 ## What Gets Seeded
 
-### ✅ **Test User Accounts** (7 accounts)
-All accounts use password: `password123`
+### Hubs (5 locations)
 
-| Email | Role | Access Level | Groups Managed |
-|-------|------|-------------|----------------|
-| `fellowship@worshipharvest.org` | MC Shepherd | Fellowship Level | Phase MC (100) |
-| `zone@worshipharvest.org` | Zone Leader | Zone Level | North Zone + 5 fellowships |
-| `location@worshipharvest.org` | Location Pastor | Location Level | Kampala + 4 zones + 20 fellowships |
-| `fob@worshipharvest.org` | FOB Leader | Regional Level | East Africa + 3 locations |
-| `network@worshipharvest.org` | Network Leader | Network Level | Africa Network + 2 FOBs |
-| `movement@worshipharvest.org` | Movement Leader | Global Level | All groups globally |
-| `admin@worshipharvest.org` | System Admin | Full Access | Full system access |
+| Code | Hub Name | Location |
+|------|----------|----------|
+| `katanga` | Katanga Hub | Katanga, Kampala |
+| `kosovo` | Kosovo Hub | Kosovo, Kampala |
+| `jinja` | Jinja Hub | Jinja Town |
+| `namayemba` | Namayemba Hub | Namayemba, Mukono |
+| `lyantode` | Lyantode Hub | Lyantode, Mpigi |
 
-### ✅ **Group Hierarchy** (6-level structure)
-```
-Movement: Worship Harvest Global (1)
-├─ Network: Africa Network (2)
-│  └─ FOB: East Africa (4)
-│     ├─ Location: Kampala, Uganda (10)
-│     │  ├─ Zone: North Zone Kampala (20) - 5 fellowships
-│     │  ├─ Zone: South Zone Kampala (21) - 5 fellowships  
-│     │  ├─ Zone: Central Zone Kampala (22) - 5 fellowships
-│     │  └─ Zone: East Zone Kampala (23) - 5 fellowships
-│     ├─ Location: Kigali, Rwanda (11)
-│     │  ├─ Zone: Kimihurura Zone (24) - 4 fellowships
-│     │  └─ Zone: Nyarutarama Zone (25) - 4 fellowships
-│     └─ Location: Nairobi, Kenya (12)
-│        ├─ Zone: Kilimani Zone (26) - 4 fellowships
-│        ├─ Zone: Westlands Zone (27) - 4 fellowships
-│        └─ Zone: Eastlands Zone (28) - 4 fellowships
-└─ Network: Europe Network (3)
-   └─ FOB: Western Europe (5)
-      └─ Location: Berlin, Germany (13)
-         ├─ Zone: Prenzlauer Berg Zone (29) - 3 fellowships
-         └─ Zone: Mitte Zone (30) - 3 fellowships
-```
+### Skill Categories (4 tracks)
 
-**Total: 68 groups** (1 movement + 2 networks + 2 FOBs + 4 locations + 13 zones + 46 fellowships)
+| ID | Name |
+|----|------|
+| `graphic-design` | Graphic Design |
+| `website-development` | Website Development |
+| `film-photography` | Film & Photography |
+| `alx-course` | ALX Course |
 
-### ✅ **Realistic Contacts** (50+ members)
-- **Uganda (Kampala)**: 35+ contacts across 20 fellowships
-- **Rwanda (Kigali)**: 8+ contacts across 8 fellowships  
-- **Kenya (Nairobi)**: 12+ contacts across 12 fellowships
-- **Germany (Berlin)**: 6+ contacts across 6 fellowships
+### Courses (6 courses across hubs)
 
-Each contact includes:
-- Full name, demographics, contact info
-- Realistic African/European names
-- Phone numbers with country codes
-- Email addresses and work places
-- Age groups, civil status, etc.
-- Group memberships with roles
+| Course | Hub | Instructor | Max Students |
+|--------|-----|------------|-------------|
+| Website Development | Katanga | John Mukasa | 30 |
+| Graphic Design | Kosovo | Sarah Namutebi | 25 |
+| Film & Photography | Jinja | John Mukasa | 20 |
+| ALX Course | Namayemba | Sarah Namutebi | 40 |
+| Website Development | Lyantode | John Mukasa | 25 |
+| Graphic Design | Katanga | Sarah Namutebi | 25 |
 
-### ✅ **Report Types** (4 report definitions)
-1. **MC Attendance Report** (Weekly, 12 fields)
-   - Date, group info, attendance, hosts, streaming
-   - Attendee names, visitors, feedback, testimonies
-2. **Sunday Service Report** (Weekly, 8 fields)
-   - Service details, total attendance, demographics
-   - Visitors, offering, sermon topic
-3. **Baptism Report** (Event-based, 6 fields)
-   - Baptism details, location, minister, notes
-4. **Salvation Report** (Event-based, 5 fields)
-   - Salvation context, names, follow-up plans
+### Instructors (2 accounts)
 
-### ✅ **Historical Data** (500+ submissions)
-- **MC Reports**: 8 weeks of history (80% submission rate)
-- **Service Reports**: 8 weeks of history (90% submission rate)
-- **Baptism Reports**: Sporadic events (2 submissions)
-- **Salvation Reports**: Sporadic events (2 submissions)
+All instructor accounts use password: `elevate2024`
 
-**Realistic patterns:**
-- Some fellowships are overdue (for testing UI)
-- Different submission rates by location
-- Attendance varies realistically (70-95%)
-- Historical gaps show realistic behavior
+| Employee ID | Name | Email | Hub | Specialization |
+|-------------|------|-------|-----|----------------|
+| INS-001 | John Mukasa | `john.mukasa@era92elevate.org` | Katanga | Website Development |
+| INS-002 | Sarah Namutebi | `sarah.namutebi@era92elevate.org` | Kosovo | Graphic Design |
+
+### Student Accounts (11 students)
+
+All student accounts use password: `student2024`
+
+| Student ID | Name | Email | Hub | Course |
+|------------|------|-------|-----|--------|
+| EA000001 | Jane Nakato | `jane.nakato@student.elevate.org` | Katanga | Website Development |
+| EA000002 | Brian Ssekandi | `brian.ssekandi@student.elevate.org` | Katanga | Website Development |
+| EA000003 | Mercy Apio | `mercy.apio@student.elevate.org` | Katanga | Graphic Design |
+| EA000004 | David Okello | `david.okello@student.elevate.org` | Kosovo | Graphic Design |
+| EA000005 | Grace Namugga | `grace.namugga@student.elevate.org` | Kosovo | Graphic Design |
+| EA000006 | Peter Mugisha | `peter.mugisha@student.elevate.org` | Jinja | Film & Photography |
+| EA000007 | Annet Akello | `annet.akello@student.elevate.org` | Jinja | Film & Photography |
+| EA000008 | Moses Waiswa | `moses.waiswa@student.elevate.org` | Namayemba | ALX Course |
+| EA000009 | Esther Nanyanzi | `esther.nanyanzi@student.elevate.org` | Lyantode | Website Development |
+| EA000010 | Samuel Kato | `samuel.kato@student.elevate.org` | Lyantode | Website Development |
+| EA000011 | Test Student *(default)* | `student@era92elevate.org` | Katanga | Website Development |
+
+### Admin Account
+
+Seeded separately via `npm run seed:admin`:
+
+| Email | Password | Role |
+|-------|----------|------|
+| `admin@era92elevate.org` | `elevate2024` | Admin |
 
 ## File Structure
 
 ```
+prisma/
+├── seed.ts              # Main Prisma seed (hubs, courses, students, enrollments)
+├── seed-admin.ts        # Admin + instructor TypeORM accounts
 src/seed/
-├── comprehensive-seed.service.ts    # Main seeding service
+├── comprehensive-seed.service.ts   # Stub (delegates to prisma/seed.ts)
 ├── data/
-│   ├── test-users.ts               # 7 test accounts
-│   ├── seed-groups.ts              # 6-level hierarchy
-│   ├── seed-contacts.ts            # 50+ contacts
-│   ├── seed-reports.ts             # 4 report types
-│   └── seed-submissions.ts         # Historical data generators
-└── commands/
-    └── seed-comprehensive.ts       # CLI command
+│   ├── users.ts         # Admin and instructor user data
+│   ├── hubs.ts          # Hub locations and skill categories
+│   ├── courses.ts       # Course definitions and assignments
+│   └── groups.ts        # Legacy group data
 ```
 
 ## Usage Examples
 
-### Development Setup
+### Fresh Development Setup
 ```bash
-# Fresh start - clear and seed
-npm run seed:reset
+# Run migrations
+npx prisma migrate dev
 
-# Start your server
+# Seed all data
+npm run seed:elevate
+npm run seed:admin
+
+# Start server
 npm run start:dev
+```
 
-# Test with Phase MC leader
-curl -X POST http://localhost:3000/api/auth/login \
+### Login as Admin
+```bash
+curl -X POST http://localhost:4002/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{
-    "churchName": "worship harvest",
-    "username": "fellowship@worshipharvest.org", 
-    "password": "password123"
+    "username": "admin@era92elevate.org",
+    "password": "elevate2024"
   }'
 ```
 
-### Testing Different User Levels
-
-**Fellowship Level** (Emmanuel Okello):
+### Login as Student
 ```bash
-# Only sees Phase MC (8 members)
-curl -H "Authorization: Bearer $TOKEN" \
-  http://localhost:3000/api/groups/me
+curl -X POST http://localhost:4002/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "student@era92elevate.org",
+    "password": "student2024"
+  }'
 ```
 
-**Zone Level** (Zone Leader):
-```bash  
-# Sees North Zone + 5 fellowships (~32 members)
-curl -H "Authorization: Bearer $TOKEN" \
-  http://localhost:3000/api/reports/submissions/team
+### Check Seeded Data (SQL)
+```sql
+-- Count students
+SELECT COUNT(*) FROM student;
+
+-- Students per hub
+SELECT h.name, COUNT(s.id) FROM student s
+JOIN hub h ON s."hubId" = h.id
+GROUP BY h.name;
+
+-- Enrollments per course
+SELECT c.title, h.name AS hub, COUNT(e.id) AS enrollments
+FROM enrollment e
+JOIN course c ON e."courseId" = c.id
+JOIN hub h ON c."hubId" = h.id
+GROUP BY c.title, h.name;
 ```
-
-**Location Level** (Location Pastor):
-```bash
-# Sees all Kampala (4 zones + 20 fellowships + ~135 members)
-curl -H "Authorization: Bearer $TOKEN" \
-  http://localhost:3000/api/dashboard/summary
-```
-
-**Global Level** (Movement Leader):
-```bash
-# Sees entire global hierarchy
-curl -H "Authorization: Bearer $TOKEN" \
-  http://localhost:3000/api/search?q=emmanuel&type=contacts
-```
-
-## Database Integration
-
-The seeding system:
-- ✅ **Respects existing data** (won't duplicate)
-- ✅ **Handles dependencies** (creates in proper order)
-- ✅ **Supports multi-tenancy** (creates default tenant)
-- ✅ **Sets up permissions** (role-based access control)
-- ✅ **Creates relationships** (group memberships, user roles)
-- ✅ **Validates data** (proper foreign keys, constraints)
 
 ## Troubleshooting
 
-### Clear and Restart
+### Clear and Re-seed
 ```bash
 npm run seed:clear
-npm run seed:comprehensive
+npm run seed:elevate
+npm run seed:admin
 ```
 
-### Check Seeded Data
-```bash
-# Count contacts
-SELECT COUNT(*) FROM contact;
+### Student Already Exists
+The seed uses `upsert` — re-running is safe. Existing records are skipped.
 
-# Count groups by type  
-SELECT gc.name, COUNT(g.id) FROM "group" g 
-JOIN group_category gc ON g."categoryId" = gc.id 
-GROUP BY gc.name;
-
-# Check user accounts
-SELECT username, "fullName", roles FROM "user" 
-JOIN user_roles ur ON "user".id = ur."userId"
-JOIN roles r ON ur."rolesId" = r.id;
-```
-
-### Performance
-The comprehensive seeding creates **500+ database records** and typically takes **30-60 seconds** depending on your system.
-
-## Mobile App Integration
-
-After seeding, your NestJS backend provides **100% API compatibility** with the MirageJS mock server:
-
-1. **Same test accounts** with identical credentials
-2. **Same group hierarchy** with exact IDs and relationships  
-3. **Same realistic data** distribution and demographics
-4. **Same report structure** with identical field definitions
-5. **Same historical patterns** with realistic submission gaps
-
-Perfect for seamless mobile development and testing! 🚀
+### Student ID Format
+Student IDs follow the pattern `EA000001` (EA + 6-digit zero-padded number).

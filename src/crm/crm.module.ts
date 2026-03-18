@@ -22,9 +22,9 @@ import { appEntities } from '../config';
 import { PhonesService } from './phones.service';
 import { AddressesService } from './addresses.service';
 import { TenantHeaderMiddleware } from 'src/middleware/tenant-header.middleware';
-import { GroupsMembershipService } from 'src/groups/services/group-membership.service';
-import { GroupsService } from 'src/groups/services/groups.service';
-import { GroupPermissionsService } from 'src/groups/services/group-permissions.service';
+// import { GroupsMembershipService } from 'src/groups/services/group-membership.service';
+// import { GroupsService } from 'src/groups/services/groups.service';
+// import { GroupPermissionsService } from 'src/groups/services/group-permissions.service';
 import { TenantContextInterceptor } from '../interceptors/tenant-context.interceptor';
 
 @Global()
@@ -34,9 +34,6 @@ import { TenantContextInterceptor } from '../interceptors/tenant-context.interce
     ContactsService,
     GoogleService,
     PrismaService,
-    GroupsMembershipService,
-    GroupsService,
-    GroupPermissionsService,
     GroupFinderService,
     PhonesService,
     AddressesService,

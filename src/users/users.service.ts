@@ -75,12 +75,7 @@ export class UsersService {
       }
 
       const data = await this.repository.find({
-        relations: [
-          'contact',
-          'contact.person',
-          'userRoles',
-          'userRoles.roles',
-        ],
+        relations: ['contact', 'contact.person'],
         skip: req.skip,
         take: req.limit,
         where: hasValue(idList) ? { id: In(idList) } : undefined,
@@ -110,9 +105,12 @@ export class UsersService {
         name: fullName,
       },
       id: user.id,
-      roles: user.userRoles.map((it) =>
-        it.roles.isActive ? it.roles.role : `${it.roles.role}: is disabled`,
-      ),
+      roles: user.roles
+        ? user.roles
+            .split(',')
+            .map((r) => r.trim())
+            .filter(Boolean)
+        : [],
       isActive: user.isActive,
       username: user.username,
       contactId: user.contactId,
@@ -213,13 +211,7 @@ export class UsersService {
 
   async findOne(id: number): Promise<UserListDto> {
     const data = await this.repository.findOne({
-      relations: [
-        'contact',
-        'contact.person',
-        'contact.tenant',
-        'userRoles',
-        'userRoles.roles',
-      ],
+      relations: ['contact', 'contact.person'],
       where: { id: id },
     });
 
@@ -305,26 +297,14 @@ export class UsersService {
   async findByName(username: string): Promise<User | undefined> {
     return this.repository.findOne({
       where: { username: ILike(username) },
-      relations: [
-        'contact',
-        'contact.person',
-        'contact.tenant',
-        'userRoles',
-        'userRoles.roles',
-      ],
+      relations: ['contact', 'contact.person'],
     });
   }
 
   async findById(id: number): Promise<User | undefined> {
     return this.repository.findOne({
       where: { id: id },
-      relations: [
-        'contact',
-        'contact.person',
-        'contact.tenant',
-        'userRoles',
-        'userRoles.roles',
-      ],
+      relations: ['contact', 'contact.person'],
     });
   }
 

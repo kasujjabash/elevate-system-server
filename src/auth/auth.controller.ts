@@ -43,15 +43,28 @@ export class AuthController {
   @UseGuards(LocalAuthGuard)
   @Post('login')
   async login(@Request() req): Promise<LoginResponseDto> {
-    const tenant = req.body.hasOwnProperty('churchName')
-      ? lowerCaseRemoveSpaces(req.body['churchName'])
+    const tenant = req.body['hubName']
+      ? lowerCaseRemoveSpaces(req.body['hubName'])
       : 'default';
     return this.authService.generateToken(req.user, tenant);
   }
 
   @Get('me')
-  getProfile(@Request() req): Promise<LoginResponseDto> {
+  getMe(@Request() req): Promise<LoginResponseDto> {
     return req.user;
+  }
+
+  @Get('profile')
+  getProfile(@Request() req) {
+    return this.authService.getFullProfile(req.user.contactId);
+  }
+
+  @Put('profile')
+  updateProfile(
+    @Request() req,
+    @Body() body: { firstName?: string; lastName?: string; phone?: string },
+  ) {
+    return this.authService.updateProfile(req.user.contactId, body);
   }
 
   @Post('refresh')

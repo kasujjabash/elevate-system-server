@@ -7,15 +7,7 @@ import {
 // import { TenantContext } from "../shared/tenant/tenant-context"; // No longer needed
 import { Tenant } from '../tenants/entities/tenant.entity';
 import { intersection } from 'lodash';
-import {
-  getRepository,
-  ILike,
-  In,
-  Like,
-  Repository,
-  Connection,
-  TreeRepository,
-} from 'typeorm';
+import { ILike, In, Like, Repository, Connection } from 'typeorm';
 import Contact from './entities/contact.entity';
 import { CreatePersonDto } from './dto/create-person.dto';
 import {
@@ -33,25 +25,25 @@ import Company from './entities/company.entity';
 import { CreateCompanyDto } from './dto/create-company.dto';
 import { hasNoValue, hasValue } from 'src/utils/validation';
 import Address from './entities/address.entity';
-import GroupMembership from '../groups/entities/groupMembership.entity';
-import { GroupRole } from '../groups/enums/groupRole';
+// import GroupMembership from '../groups/entities/groupMembership.entity';
+// import { GroupRole } from '../groups/enums/groupRole';
 import ContactListDto from './dto/contact-list.dto';
-import Group from '../groups/entities/group.entity';
+// import Group from '../groups/entities/group.entity';
 import { GoogleService } from 'src/vendor/google.service';
 import GooglePlaceDto from 'src/vendor/google-place.dto';
 import { getPreciseDistance } from 'geolib';
-import GroupMembershipRequest from 'src/groups/entities/groupMembershipRequest.entity';
+// import GroupMembershipRequest from 'src/groups/entities/groupMembershipRequest.entity';
 import { IEmail, sendEmail } from 'src/utils/mailer';
-import {
-  GetClosestGroupDto,
-  GetGroupResponseDto,
-} from 'src/groups/dto/membershipRequest/new-request.dto';
+// import {
+//   GetClosestGroupDto,
+//   GetGroupResponseDto,
+// } from 'src/groups/dto/membershipRequest/new-request.dto';
 import { PrismaService } from '../shared/prisma.service';
 import { getContactModel } from './utils/creationUtils';
 import { GroupFinderService } from './group-finder/group-finder.service';
 import { AddressesService } from './addresses.service';
-import GroupCategory from 'src/groups/entities/groupCategory.entity';
-import { groupCategories } from 'src/groups/groups.constants';
+// import GroupCategory from 'src/groups/entities/groupCategory.entity';
+// import { groupCategories } from 'src/groups/groups.constants';
 
 @Injectable()
 export class ContactsService {
@@ -61,9 +53,6 @@ export class ContactsService {
   private readonly phoneRepository: Repository<Phone>;
   private readonly emailRepository: Repository<Email>;
   private readonly addressRepository: Repository<Address>;
-  private readonly membershipRepository: Repository<GroupMembership>;
-  private readonly groupRepository: TreeRepository<Group>;
-  private readonly gmRequestRepository: Repository<GroupMembershipRequest>;
   private readonly tenantRepository: Repository<Tenant>;
 
   constructor(
@@ -79,9 +68,6 @@ export class ContactsService {
     this.phoneRepository = connection.getRepository(Phone);
     this.emailRepository = connection.getRepository(Email);
     this.addressRepository = connection.getRepository(Address);
-    this.membershipRepository = connection.getRepository(GroupMembership);
-    this.groupRepository = connection.getTreeRepository(Group);
-    this.gmRequestRepository = connection.getRepository(GroupMembershipRequest);
     this.tenantRepository = connection.getRepository(Tenant);
   }
 
@@ -90,27 +76,6 @@ export class ContactsService {
       let hasFilter = false;
       //This will hold the query id list
       let idList: number[] = [];
-      const groups = [
-        ...(req.cellGroups || []),
-        ...(req.churchLocations || []),
-      ];
-      if (hasValue(groups)) {
-        Logger.log(`searching by groups: ${groups.join(',')}`);
-        hasFilter = true;
-        const resp = await this.membershipRepository.find({
-          select: ['contactId'],
-          where: { groupId: In(groups) },
-        });
-        if (hasValue(idList)) {
-          idList = intersection(
-            idList,
-            resp.map((it) => it.contactId),
-          );
-        } else {
-          idList.push(...resp.map((it) => it.contactId));
-        }
-      }
-
       if (hasValue(req.query)) {
         hasFilter = true;
         const resp = await this.personRepository.find({
@@ -176,14 +141,7 @@ export class ContactsService {
         return [];
       }
       const data = await this.repository.find({
-        relations: [
-          'person',
-          'emails',
-          'phones',
-          'groupMemberships',
-          'groupMemberships.group',
-          'groupMemberships.group.category',
-        ],
+        relations: ['person', 'emails', 'phones'],
         skip: req.skip,
         take: req.limit,
         where: hasValue(idList) ? { id: In(idList) } : undefined,
@@ -308,152 +266,18 @@ export class ContactsService {
     return newPerson;
   }
 
-  async getGroupRequest(createPersonDto: CreatePersonDto): Promise<void> {
-    try {
-      const groupMembershipRequests: GroupMembershipRequest[] = [];
-      if (createPersonDto.joinCell === 'Yes') {
-        Logger.log('Attempt to add person to MC');
-        const groupRequest = new GroupMembershipRequest();
-        const details = {
-          placeId: createPersonDto.residence.placeId,
-          parentGroupId: createPersonDto.churchLocationId,
-        };
-        const closestGroup = await this.getClosestGroups(details);
-        Logger.log(
-          `Got closest group:${closestGroup.id}>>${
-            closestGroup.name
-          } ${JSON.stringify(closestGroup)}`,
-        );
-        if (hasValue(closestGroup)) {
-          groupRequest.parentId = details.parentGroupId;
-          groupRequest.groupId = closestGroup.groupId;
-          groupRequest.distanceKm = Math.round(closestGroup.distance / 1000);
-          groupMembershipRequests.push(groupRequest);
-          await this.notifyLeader(closestGroup, createPersonDto);
-        }
-      }
-    } catch (e) {
-      console.log('Failed to attach to group');
-    }
+  async getGroupRequest(_createPersonDto: CreatePersonDto): Promise<void> {
+    return;
   }
 
-  async getClosestGroups(
-    data: GetClosestGroupDto,
-  ): Promise<any | GetGroupResponseDto> {
-    try {
-      const { placeId, parentGroupId } = data;
-
-      let place: GooglePlaceDto = null;
-      if (placeId) {
-        place = await this.googleService.getPlaceDetails(placeId);
-      }
-
-      const groupCategory = getRepository(GroupCategory)
-        .createQueryBuilder('groupCategory')
-        .where('groupCategory.name = :groupCategoryName', {
-          groupCategoryName: groupCategories.MC,
-        })
-        .getOne();
-
-      const groupsAtLocation = await getRepository(Group)
-        .createQueryBuilder('group')
-        .where('group.parentId = :churchLocationId', {
-          churchLocationId: parentGroupId,
-        })
-        .andWhere('group.category = :groupCategory', {
-          groupCategory: groupCategory,
-        })
-        .getMany();
-
-      if (groupsAtLocation.length === 0) {
-        Logger.warn("There are no groups in the person's vicinity");
-        return [];
-      }
-
-      //Variable to store closest cell group
-      let closestCellGroupid = groupsAtLocation[0].id;
-      let closestCellGroupname = groupsAtLocation[0].name;
-      let closestCellGroupMetadata = groupsAtLocation[0].metaData;
-      //Initialise variable to store least distance
-      let leastDistance = getPreciseDistance(
-        { latitude: place?.latitude, longitude: place?.longitude },
-        {
-          latitude: groupsAtLocation[0]?.address?.latitude,
-          longitude: groupsAtLocation[0]?.address?.longitude,
-        },
-        1,
-      );
-
-      //Calculate closest distance
-      for (let i = 1; i < groupsAtLocation.length; i++) {
-        const distanceToCellGroup = getPreciseDistance(
-          { latitude: place.latitude, longitude: place.longitude },
-          {
-            latitude: groupsAtLocation[i]?.address?.latitude,
-            longitude: groupsAtLocation[i]?.address?.longitude,
-          },
-          1,
-        );
-        if (distanceToCellGroup < leastDistance) {
-          leastDistance = distanceToCellGroup;
-          closestCellGroupid = groupsAtLocation[i].id;
-          closestCellGroupname = groupsAtLocation[i].name;
-          closestCellGroupMetadata = groupsAtLocation[i].metaData;
-        }
-      }
-      return {
-        groupId: closestCellGroupid,
-        groupName: closestCellGroupname,
-        groupMeta: closestCellGroupMetadata,
-        distance: leastDistance,
-      };
-    } catch (e) {
-      console.log(e);
-      Logger.error('Failed to create member request', e);
-      return [];
-    }
+  async getClosestGroups(_data: any): Promise<any[]> {
+    return [];
   }
 
-  async notifyLeader(closestGroup: any, personDto: CreatePersonDto) {
-    try {
-      if (!hasValue(closestGroup)) {
-        Logger.log('Invalid group data');
-      }
-      const leader = await this.prisma.group_membership.findFirst({
-        where: { groupId: closestGroup.id, role: GroupRole.Leader },
-        include: {
-          contact: {
-            include: {
-              person: { select: { firstName: true } },
-              email: true,
-            },
-          },
-        },
-      });
-      if (leader) {
-        Logger.log(
-          `There are no leaders in  for this group:${closestGroup.id}`,
-        );
-      }
-      //notify cell group leader of cell group with shortest distance to the person's residence
-      const closestCellData = JSON.parse(closestGroup.groupMeta);
-      const mailerData: IEmail = {
-        to: `${closestCellData.email}`,
-        subject: 'Join MC Request',
-        html: `
-          <h3>Hello ${closestCellData.leaders},</h3></br>
-          <h4>I hope all is well on your end.<h4></br>
-          <p>${personDto.firstName} ${personDto.lastName} who lives in ${personDto.residence.description},
-          would like to join your Missional Community ${closestGroup.groupName}.</br>
-          You can reach ${personDto.firstName} on ${personDto.phone} or ${personDto.email}.</p></br>
-          <p>Cheers!</p>
-          `,
-      };
-      await sendEmail(mailerData);
-    } catch (e) {
-      Logger.error('Failed to notify leader');
-    }
-  }
+  // async notifyLeader(closestGroup: any, personDto: CreatePersonDto) {
+  //   // Commented out - this was church-specific functionality
+  //   // TODO: Implement hub leader notification for school system if needed
+  // }
 
   async findOne(id: number): Promise<Contact> {
     return await this.repository.findOne({

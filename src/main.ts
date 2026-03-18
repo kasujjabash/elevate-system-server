@@ -35,8 +35,10 @@ async function bootstrap() {
     }),
   );
   const options = new DocumentBuilder()
-    .setTitle('Project Zoe API')
-    .setDescription('API for Project Zoe frontend systems')
+    .setTitle('Elevate Academy API')
+    .setDescription(
+      'API for Elevate Academy School Management System - Digital Skills Training Platform',
+    )
     .setVersion('1.0')
     .build();
   const document = SwaggerModule.createDocument(app, options);

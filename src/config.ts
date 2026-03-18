@@ -1,11 +1,11 @@
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { usersEntities } from './users/users.helpers';
 import { crmEntities } from './crm/crm.helpers';
-import { groupEntities } from './groups/groups.helpers';
-import { eventEntities } from './events/events.helpers';
 import { helpEntities } from './help/help.helpers';
-import { reportsEntities } from './reports/reports.helpers';
-import { botEntities } from './bot/bot.helpers';
+import { Report } from './reports/entities/report.entity';
+import { ReportSubmission } from './reports/entities/report.submission.entity';
+import { ReportSubmissionData } from './reports/entities/report.submission.data.entity';
+import { ReportField } from './reports/entities/report.field.entity';
 
 require('dotenv').config();
 
@@ -52,10 +52,10 @@ export default config;
 export const appEntities: any[] = [
   ...usersEntities,
   ...crmEntities,
-  ...groupEntities,
-  ...eventEntities,
-  ...reportsEntities,
   ...helpEntities,
-  ...botEntities,
+  Report,
+  ReportSubmission,
+  ReportSubmissionData,
+  ReportField,
 ];
 console.log('#################appEntities#########', appEntities);

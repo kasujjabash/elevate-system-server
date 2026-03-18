@@ -20,7 +20,7 @@ export default class Roles {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => Tenant, (tenant) => tenant.roles, { nullable: false })
+  @ManyToOne(() => Tenant, (tenant) => tenant.roles, { nullable: true })
   tenant: Tenant;
 
   @Column({ nullable: false })
