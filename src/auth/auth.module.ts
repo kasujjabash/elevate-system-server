@@ -7,20 +7,24 @@ import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { jwtConstants } from './constants';
 import { JwtHelperService } from './jwt-helpers.service';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import Roles from 'src/users/entities/roles.entity';
+import { PrismaService } from '../shared/prisma.service';
 
 @Module({
   imports: [
     UsersModule,
-    TypeOrmModule.forFeature([Roles]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.register({
       secret: jwtConstants.secret,
       signOptions: { expiresIn: '60m' },
     }),
   ],
-  providers: [AuthService, LocalStrategy, JwtStrategy, JwtHelperService],
+  providers: [
+    AuthService,
+    LocalStrategy,
+    JwtStrategy,
+    JwtHelperService,
+    PrismaService,
+  ],
   exports: [AuthService, JwtHelperService],
 })
 export class AuthModule {}

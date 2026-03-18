@@ -1,0 +1,442 @@
+{
+  "auditReportVersion": 2,
+  "vulnerabilities": {
+    "@nestjs/common": {
+      "name": "@nestjs/common",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1103903,
+          "name": "@nestjs/common",
+          "dependency": "@nestjs/common",
+          "title": "nest allows a remote attacker to execute arbitrary code via the Content-Type header",
+          "url": "https://github.com/advisories/GHSA-cj7v-w2c7-cp7c",
+          "severity": "moderate",
+          "cwe": [
+            "CWE-94"
+          ],
+          "cvss": {
+            "score": 5.5,
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:U/C:L/I:L/A:L"
+          },
+          "range": "<10.4.16"
+        },
+        "axios"
+      ],
+      "effects": [
+        "@nestjs/core",
+        "nest-csv-parser"
+      ],
+      "range": "<=10.4.15",
+      "nodes": [
+        "node_modules/nest-csv-parser/node_modules/@nestjs/common"
+      ],
+      "fixAvailable": false
+    },
+    "@nestjs/core": {
+      "name": "@nestjs/core",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "@nestjs/common",
+        {
+          "source": 1091325,
+          "name": "@nestjs/core",
+          "dependency": "@nestjs/core",
+          "title": "@nestjs/core vulnerable to Information Exposure via StreamableFile pipe",
+          "url": "https://github.com/advisories/GHSA-4jpv-8r57-pv7j",
+          "severity": "moderate",
+          "cwe": [
+            "CWE-200"
+          ],
+          "cvss": {
+            "score": 5.3,
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+          },
+          "range": "<9.0.5"
+        },
+        "path-to-regexp"
+      ],
+      "effects": [],
+      "range": "<=10.4.1",
+      "nodes": [
+        "node_modules/nest-csv-parser/node_modules/@nestjs/core"
+      ],
+      "fixAvailable": true
+    },
+    "axios": {
+      "name": "axios",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1090049,
+          "name": "axios",
+          "dependency": "axios",
+          "title": "Axios vulnerable to Server-Side Request Forgery",
+          "url": "https://github.com/advisories/GHSA-4w2v-q235-vp99",
+          "severity": "moderate",
+          "cwe": [
+            "CWE-918"
+          ],
+          "cvss": {
+            "score": 5.9,
+            "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:N/A:N"
+          },
+          "range": "<0.21.1"
+        },
+        {
+          "source": 1097679,
+          "name": "axios",
+          "dependency": "axios",
+          "title": "Axios Cross-Site Request Forgery Vulnerability",
+          "url": "https://github.com/advisories/GHSA-wf5p-g6vw-rhxx",
+          "severity": "moderate",
+          "cwe": [
+            "CWE-352"
+          ],
+          "cvss": {
+            "score": 6.5,
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:N/A:N"
+          },
+          "range": ">=0.8.1 <0.28.0"
+        },
+        {
+          "source": 1102326,
+          "name": "axios",
+          "dependency": "axios",
+          "title": "axios Inefficient Regular Expression Complexity vulnerability",
+          "url": "https://github.com/advisories/GHSA-cph5-m8f7-6c5x",
+          "severity": "high",
+          "cwe": [
+            "CWE-400",
+            "CWE-1333"
+          ],
+          "cvss": {
+            "score": 7.5,
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+          },
+          "range": "<0.21.2"
+        },
+        {
+          "source": 1103617,
+          "name": "axios",
+          "dependency": "axios",
+          "title": "axios Requests Vulnerable To Possible SSRF and Credential Leakage via Absolute URL",
+          "url": "https://github.com/advisories/GHSA-jr5f-v2jv-69x6",
+          "severity": "high",
+          "cwe": [
+            "CWE-918"
+          ],
+          "cvss": {
+            "score": 0,
+            "vectorString": null
+          },
+          "range": "<0.30.0"
+        },
+        "follow-redirects"
+      ],
+      "effects": [
+        "@nestjs/common"
+      ],
+      "range": "<=0.29.0",
+      "nodes": [
+        "node_modules/nest-csv-parser/node_modules/axios"
+      ],
+      "fixAvailable": false
+    },
+    "class-transformer": {
+      "name": "class-transformer",
+      "severity": "moderate",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1089067,
+          "name": "class-transformer",
+          "dependency": "class-transformer",
+          "title": "Prototype pollution in class-transformer",
+          "url": "https://github.com/advisories/GHSA-6gp3-h3jj-prx4",
+          "severity": "moderate",
+          "cwe": [
+            "CWE-915",
+            "CWE-1321"
+          ],
+          "cvss": {
+            "score": 5.3,
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N"
+          },
+          "range": "<0.3.1"
+        }
+      ],
+      "effects": [],
+      "range": "<0.3.1",
+      "nodes": [
+        "node_modules/nest-csv-parser/node_modules/class-transformer"
+      ],
+      "fixAvailable": true
+    },
+    "commitizen": {
+      "name": "commitizen",
+      "severity": "low",
+      "isDirect": true,
+      "via": [
+        "cz-conventional-changelog",
+        "inquirer"
+      ],
+      "effects": [
+        "cz-conventional-changelog"
+      ],
+      "range": ">=3.0.1",
+      "nodes": [
+        "node_modules/commitizen"
+      ],
+      "fixAvailable": {
+        "name": "commitizen",
+        "version": "3.0.0",
+        "isSemVerMajor": true
+      }
+    },
+    "cz-conventional-changelog": {
+      "name": "cz-conventional-changelog",
+      "severity": "low",
+      "isDirect": true,
+      "via": [
+        "commitizen"
+      ],
+      "effects": [
+        "commitizen"
+      ],
+      "range": ">=3.0.2",
+      "nodes": [
+        "node_modules/cz-conventional-changelog"
+      ],
+      "fixAvailable": {
+        "name": "commitizen",
+        "version": "3.0.0",
+        "isSemVerMajor": true
+      }
+    },
+    "external-editor": {
+      "name": "external-editor",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        "tmp"
+      ],
+      "effects": [
+        "inquirer"
+      ],
+      "range": ">=1.1.1",
+      "nodes": [
+        "node_modules/external-editor"
+      ],
+      "fixAvailable": {
+        "name": "commitizen",
+        "version": "3.0.0",
+        "isSemVerMajor": true
+      }
+    },
+    "follow-redirects": {
+      "name": "follow-redirects",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1092623,
+          "name": "follow-redirects",
+          "dependency": "follow-redirects",
+          "title": "Exposure of Sensitive Information to an Unauthorized Actor in follow-redirects",
+          "url": "https://github.com/advisories/GHSA-pw2r-vq6v-hr8c",
+          "severity": "moderate",
+          "cwe": [
+            "CWE-200",
+            "CWE-212"
+          ],
+          "cvss": {
+            "score": 5.9,
+            "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:N/A:N"
+          },
+          "range": "<1.14.8"
+        },
+        {
+          "source": 1096353,
+          "name": "follow-redirects",
+          "dependency": "follow-redirects",
+          "title": "Follow Redirects improperly handles URLs in the url.parse() function",
+          "url": "https://github.com/advisories/GHSA-jchw-25xp-jwwc",
+          "severity": "moderate",
+          "cwe": [
+            "CWE-20",
+            "CWE-601"
+          ],
+          "cvss": {
+            "score": 6.1,
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N"
+          },
+          "range": "<1.15.4"
+        },
+        {
+          "source": 1096856,
+          "name": "follow-redirects",
+          "dependency": "follow-redirects",
+          "title": "follow-redirects' Proxy-Authorization header kept across hosts",
+          "url": "https://github.com/advisories/GHSA-cxjh-pqwp-8mfp",
+          "severity": "moderate",
+          "cwe": [
+            "CWE-200"
+          ],
+          "cvss": {
+            "score": 6.5,
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N"
+          },
+          "range": "<=1.15.5"
+        },
+        {
+          "source": 1102323,
+          "name": "follow-redirects",
+          "dependency": "follow-redirects",
+          "title": "Exposure of sensitive information in follow-redirects",
+          "url": "https://github.com/advisories/GHSA-74fj-2j2h-c42q",
+          "severity": "high",
+          "cwe": [
+            "CWE-359"
+          ],
+          "cvss": {
+            "score": 8,
+            "vectorString": "CVSS:3.0/AV:N/AC:L/PR:L/UI:R/S:U/C:H/I:H/A:H"
+          },
+          "range": "<1.14.7"
+        }
+      ],
+      "effects": [
+        "axios"
+      ],
+      "range": "<=1.15.5",
+      "nodes": [
+        "node_modules/nest-csv-parser/node_modules/follow-redirects"
+      ],
+      "fixAvailable": false
+    },
+    "inquirer": {
+      "name": "inquirer",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        "external-editor"
+      ],
+      "effects": [
+        "commitizen"
+      ],
+      "range": "3.0.0 - 8.2.6 || 9.0.0 - 9.3.7",
+      "nodes": [
+        "node_modules/inquirer"
+      ],
+      "fixAvailable": {
+        "name": "commitizen",
+        "version": "3.0.0",
+        "isSemVerMajor": true
+      }
+    },
+    "nest-csv-parser": {
+      "name": "nest-csv-parser",
+      "severity": "moderate",
+      "isDirect": true,
+      "via": [
+        "@nestjs/common",
+        "@nestjs/core",
+        "class-transformer"
+      ],
+      "effects": [],
+      "range": "*",
+      "nodes": [
+        "node_modules/nest-csv-parser"
+      ],
+      "fixAvailable": false
+    },
+    "path-to-regexp": {
+      "name": "path-to-regexp",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1101848,
+          "name": "path-to-regexp",
+          "dependency": "path-to-regexp",
+          "title": "path-to-regexp outputs backtracking regular expressions",
+          "url": "https://github.com/advisories/GHSA-9wv6-86v2-598j",
+          "severity": "high",
+          "cwe": [
+            "CWE-1333"
+          ],
+          "cvss": {
+            "score": 7.5,
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+          },
+          "range": ">=2.0.0 <3.3.0"
+        }
+      ],
+      "effects": [
+        "@nestjs/core"
+      ],
+      "range": "2.0.0 - 3.2.0",
+      "nodes": [
+        "node_modules/nest-csv-parser/node_modules/path-to-regexp"
+      ],
+      "fixAvailable": true
+    },
+    "tmp": {
+      "name": "tmp",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1106849,
+          "name": "tmp",
+          "dependency": "tmp",
+          "title": "tmp allows arbitrary temporary file / directory write via symbolic link `dir` parameter",
+          "url": "https://github.com/advisories/GHSA-52f5-9888-hmc6",
+          "severity": "low",
+          "cwe": [
+            "CWE-59"
+          ],
+          "cvss": {
+            "score": 2.5,
+            "vectorString": "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:N/I:L/A:N"
+          },
+          "range": "<=0.2.3"
+        }
+      ],
+      "effects": [
+        "external-editor"
+      ],
+      "range": "<=0.2.3",
+      "nodes": [
+        "node_modules/tmp"
+      ],
+      "fixAvailable": {
+        "name": "commitizen",
+        "version": "3.0.0",
+        "isSemVerMajor": true
+      }
+    }
+  },
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 5,
+      "moderate": 2,
+      "high": 5,
+      "critical": 0,
+      "total": 12
+    },
+    "dependencies": {
+      "prod": 493,
+      "dev": 829,
+      "optional": 68,
+      "peer": 32,
+      "peerOptional": 0,
+      "total": 1348
+    }
+  }
+}

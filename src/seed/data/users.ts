@@ -1,47 +1,33 @@
-import { RegisterUserDto } from "../../auth/dto/register-user.dto";
-import { Gender } from "../../crm/enums/gender";
-import { CivilStatus } from "../../crm/enums/civilStatus";
-import { roleAdmin } from "../../auth/constants";
-import { Tenant } from "src/tenants/entities/tenant.entity";
+import { RegisterUserDto } from '../../auth/dto/register-user.dto';
+import { Gender } from '../../crm/enums/gender';
+import { CivilStatus } from '../../crm/enums/civilStatus';
+import { roleAdmin } from '../../auth/constants';
 
-export const seedTenant: Tenant = {
-  id: 1,
-  name: "demo",
-  description: "",
-  users: [],
-  contacts: [],
-  groups: [],
-  groupCategories: [],
-  eventCategories: [],
-  roles: [],
-  helpArticles: [],
-  chatSessions: [],
-  reports: [],
-};
-
+// These are the TypeORM-based users (admin + instructors) seeded on first boot.
+// Students log in via Prisma user records (seeded by prisma/seed.ts).
 export const seedUsers: RegisterUserDto[] = [
   {
-    firstName: "John",
-    lastName: "Doe",
-    middleName: "Emmanuel",
+    firstName: 'Elevate',
+    lastName: 'Admin',
+    middleName: null,
     gender: Gender.Male,
-    civilStatus: CivilStatus.Married,
-    dateOfBirth: new Date("1900-12-20"),
-    phone: "0701123456",
-    email: "john.doe@kanzucodefoundation.org",
-    password: "Xpass@123",
+    civilStatus: CivilStatus.Single,
+    dateOfBirth: new Date('1990-01-01'),
+    phone: '0700000001',
+    email: 'admin@era92elevate.org',
+    password: 'elevate2024',
     roles: [roleAdmin.role],
   },
   {
-    firstName: "Jane",
-    lastName: "Doe",
+    firstName: 'John',
+    lastName: 'Mukasa',
     middleName: null,
-    gender: Gender.Female,
-    civilStatus: CivilStatus.Married,
-    dateOfBirth: new Date("1900-12-20"),
-    phone: "0701123457",
-    email: "jane.doe@kanzucodefoundation.org",
-    password: "Password@1",
+    gender: Gender.Male,
+    civilStatus: CivilStatus.Single,
+    dateOfBirth: new Date('1985-05-15'),
+    phone: '0700000002',
+    email: 'instructor@era92elevate.org',
+    password: 'elevate2024',
     roles: [roleAdmin.role],
   },
 ];

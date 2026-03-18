@@ -1,13 +1,13 @@
-import { TypeOrmModuleOptions } from "@nestjs/typeorm";
-import { usersEntities } from "./users/users.helpers";
-import { crmEntities } from "./crm/crm.helpers";
-import { groupEntities } from "./groups/groups.helpers";
-import { eventEntities } from "./events/events.helpers";
-import { helpEntities } from "./help/help.helpers";
-import { reportsEntities } from "./reports/reports.helpers";
-import { botEntities } from "./bot/bot.helpers";
+import { TypeOrmModuleOptions } from '@nestjs/typeorm';
+import { usersEntities } from './users/users.helpers';
+import { crmEntities } from './crm/crm.helpers';
+import { helpEntities } from './help/help.helpers';
+import { Report } from './reports/entities/report.entity';
+import { ReportSubmission } from './reports/entities/report.submission.entity';
+import { ReportSubmissionData } from './reports/entities/report.submission.data.entity';
+import { ReportField } from './reports/entities/report.field.entity';
 
-require("dotenv").config();
+require('dotenv').config();
 
 export function normalizePort(val: any) {
   const port = parseInt(val, 10);
@@ -23,20 +23,21 @@ export function normalizePort(val: any) {
 }
 
 const database: TypeOrmModuleOptions = {
-  type: "postgres",
+  type: 'postgres',
   host: process.env.DB_HOST,
   port: normalizePort(process.env.DB_PORT),
   username: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
-  ssl: process.env.DB_PORT === '25060'
-          ? {
-            rejectUnauthorized: false,
-          }
-          : undefined,
+  ssl:
+    process.env.DB_PORT === '25060'
+      ? {
+          rejectUnauthorized: false,
+        }
+      : undefined,
   database: process.env.DB_DATABASE,
-  synchronize: process.env.DB_SYNCHRONIZE === "true",
+  synchronize: process.env.DB_SYNCHRONIZE === 'true',
   cache: true,
-  logging: process.env.DB_LOGGING === "true",
+  logging: process.env.DB_LOGGING === 'true',
 };
 
 const config = {
@@ -51,10 +52,10 @@ export default config;
 export const appEntities: any[] = [
   ...usersEntities,
   ...crmEntities,
-  ...groupEntities,
-  ...eventEntities,
-  ...reportsEntities,
   ...helpEntities,
-  ...botEntities,
+  Report,
+  ReportSubmission,
+  ReportSubmissionData,
+  ReportField,
 ];
-console.log("#################appEntities#########", appEntities);
+console.log('#################appEntities#########', appEntities);

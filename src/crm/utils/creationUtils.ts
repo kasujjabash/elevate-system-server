@@ -11,8 +11,8 @@ import { EmailCategory } from '../enums/emailCategory';
 import Address from '../entities/address.entity';
 import { AddressCategory } from '../enums/addressCategory';
 import GooglePlaceDto from '../../vendor/google-place.dto';
-import GroupMembership from '../../groups/entities/groupMembership.entity';
-import { GroupRole } from '../../groups/enums/groupRole';
+// import GroupMembership from '../../groups/entities/groupMembership.entity';
+// import { GroupRole } from '../../groups/enums/groupRole';
 
 export const getContactModel = (
   personDto: CreatePersonDto,
@@ -62,19 +62,6 @@ export const getContactModel = (
     address.country = place.country;
     address.district = place.district;
     model.addresses.push(address);
-  }
-  model.groupMemberships = [];
-  if (isValidNumber(personDto.churchLocationId)) {
-    const membership = new GroupMembership();
-    membership.groupId = personDto.churchLocationId;
-    membership.role = GroupRole.Member;
-    model.groupMemberships.push(membership);
-  }
-  if (isValidNumber(personDto.cellGroupId)) {
-    const membership = new GroupMembership();
-    membership.groupId = personDto.cellGroupId;
-    membership.role = GroupRole.Member;
-    model.groupMemberships.push(membership);
   }
   return model;
 };

@@ -36,6 +36,7 @@ lerna-debug.log*
 *.prod
 
 .env
+prisma/.env
 
 #Eslint cache file
 .eslintcache

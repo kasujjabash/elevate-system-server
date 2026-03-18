@@ -1,29 +1,33 @@
-import { Global, Module, MiddlewareConsumer } from "@nestjs/common";
-import { AuthController } from "./auth/auth.controller";
-import { AppService } from "./app.service";
-import { UsersModule } from "./users/users.module";
-import { ConfigModule } from "@nestjs/config";
-import { TypeOrmModule } from "@nestjs/typeorm";
-import { AuthModule } from "./auth/auth.module";
-import { CrmModule } from "./crm/crm.module";
-import { GroupsModule } from "./groups/groups.module";
-import config, { appEntities } from "./config";
-import { SeedModule } from "./seed/seed.module";
-import { VendorModule } from "./vendor/vendor.module";
-import { EventsModule } from "./events/events.module";
-import { ChatModule } from "./chat/chat.module";
-import { HelpModule } from "./help/help.module";
-import { TenantsModule } from "./tenants/tenants.module";
-import { JwtTenantHeaderMiddleware } from "./middleware/jwtTenantHeader.middleware";
-import { ReportsModule } from "./reports/reports.module";
-import { Tenant } from "./tenants/entities/tenant.entity";
-import { nameTenantHeaderMiddleware } from "./middleware/nameTenantHeader.middleware";
+import { Global, Module, MiddlewareConsumer } from '@nestjs/common';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { AuthController } from './auth/auth.controller';
+import { AppService } from './app.service';
+import { UsersModule } from './users/users.module';
+import { ConfigModule } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuthModule } from './auth/auth.module';
+import { CrmModule } from './crm/crm.module';
+// School-specific modules
+import { HubsModule } from './hubs/hubs.module';
+import { CoursesModule } from './courses/courses.module';
+import { StudentsModule } from './students/students.module';
+import { ClassesModule } from './classes/classes.module';
+import { DashboardModule } from './dashboard/dashboard.module';
+// Keeping useful modules
+import config, { appEntities } from './config';
+import { SeedModule } from './seed/seed.module';
+import { VendorModule } from './vendor/vendor.module';
+import { ChatModule } from './chat/chat.module';
+import { HelpModule } from './help/help.module';
+import { TenantsModule } from './tenants/tenants.module';
+import { SearchModule } from './search/search.module';
+import { Tenant } from './tenants/entities/tenant.entity';
+import { TenantHeaderMiddleware } from './middleware/tenant-header.middleware';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 
 @Global()
 @Module({
   imports: [
-
-
     ConfigModule.forRoot({
       isGlobal: true,
       expandVariables: true,
@@ -33,46 +37,47 @@ import { nameTenantHeaderMiddleware } from "./middleware/nameTenantHeader.middle
       entities: [...appEntities, Tenant],
       schema: 'public', // Use public schema for row-level multi-tenancy
     }),
+    // Core modules
     UsersModule,
     AuthModule,
-    CrmModule,
-    GroupsModule,
+    // CrmModule, // Temporarily disabled due to group dependencies
+
+    // School-specific modules
+    HubsModule,
+    CoursesModule,
+    StudentsModule,
+
+    // Supporting modules
     SeedModule,
     VendorModule,
-    EventsModule,
-
     ChatModule,
     HelpModule,
-    TenantsModule, 
-    ReportsModule,
+    TenantsModule,
+    DashboardModule,
+    ClassesModule,
+    // SearchModule, // Temporarily disabled due to group dependencies
   ],
   exports: [AppService],
   controllers: [AuthController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+  ],
 })
 export class AppModule {
   public configure(consumer: MiddlewareConsumer): void {
     consumer
-      .apply(JwtTenantHeaderMiddleware)
-      .exclude(
-        'api/tenants',
-        'api/tenants/seed',
-        'api/auth/login',
-        'api/auth/forgot-password',
-        'api/auth/reset-password/:token',
-        'api/register',
-      )
-      .forRoutes('*');
-
-    consumer
-      .apply(nameTenantHeaderMiddleware)
+      .apply(TenantHeaderMiddleware)
       .forRoutes(
-        'api/tenants',
-        'api/tenants/seed',
         'api/auth/login',
         'api/auth/forgot-password',
         'api/auth/reset-password/:token',
         'api/register',
+        'api/tenants',
+        'api/tenants/seed',
       );
   }
 }

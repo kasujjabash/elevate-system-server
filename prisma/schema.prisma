@@ -1,6 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
-  binaryTargets = ["debian-openssl-1.1.x","darwin","debian-openssl-1.0.x"]
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-1.1.x", "darwin", "darwin-arm64", "debian-openssl-1.0.x"]
 }
 
 datasource db {
@@ -29,30 +29,17 @@ model address {
   contact        contact               @relation(fields: [contactId], references: [id])
 }
 
-model company {
-  id        Int     @id @default(autoincrement())
-  name      String  @db.VarChar
-  contactId Int     @unique
-  contact   contact @relation(fields: [contactId], references: [id])
-}
-
 model contact {
-  id                                            Int                        @id @default(autoincrement())
-  category                                      contact_category_enum      @default(Person)
-  address                                       address[]
-  company                                       company?
-  email                                         email[]
-  event_attendance                              event_attendance[]
-  group_membership                              group_membership[]
-  group_membership_request                      group_membership_request[]
-  identification                                identification[]
-  occasion                                      occasion[]
-  person                                        person?
-  phone                                         phone[]
-  relationship_contactTorelationship_contactId  relationship[]             @relation("contactTorelationship_contactId")
-  relationship_contactTorelationship_relativeId relationship[]             @relation("contactTorelationship_relativeId")
-  request                                       request[]
-  user                                          user?
+  id             Int                   @id @default(autoincrement())
+  category       contact_category_enum @default(Person)
+  address        address[]
+  email          email[]
+  phone          phone[]
+  identification identification[]
+  person         person?
+  student        student?
+  instructor     instructor?
+  user           user?
 }
 
 model email {
@@ -64,96 +51,13 @@ model email {
   contact   contact             @relation(fields: [contactId], references: [id])
 }
 
-model event_attendance {
-  id        Int     @id @default(autoincrement())
-  isVisitor Boolean
-  eventId   Int
+model phone {
+  id        Int                 @id @default(autoincrement())
+  category  phone_category_enum @default(Mobile)
+  value     String              @db.VarChar
+  isPrimary Boolean
   contactId Int
-  attended  Boolean
-  contact   contact @relation(fields: [contactId], references: [id])
-  events    events  @relation(fields: [eventId], references: [id])
-}
-
-model event_category {
-  id          String        @id @db.VarChar(40)
-  name        String        @db.VarChar(200)
-  event_field event_field[]
-  events      events[]
-}
-
-model event_field {
-  id             Int            @id @default(autoincrement())
-  name           String         @db.VarChar(40)
-  label          String         @db.VarChar(100)
-  details        String         @db.VarChar(200)
-  type           String         @db.VarChar(25)
-  isRequired     Boolean
-  categoryId     String         @db.VarChar(40)
-  event_category event_category @relation(fields: [categoryId], references: [id])
-}
-
-model events {
-  id               Int                  @id @default(autoincrement())
-  privacy          events_privacy_enum?
-  name             String               @db.VarChar(100)
-  startDate        DateTime?            @db.Timestamp(6)
-  endDate          DateTime?            @db.Timestamp(6)
-  submittedAt      DateTime?            @db.Timestamp(6)
-  submittedById      Int?
-  details          String               @db.VarChar(500)
-  venue            Json?
-  groupId          Int?
-  metaData         Json?
-  categoryId       String               @db.VarChar(40)
-  event_category   event_category       @relation(fields: [categoryId], references: [id])
-  group            group?               @relation(fields: [groupId], references: [id])
-  event_attendance event_attendance[]
-}
-
-model group {
-  id                       Int                        @id @default(autoincrement())
-  privacy                  group_privacy_enum?
-  name                     String                     @db.VarChar(100)
-  details                  String?                    @db.VarChar(500)
-  metaData                 Json?
-  parentId                 Int?
-  freeForm                 String?                    @db.VarChar
-  latitude                 Float?
-  longitude                Float?
-  geoCoordinates           Unsupported("point")?
-  placeId                  String?                    @db.VarChar
-  categoryId               String                     @db.VarChar(40)
-  group_category           group_category             @relation(fields: [categoryId], references: [id])
-  group                    group?                     @relation("groupTogroup_parentId", fields: [parentId], references: [id])
-  events                   events[]
-  other_group              group[]                    @relation("groupTogroup_parentId")
-  group_membership         group_membership[]
-  group_membership_request group_membership_request[]
-}
-
-model group_category {
-  id    String  @id @db.VarChar(40)
-  name  String  @db.VarChar(200)
-  group group[]
-}
-
-model group_membership {
-  id        Int                         @id @default(autoincrement())
-  groupId   Int
-  contactId Int
-  role      group_membership_role_enum?
-  contact   contact                     @relation(fields: [contactId], references: [id])
-  group     group                       @relation(fields: [groupId], references: [id])
-}
-
-model group_membership_request {
-  id         Int     @id @default(autoincrement())
-  contactId  Int
-  parentId   Int?
-  groupId    Int
-  distanceKm Int
-  contact    contact @relation(fields: [contactId], references: [id])
-  group      group   @relation(fields: [groupId], references: [id])
+  contact   contact             @relation(fields: [contactId], references: [id])
 }
 
 model identification {
@@ -169,68 +73,191 @@ model identification {
   contact        contact                      @relation(fields: [contactId], references: [id])
 }
 
-model occasion {
-  id        Int                    @id @default(autoincrement())
-  value     DateTime               @db.Timestamp(6)
-  details   String                 @db.VarChar
-  category  occasion_category_enum @default(Birthday)
-  contactId Int
-  contact   contact                @relation(fields: [contactId], references: [id])
-}
-
 model person {
-  id          Int                      @id @default(autoincrement())
-  salutation  person_salutation_enum?
-  firstName   String                   @db.VarChar(40)
-  lastName    String                   @db.VarChar(40)
-  middleName  String?                  @db.VarChar(40)
-  ageGroup    String?                  @db.VarChar
-  placeOfWork String?                  @db.VarChar
+  id          Int                @id @default(autoincrement())
+  firstName   String             @db.VarChar(40)
+  lastName    String             @db.VarChar(40)
+  middleName  String?            @db.VarChar(40)
   gender      person_gender_enum
-  civilStatus person_civilstatus_enum?
-  avatar      String?                  @db.VarChar
-  dateOfBirth DateTime?                @db.Date
-  contactId   Int                      @unique
-  contact     contact                  @relation(fields: [contactId], references: [id])
+  avatar      String?            @db.VarChar
+  dateOfBirth DateTime?          @db.Date
+  contactId   Int                @unique
+  contact     contact            @relation(fields: [contactId], references: [id])
 }
 
-model phone {
-  id        Int                 @id @default(autoincrement())
-  category  phone_category_enum @default(Mobile)
-  value     String              @db.VarChar
-  isPrimary Boolean
-  contactId Int
-  contact   contact             @relation(fields: [contactId], references: [id])
+model hub {
+  id          Int          @id @default(autoincrement())
+  name        String       @db.VarChar(100)
+  code        String       @unique @db.VarChar(20)
+  description String?      @db.VarChar(500)
+  location    String       @db.VarChar(100)
+  address     String?      @db.VarChar(500)
+  isActive    Boolean      @default(true)
+  students    student[]
+  courses     course[]
+  instructors instructor[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 }
 
-model query_result_cache {
-  id         Int     @id @default(autoincrement())
-  identifier String? @db.VarChar
-  time       BigInt
-  duration   Int
-  query      String
-  result     String
-
-  @@map("query-result-cache")
+model skill_category {
+  id          String   @id @db.VarChar(40)
+  name        String   @db.VarChar(100)
+  description String?  @db.VarChar(500)
+  courses     course[]
 }
 
-model relationship {
-  id                                       Int                        @id @default(autoincrement())
-  category                                 relationship_category_enum @default(Other)
-  contactId                                Int
-  relativeId                               Int
-  contact_contactTorelationship_contactId  contact                    @relation("contactTorelationship_contactId", fields: [contactId], references: [id])
-  contact_contactTorelationship_relativeId contact                    @relation("contactTorelationship_relativeId", fields: [relativeId], references: [id])
+model course {
+  id              Int               @id @default(autoincrement())
+  title           String            @db.VarChar(200)
+  description     String            @db.VarChar(1000)
+  duration        String?           @db.VarChar(50)
+  level           course_level_enum @default(Beginner)
+  isActive        Boolean           @default(true)
+  isEnrollable    Boolean           @default(true)
+  maxStudents     Int?
+  hubId           Int
+  instructorId    Int?
+  skillCategoryId String?           @db.VarChar(40)
+  hub             hub               @relation(fields: [hubId], references: [id])
+  instructor      instructor?       @relation(fields: [instructorId], references: [id])
+  skillCategory   skill_category?   @relation(fields: [skillCategoryId], references: [id])
+  enrollments     enrollment[]
+  study_resources study_resource[]
+  assignments     assignment[]
+  modules         course_module[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
 }
 
-model request {
-  id         Int                   @id @default(autoincrement())
-  value      DateTime              @db.Timestamp(6)
-  details    String                @db.VarChar
-  category   request_category_enum @default(Birthday)
-  relativeId Int
-  contactId  Int
-  contact    contact               @relation(fields: [contactId], references: [id])
+model student {
+  id             Int                 @id @default(autoincrement())
+  studentId      String              @unique @db.VarChar(20)
+  contactId      Int                 @unique
+  hubId          Int
+  status         student_status_enum @default(Active)
+  enrolledAt     DateTime            @default(now())
+  contact        contact             @relation(fields: [contactId], references: [id])
+  hub            hub                 @relation(fields: [hubId], references: [id])
+  enrollments    enrollment[]
+  submissions    submission[]
+  contentProgress content_progress[]
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+}
+
+model instructor {
+  id             Int      @id @default(autoincrement())
+  employeeId     String   @unique @db.VarChar(20)
+  contactId      Int      @unique
+  hubId          Int
+  specialization String?  @db.VarChar(200)
+  isActive       Boolean  @default(true)
+  contact        contact  @relation(fields: [contactId], references: [id])
+  hub            hub      @relation(fields: [hubId], references: [id])
+  courses        course[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model enrollment {
+  id          Int                    @id @default(autoincrement())
+  studentId   Int
+  courseId    Int
+  status      enrollment_status_enum @default(Enrolled)
+  enrolledAt  DateTime               @default(now())
+  completedAt DateTime?
+  progress    Float                  @default(0)
+  student     student                @relation(fields: [studentId], references: [id])
+  course      course                 @relation(fields: [courseId], references: [id])
+
+  @@unique([studentId, courseId])
+}
+
+model study_resource {
+  id          Int                      @id @default(autoincrement())
+  title       String                   @db.VarChar(200)
+  description String?                  @db.VarChar(1000)
+  type        study_resource_type_enum @default(Document)
+  url         String?                  @db.VarChar(500)
+  filePath    String?                  @db.VarChar(500)
+  courseId    Int
+  isPublic    Boolean                  @default(false)
+  course      course                   @relation(fields: [courseId], references: [id])
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+}
+
+model assignment {
+  id          Int          @id @default(autoincrement())
+  title       String       @db.VarChar(200)
+  description String       @db.VarChar(1000)
+  dueDate     DateTime?
+  maxScore    Int?         @default(100)
+  courseId    Int
+  isActive    Boolean      @default(true)
+  course      course       @relation(fields: [courseId], references: [id])
+  submissions submission[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model course_module {
+  id          Int              @id @default(autoincrement())
+  title       String           @db.VarChar(200)
+  description String?          @db.VarChar(1000)
+  weekNumber  Int              @default(1)
+  order       Int              @default(0)
+  isPublished Boolean          @default(true)
+  courseId    Int
+  course      course           @relation(fields: [courseId], references: [id])
+  contents    module_content[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model module_content {
+  id          Int                      @id @default(autoincrement())
+  title       String                   @db.VarChar(200)
+  body        String?                  @db.Text
+  videoUrl    String?                  @db.VarChar(500)
+  type        module_content_type_enum @default(Lesson)
+  order       Int                      @default(0)
+  durationMin Int?
+  isPublished Boolean                  @default(true)
+  moduleId    Int
+  module      course_module            @relation(fields: [moduleId], references: [id])
+  progress    content_progress[]
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+}
+
+model content_progress {
+  id          Int            @id @default(autoincrement())
+  studentId   Int
+  contentId   Int
+  completedAt DateTime       @default(now())
+  student     student        @relation(fields: [studentId], references: [id])
+  content     module_content @relation(fields: [contentId], references: [id])
+
+  @@unique([studentId, contentId])
+}
+
+model submission {
+  id           Int                    @id @default(autoincrement())
+  studentId    Int
+  assignmentId Int
+  content      String?                @db.Text
+  filePath     String?                @db.VarChar(500)
+  score        Int?
+  feedback     String?                @db.Text
+  status       submission_status_enum @default(Submitted)
+  submittedAt  DateTime               @default(now())
+  gradedAt     DateTime?
+  student      student                @relation(fields: [studentId], references: [id])
+  assignment   assignment             @relation(fields: [assignmentId], references: [id])
+
+  @@unique([studentId, assignmentId])
 }
 
 model user {
@@ -251,65 +278,12 @@ enum address_category_enum {
 
 enum contact_category_enum {
   Person
-  Company
 }
 
 enum email_category_enum {
   Work
   Personal
-  Other
-}
-
-enum events_privacy_enum {
-  Public
-  Private
-}
-
-enum group_membership_role_enum {
-  Member
-  Leader
-}
-
-enum group_privacy_enum {
-  Private
-  Public
-}
-
-enum identification_category_enum {
-  Nin
-  Passport
-  DrivingPermit
-  VillageCard
-  Nssf
-  Other
-}
-
-enum occasion_category_enum {
-  Birthday
-  Anniversary
-  Salvation
-  Engaged
-  Other
-}
-
-enum person_civilstatus_enum {
-  Other
-  Single
-  Married
-  Dating
-}
-
-enum person_gender_enum {
-  Male
-  Female
-}
-
-enum person_salutation_enum {
-  Mr
-  Mrs
-  Ms
-  Dr
-  Prof
+  School
   Other
 }
 
@@ -317,25 +291,61 @@ enum phone_category_enum {
   Mobile
   Office
   Home
-  Fax
   Other
 }
 
-enum relationship_category_enum {
-  Mother
-  Father
-  Daughter
-  Son
-  Fiancee
-  Sister
-  Brother
+enum identification_category_enum {
+  Nin
+  Passport
+  DrivingPermit
+  StudentId
   Other
 }
 
-enum request_category_enum {
-  Birthday
-  Anniversary
-  Salvation
-  Engaged
-  Other
+enum person_gender_enum {
+  Male
+  Female
+}
+
+enum course_level_enum {
+  Beginner
+  Intermediate
+  Advanced
+}
+
+enum student_status_enum {
+  Active
+  Inactive
+  Graduated
+  Suspended
+}
+
+enum enrollment_status_enum {
+  Enrolled
+  InProgress
+  Completed
+  Dropped
+}
+
+enum study_resource_type_enum {
+  Document
+  Video
+  Audio
+  Image
+  Link
+  Software
+}
+
+enum submission_status_enum {
+  Submitted
+  Graded
+  Returned
+}
+
+enum module_content_type_enum {
+  Lesson
+  Video
+  Quiz
+  Assignment
+  Resource
 }
