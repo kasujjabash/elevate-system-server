@@ -7,7 +7,10 @@ export const cleanUpUser = (user: User) => {
 };
 
 export const createUserDto = (user: User): UserDto => {
-  const roleNames = user.roles
+  // Prefer the userRoles join table (authoritative); fall back to legacy roles string column
+  const roleNames = user.userRoles?.length
+    ? user.userRoles.map((ur) => ur.roles?.role).filter(Boolean)
+    : user.roles
     ? user.roles
         .split(',')
         .map((r) => r.trim())

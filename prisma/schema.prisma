@@ -80,18 +80,28 @@ model person {
 }
 
 model hub {
-  id          Int          @id @default(autoincrement())
-  name        String       @db.VarChar(100)
-  code        String       @unique @db.VarChar(20)
-  description String?      @db.VarChar(500)
-  location    String       @db.VarChar(100)
-  address     String?      @db.VarChar(500)
-  isActive    Boolean      @default(true)
-  students    student[]
-  courses     course[]
-  instructors instructor[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id              Int          @id @default(autoincrement())
+  name            String       @db.VarChar(100)
+  code            String       @unique @db.VarChar(20)
+  description     String?      @db.VarChar(500)
+  location        String       @db.VarChar(100)
+  address         String?      @db.VarChar(500)
+  isActive        Boolean      @default(true)
+  // Hub manager
+  managerName     String?      @db.VarChar(100)
+  managerPhone    String?      @db.VarChar(30)
+  managerEmail    String?      @db.VarChar(100)
+  // Resources
+  computers       Int?         @default(0)
+  projectors      Int?         @default(0)
+  capacity        Int?
+  notes           String?      @db.Text
+  students            student[]
+  courses             course[]
+  instructors         instructor[]
+  attendanceSessions  attendance_session[]
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
 }
 
 model skill_category {
@@ -115,12 +125,13 @@ model course {
   hub             hub?              @relation(fields: [hubId], references: [id])
   instructor      instructor?       @relation(fields: [instructorId], references: [id])
   skillCategory   skill_category?   @relation(fields: [skillCategoryId], references: [id])
-  enrollments     enrollment[]
-  study_resources study_resource[]
-  assignments     assignment[]
-  modules         course_module[]
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  enrollments         enrollment[]
+  study_resources     study_resource[]
+  assignments         assignment[]
+  modules             course_module[]
+  attendanceSessions  attendance_session[]
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
 }
 
 model student {
@@ -132,11 +143,12 @@ model student {
   enrolledAt     DateTime            @default(now())
   contact        contact             @relation(fields: [contactId], references: [id])
   hub            hub                 @relation(fields: [hubId], references: [id])
-  enrollments    enrollment[]
-  submissions    submission[]
-  contentProgress content_progress[]
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
+  enrollments        enrollment[]
+  submissions        submission[]
+  contentProgress    content_progress[]
+  attendanceRecords  attendance_record[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
 }
 
 model instructor {
@@ -261,6 +273,60 @@ model user {
   roles     String?
   isActive  Boolean
   contact   contact @relation(fields: [contactId], references: [id])
+}
+
+model announcement {
+  id        Int       @id @default(autoincrement())
+  title     String    @db.VarChar(200)
+  body      String    @db.Text
+  type      String    @default("info")   // info | warning | event | success
+  pinned    Boolean   @default(false)
+  isActive  Boolean   @default(true)
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  createdBy Int?
+}
+
+model attendance_session {
+  id         Int                   @id @default(autoincrement())
+  token      String                @unique @db.VarChar(64)
+  shortCode  String                @unique @db.VarChar(8)
+  courseId   Int?
+  hubId      Int?
+  label      String?               @db.VarChar(200)
+  expiresAt  DateTime
+  isActive   Boolean               @default(true)
+  createdBy  Int?
+  createdAt  DateTime              @default(now())
+  records    attendance_record[]
+  course     course?               @relation(fields: [courseId], references: [id])
+  hub        hub?                  @relation(fields: [hubId], references: [id])
+}
+
+model attendance_record {
+  id          Int                @id @default(autoincrement())
+  sessionId   Int
+  studentId   Int
+  checkedInAt DateTime           @default(now())
+  method      String             @default("QR")  // QR | Manual
+  session     attendance_session @relation(fields: [sessionId], references: [id])
+  student     student            @relation(fields: [studentId], references: [id])
+
+  @@unique([sessionId, studentId])
+}
+
+model calendar_event {
+  id          Int       @id @default(autoincrement())
+  title       String    @db.VarChar(200)
+  description String?   @db.Text
+  eventDate   DateTime
+  endDate     DateTime?
+  location    String?   @db.VarChar(300)
+  type        String    @default("general") // general | class | holiday | milestone | deadline
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  createdBy   Int?
 }
 
 enum address_category_enum {

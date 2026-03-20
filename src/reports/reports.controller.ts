@@ -58,6 +58,25 @@ export class ReportsController {
     return await this.reportService.submitReport(submissionDto, request.user);
   }
 
+  @Get('submissions')
+  async getAllSubmissions(
+    @Query('limit') limit: number = 20,
+    @Query('offset') offset: number = 0,
+    @Request() request: any,
+  ): Promise<any> {
+    try {
+      return await this.reportService.getMySubmissions(request.user, {
+        limit,
+        offset,
+      });
+    } catch {
+      return {
+        submissions: [],
+        pagination: { total: 0, limit, offset, hasMore: false },
+      };
+    }
+  }
+
   @Get('submissions/me')
   async getMySubmissions(
     @Query('limit') limit: number = 20,
@@ -65,12 +84,18 @@ export class ReportsController {
     @Query('reportId') reportId: number | undefined,
     @Request() request: any,
   ): Promise<any> {
-    console.log('👤 ReportsController.getMySubmissions() - Called');
-    return await this.reportService.getMySubmissions(request.user, {
-      limit,
-      offset,
-      reportId,
-    });
+    try {
+      return await this.reportService.getMySubmissions(request.user, {
+        limit,
+        offset,
+        reportId,
+      });
+    } catch {
+      return {
+        submissions: [],
+        pagination: { total: 0, limit, offset, hasMore: false },
+      };
+    }
   }
 
   @Get('submissions/team')
@@ -78,9 +103,13 @@ export class ReportsController {
     @Query('reportId') reportId: number | undefined,
     @Request() request: any,
   ): Promise<any> {
-    return await this.reportService.getTeamSubmissions(request.user, {
-      reportId,
-    });
+    try {
+      return await this.reportService.getTeamSubmissions(request.user, {
+        reportId,
+      });
+    } catch {
+      return { submissions: [], pagination: { total: 0 } };
+    }
   }
 
   @Get('submissions/:id')

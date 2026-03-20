@@ -73,4 +73,52 @@ export class DashboardService {
       },
     };
   }
+
+  async getReportStats() {
+    const [studentsByStatus, enrollmentsByStatus, topCourses, hubStats] =
+      await Promise.all([
+        this.prisma.student.groupBy({
+          by: ['status'],
+          _count: { id: true },
+        }),
+        this.prisma.enrollment.groupBy({
+          by: ['status'],
+          _count: { id: true },
+        }),
+        this.prisma.course.findMany({
+          select: {
+            title: true,
+            _count: { select: { enrollments: true } },
+          },
+          orderBy: { enrollments: { _count: 'desc' } },
+          take: 8,
+        }),
+        this.prisma.hub.findMany({
+          select: {
+            name: true,
+            _count: { select: { students: true } },
+          },
+          orderBy: { students: { _count: 'desc' } },
+        }),
+      ]);
+
+    return {
+      studentsByStatus: studentsByStatus.map((s) => ({
+        status: s.status,
+        count: s._count.id,
+      })),
+      enrollmentsByStatus: enrollmentsByStatus.map((e) => ({
+        status: e.status,
+        count: e._count.id,
+      })),
+      enrollmentsByCourse: topCourses.map((c) => ({
+        course: c.title,
+        count: c._count.enrollments,
+      })),
+      studentsByHub: hubStats.map((h) => ({
+        hub: h.name,
+        count: h._count.students,
+      })),
+    };
+  }
 }

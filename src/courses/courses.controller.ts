@@ -20,6 +20,21 @@ export class CoursesController {
 
   // ── Course CRUD ───────────────────────────────────────────────────────────
 
+  // GET /api/courses  — list all courses (alias)
+  @Get()
+  findAllRoot(
+    @Query('hub') hub?: string,
+    @Query('isActive') isActive?: string,
+  ) {
+    return this.coursesService.findAllForClient(hub, isActive);
+  }
+
+  // POST /api/courses  — admin: create a course (alias)
+  @Post()
+  createRoot(@Body() dto: any) {
+    return this.coursesService.create(dto);
+  }
+
   // GET /api/courses/course  — list all courses
   @Get('course')
   findAll(@Query('hub') hub?: string, @Query('isActive') isActive?: string) {

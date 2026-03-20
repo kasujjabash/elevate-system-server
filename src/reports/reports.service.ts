@@ -160,7 +160,7 @@ export class ReportsService {
       console.log('🔧 ReportsService.getAllReports() - Querying database...');
       const reports = await this.reportRepository.find({
         where: { status: ReportStatus.ACTIVE },
-        relations: ['fields', 'targetGroupCategory'],
+        relations: ['fields'],
       });
 
       console.log(
@@ -699,7 +699,6 @@ export class ReportsService {
         'report',
         'submissionData',
         'submissionData.reportField',
-        'group',
         'user',
       ],
       order: { submittedAt: 'DESC' },

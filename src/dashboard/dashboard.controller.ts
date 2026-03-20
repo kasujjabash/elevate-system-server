@@ -28,4 +28,9 @@ export class DashboardController {
   async getSummary() {
     return this.dashboardService.getSummary(null);
   }
+
+  @Get('report-stats')
+  async getReportStats() {
+    return this.dashboardService.getReportStats();
+  }
 }

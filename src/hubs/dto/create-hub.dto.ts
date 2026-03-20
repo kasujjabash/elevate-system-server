@@ -1,4 +1,11 @@
-import { IsString, IsNotEmpty, IsOptional, IsBoolean } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsBoolean,
+  IsInt,
+  Min,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateHubDto {
@@ -34,4 +41,42 @@ export class CreateHubDto {
   @IsBoolean()
   @IsOptional()
   isActive?: boolean = true;
+
+  @ApiPropertyOptional({ description: 'Hub manager full name' })
+  @IsString()
+  @IsOptional()
+  managerName?: string;
+
+  @ApiPropertyOptional({ description: 'Hub manager phone number' })
+  @IsString()
+  @IsOptional()
+  managerPhone?: string;
+
+  @ApiPropertyOptional({ description: 'Hub manager email' })
+  @IsString()
+  @IsOptional()
+  managerEmail?: string;
+
+  @ApiPropertyOptional({ description: 'Number of computers' })
+  @IsInt()
+  @Min(0)
+  @IsOptional()
+  computers?: number;
+
+  @ApiPropertyOptional({ description: 'Number of projectors' })
+  @IsInt()
+  @Min(0)
+  @IsOptional()
+  projectors?: number;
+
+  @ApiPropertyOptional({ description: 'Maximum seating capacity' })
+  @IsInt()
+  @Min(0)
+  @IsOptional()
+  capacity?: number;
+
+  @ApiPropertyOptional({ description: 'Additional notes' })
+  @IsString()
+  @IsOptional()
+  notes?: string;
 }

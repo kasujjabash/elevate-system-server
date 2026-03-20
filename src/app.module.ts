@@ -1,15 +1,16 @@
 import { Global, Module, MiddlewareConsumer } from '@nestjs/common';
-import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_GUARD } from '@nestjs/core';
 import { AuthController } from './auth/auth.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
-import { CrmModule } from './crm/crm.module';
 // School-specific modules
 import { HubsModule } from './hubs/hubs.module';
+import { AttendanceModule } from './attendance/attendance.module';
 import { CoursesModule } from './courses/courses.module';
+import { AnnouncementsModule } from './announcements/announcements.module';
 import { StudentsModule } from './students/students.module';
 import { ClassesModule } from './classes/classes.module';
 import { DashboardModule } from './dashboard/dashboard.module';
@@ -20,7 +21,6 @@ import { VendorModule } from './vendor/vendor.module';
 import { ChatModule } from './chat/chat.module';
 import { HelpModule } from './help/help.module';
 import { TenantsModule } from './tenants/tenants.module';
-import { SearchModule } from './search/search.module';
 import { Tenant } from './tenants/entities/tenant.entity';
 import { TenantHeaderMiddleware } from './middleware/tenant-header.middleware';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
@@ -46,6 +46,7 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
     HubsModule,
     CoursesModule,
     StudentsModule,
+    AnnouncementsModule,
 
     // Supporting modules
     SeedModule,
@@ -55,6 +56,7 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
     TenantsModule,
     DashboardModule,
     ClassesModule,
+    AttendanceModule,
     // SearchModule, // Temporarily disabled due to group dependencies
   ],
   exports: [AppService],

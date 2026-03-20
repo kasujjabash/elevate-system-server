@@ -298,7 +298,7 @@ export class StudentsService {
     };
   }
 
-  async getPeople(query?: string) {
+  async getPeople(_query?: string) {
     const students = await this.prisma.student.findMany({
       take: 50,
       include: {
@@ -482,7 +482,10 @@ export class StudentsService {
     if (!student) return [];
 
     const enrollments = await this.prisma.enrollment.findMany({
-      where: { studentId: student.id },
+      where: {
+        studentId: student.id,
+        status: { notIn: ['Dropped'] },
+      },
       include: {
         course: {
           include: {
@@ -524,7 +527,10 @@ export class StudentsService {
 
   async getMyCoursesByStudentId(studentId: number) {
     const enrollments = await this.prisma.enrollment.findMany({
-      where: { studentId },
+      where: {
+        studentId,
+        status: { notIn: ['Dropped'] },
+      },
       include: {
         course: {
           include: {

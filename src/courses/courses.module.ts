@@ -6,6 +6,7 @@ import { SkillCategoriesService } from './skill-categories.service';
 import { StudyResourcesService } from './study-resources.service';
 import { AssignmentsService } from './assignments.service';
 import { AssignmentsController } from './assignments.controller';
+import { ExamsController } from './exams.controller';
 import { ModulesService } from './modules.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PrismaService } from '../shared/prisma.service';
@@ -20,7 +21,7 @@ import { PrismaService } from '../shared/prisma.service';
     ModulesService,
     PrismaService,
   ],
-  controllers: [CoursesController, AssignmentsController],
+  controllers: [CoursesController, AssignmentsController, ExamsController],
   exports: [
     CoursesService,
     SkillCategoriesService,

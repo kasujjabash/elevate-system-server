@@ -307,7 +307,7 @@ export class UsersService {
   async findByName(username: string): Promise<User | undefined> {
     return this.repository.findOne({
       where: { username: ILike(username) },
-      relations: ['contact', 'contact.person'],
+      relations: ['contact', 'contact.person', 'userRoles', 'userRoles.roles'],
     });
   }
 
