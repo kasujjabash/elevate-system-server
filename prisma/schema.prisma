@@ -14,12 +14,6 @@ model address {
   isPrimary      Boolean
   country        String                @db.VarChar
   district       String                @db.VarChar
-  county         String?               @db.VarChar
-  subCounty      String?               @db.VarChar
-  village        String?               @db.VarChar
-  parish         String?               @db.VarChar
-  postalCode     String?               @db.VarChar
-  street         String?               @db.VarChar
   freeForm       String?               @db.VarChar
   latitude       Float?
   longitude      Float?
@@ -112,14 +106,13 @@ model course {
   title           String            @db.VarChar(200)
   description     String            @db.VarChar(1000)
   duration        String?           @db.VarChar(50)
-  level           course_level_enum @default(Beginner)
   isActive        Boolean           @default(true)
   isEnrollable    Boolean           @default(true)
   maxStudents     Int?
-  hubId           Int
+  hubId           Int?
   instructorId    Int?
   skillCategoryId String?           @db.VarChar(40)
-  hub             hub               @relation(fields: [hubId], references: [id])
+  hub             hub?              @relation(fields: [hubId], references: [id])
   instructor      instructor?       @relation(fields: [instructorId], references: [id])
   skillCategory   skill_category?   @relation(fields: [skillCategoryId], references: [id])
   enrollments     enrollment[]
@@ -265,7 +258,7 @@ model user {
   username  String  @unique @db.VarChar(40)
   password  String  @db.VarChar(100)
   contactId Int     @unique
-  roles     String
+  roles     String?
   isActive  Boolean
   contact   contact @relation(fields: [contactId], references: [id])
 }
@@ -307,12 +300,6 @@ enum person_gender_enum {
   Female
 }
 
-enum course_level_enum {
-  Beginner
-  Intermediate
-  Advanced
-}
-
 enum student_status_enum {
   Active
   Inactive
@@ -321,6 +308,7 @@ enum student_status_enum {
 }
 
 enum enrollment_status_enum {
+  Pending
   Enrolled
   InProgress
   Completed

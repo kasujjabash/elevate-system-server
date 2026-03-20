@@ -3,7 +3,7 @@ import { UsersService } from '../users/users.service';
 import { seedUsers } from './data/users';
 import { Repository, Connection } from 'typeorm';
 import Roles from 'src/users/entities/roles.entity';
-import { roleAdmin, roleStudent } from 'src/auth/constants';
+import { roleAdmin, roleStudent, roleTrainer } from 'src/auth/constants';
 import { ContactsService } from 'src/crm/contacts.service';
 import { JwtHelperService } from 'src/auth/jwt-helpers.service';
 
@@ -60,7 +60,7 @@ export class SeedService {
   async createRoles() {
     try {
       Logger.log('🔐 Creating roles...');
-      for (const roleDef of [roleAdmin, roleStudent]) {
+      for (const roleDef of [roleAdmin, roleTrainer, roleStudent]) {
         const existing = await this.rolesRepository.findOne({
           where: { role: roleDef.role },
         });

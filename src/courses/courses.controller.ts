@@ -64,6 +64,24 @@ export class CoursesController {
     return this.coursesService.selfEnroll(req.user, id);
   }
 
+  // GET /api/courses/enrollment/pending  — admin: list pending enrollment requests
+  @Get('enrollment/pending')
+  getPendingEnrollments() {
+    return this.coursesService.getPendingEnrollments();
+  }
+
+  // PATCH /api/courses/enrollment/:id/approve  — admin: approve a pending request
+  @Patch('enrollment/:id/approve')
+  approveEnrollment(@Param('id', ParseIntPipe) id: number) {
+    return this.coursesService.approveEnrollment(id);
+  }
+
+  // PATCH /api/courses/enrollment/:id/reject  — admin: reject a pending request
+  @Patch('enrollment/:id/reject')
+  rejectEnrollment(@Param('id', ParseIntPipe) id: number) {
+    return this.coursesService.rejectEnrollment(id);
+  }
+
   // ── Combo / misc ──────────────────────────────────────────────────────────
 
   @Get('combo')
@@ -94,6 +112,12 @@ export class CoursesController {
   @Get('category')
   getCategories() {
     return [];
+  }
+
+  // GET /api/courses/instructors  — list all instructors for dropdowns
+  @Get('instructors')
+  getInstructors() {
+    return this.coursesService.getInstructors();
   }
 
   // ── Content (before :id to avoid route collision) ─────────────────────────

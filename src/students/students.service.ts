@@ -427,7 +427,6 @@ export class StudentsService {
           ? `${instructor.firstName} ${instructor.lastName}`
           : null,
         duration: course.duration || '',
-        level: course.level || '',
         progress: enrollment.progress ?? 0,
         status: enrollment.status,
         date: null as string | null,
@@ -505,7 +504,6 @@ export class StudentsService {
         courseId: c.id,
         title: c.title,
         description: c.description,
-        level: c.level,
         hub: c.hub?.name || '',
         hubCode: c.hub?.code || '',
         category: c.skillCategory?.name || '',
@@ -543,7 +541,6 @@ export class StudentsService {
       courseId: e.courseId,
       title: e.course.title,
       description: e.course.description,
-      level: e.course.level,
       hub: e.course.hub?.name || '',
       category: e.course.skillCategory?.name || '',
       status: e.status,

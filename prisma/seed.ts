@@ -231,7 +231,6 @@ async function main() {
           instructorId: c.instructorId,
           maxStudents: c.maxStudents,
           isActive: true,
-          level: 'Beginner',
         },
       });
       courseMap.push({

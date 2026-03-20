@@ -75,7 +75,12 @@ export class UsersService {
       }
 
       const data = await this.repository.find({
-        relations: ['contact', 'contact.person'],
+        relations: [
+          'contact',
+          'contact.person',
+          'userRoles',
+          'userRoles.roles',
+        ],
         skip: req.skip,
         take: req.limit,
         where: hasValue(idList) ? { id: In(idList) } : undefined,
@@ -105,7 +110,9 @@ export class UsersService {
         name: fullName,
       },
       id: user.id,
-      roles: user.roles
+      roles: user.userRoles?.length
+        ? user.userRoles.map((ur) => ur.roles?.role).filter(Boolean)
+        : user.roles
         ? user.roles
             .split(',')
             .map((r) => r.trim())
@@ -211,7 +218,7 @@ export class UsersService {
 
   async findOne(id: number): Promise<UserListDto> {
     const data = await this.repository.findOne({
-      relations: ['contact', 'contact.person'],
+      relations: ['contact', 'contact.person', 'userRoles', 'userRoles.roles'],
       where: { id: id },
     });
 
@@ -278,6 +285,9 @@ export class UsersService {
         const toAdd = differenceBy(getRolesIds, currentDbRoles, 'role');
         toAdd.map((it) => this.saveUserRoles(data.id, [it.role]));
       }
+
+      // Keep the roles string column in sync so JWT auth reads correct roles
+      update.roles = sentRolesStrArr.join(',');
     }
 
     const resp = await this.repository

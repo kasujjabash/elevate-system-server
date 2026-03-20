@@ -26,29 +26,27 @@ export class CoursesService {
     const {
       title,
       description,
-      hubId,
-      level,
       maxStudents,
       duration,
       isEnrollable,
       instructorId,
     } = dto;
     if (!title) throw new BadRequestException('title is required');
-    if (!hubId) throw new BadRequestException('hubId is required');
 
     return this.prisma.course.create({
       data: {
         title,
         description: description ?? '',
-        hubId: parseInt(hubId, 10),
-        level: level ?? 'Beginner',
         maxStudents: maxStudents ? parseInt(maxStudents, 10) : null,
         duration: duration ?? null,
         isEnrollable: isEnrollable !== undefined ? Boolean(isEnrollable) : true,
         isActive: true,
         instructorId: instructorId ? parseInt(instructorId, 10) : null,
       },
-      include: { hub: true },
+      include: {
+        instructor: { include: { contact: { include: { person: true } } } },
+        _count: { select: { enrollments: true } },
+      },
     });
   }
 
@@ -57,7 +55,6 @@ export class CoursesService {
     const data: any = {};
     if (dto.title !== undefined) data.title = dto.title;
     if (dto.description !== undefined) data.description = dto.description;
-    if (dto.level !== undefined) data.level = dto.level;
     if (dto.maxStudents !== undefined)
       data.maxStudents = dto.maxStudents ? parseInt(dto.maxStudents, 10) : null;
     if (dto.duration !== undefined) data.duration = dto.duration;
@@ -68,13 +65,29 @@ export class CoursesService {
       data.instructorId = dto.instructorId
         ? parseInt(dto.instructorId, 10)
         : null;
-    if (dto.hubId !== undefined) data.hubId = parseInt(dto.hubId, 10);
 
     return this.prisma.course.update({
       where: { id },
       data,
-      include: { hub: true },
+      include: {
+        instructor: { include: { contact: { include: { person: true } } } },
+        _count: { select: { enrollments: true } },
+      },
     });
+  }
+
+  // ── List instructors for dropdowns ────────────────────────────────────────
+  async getInstructors() {
+    const instructors = await this.prisma.instructor.findMany({
+      include: { contact: { include: { person: true } } },
+      orderBy: { id: 'asc' },
+    });
+    return instructors.map((i) => ({
+      id: i.id,
+      name: [i.contact?.person?.firstName, i.contact?.person?.lastName]
+        .filter(Boolean)
+        .join(' '),
+    }));
   }
 
   // ── Admin: toggle isEnrollable ────────────────────────────────────────────
@@ -88,11 +101,10 @@ export class CoursesService {
     });
   }
 
-  // ── List all courses (admin) ──────────────────────────────────────────────
+  // ── List all courses ──────────────────────────────────────────────────────
   async findAll() {
     return this.prisma.course.findMany({
       include: {
-        hub: true,
         instructor: { include: { contact: { include: { person: true } } } },
         _count: { select: { enrollments: true } },
       },
@@ -101,15 +113,13 @@ export class CoursesService {
   }
 
   // ── List courses for client/student ──────────────────────────────────────
-  async findAllForClient(hub?: string, isActive?: string) {
+  async findAllForClient(_hub?: string, isActive?: string) {
     const where: any = {};
-    if (hub) where.hub = { code: hub };
     if (isActive !== undefined) where.isActive = isActive === 'true';
 
     const courses = await this.prisma.course.findMany({
       where,
       include: {
-        hub: true,
         instructor: { include: { contact: { include: { person: true } } } },
         _count: { select: { enrollments: true } },
       },
@@ -121,18 +131,16 @@ export class CoursesService {
       name: c.title,
       title: c.title,
       description: c.description,
-      level: c.level,
       duration: c.duration,
-      hub: c.hub?.code || '',
-      hubId: c.hubId,
-      hubName: c.hub?.name || '',
       capacity: c.maxStudents || null,
       enrolledCount: c._count?.enrollments || 0,
       isActive: c.isActive,
       isEnrollable: c.isEnrollable,
+      instructorId: c.instructorId,
       instructor: c.instructor
         ? `${c.instructor.contact?.person?.firstName} ${c.instructor.contact?.person?.lastName}`
         : null,
+      instructorSpecialization: c.instructor?.specialization ?? null,
     }));
   }
 
@@ -248,15 +256,82 @@ export class CoursesService {
     if (!course.isEnrollable)
       throw new BadRequestException('This course is not open for enrollment');
 
+    // Already enrolled or pending in this course?
     const existing = await this.prisma.enrollment.findUnique({
       where: { studentId_courseId: { studentId, courseId } },
     });
-    if (existing) return { alreadyEnrolled: true, enrollment: existing };
+    if (existing) return { status: existing.status, enrollment: existing };
+
+    // Check for any active enrollment in another course
+    const activeEnrollment = await this.prisma.enrollment.findFirst({
+      where: {
+        studentId,
+        status: { in: ['Enrolled', 'InProgress'] },
+        courseId: { not: courseId },
+      },
+    });
+
+    // If already in another course → create a pending request instead
+    const enrollmentStatus = activeEnrollment ? 'Pending' : 'Enrolled';
 
     const enrollment = await this.prisma.enrollment.create({
-      data: { studentId, courseId, status: 'Enrolled', progress: 0 },
+      data: { studentId, courseId, status: enrollmentStatus, progress: 0 },
     });
-    return { alreadyEnrolled: false, enrollment };
+    return { status: enrollmentStatus, enrollment };
+  }
+
+  // ── Admin: list pending enrollment requests ───────────────────────────────
+  async getPendingEnrollments() {
+    const pending = await this.prisma.enrollment.findMany({
+      where: { status: 'Pending' },
+      include: {
+        student: { include: { contact: { include: { person: true } } } },
+        course: true,
+      },
+      orderBy: { enrolledAt: 'asc' },
+    });
+    return pending.map((e) => ({
+      id: e.id,
+      studentId: e.studentId,
+      courseId: e.courseId,
+      studentName:
+        [
+          e.student?.contact?.person?.firstName,
+          e.student?.contact?.person?.lastName,
+        ]
+          .filter(Boolean)
+          .join(' ') || 'Unknown',
+      courseName: e.course?.title || 'Unknown',
+      requestedAt: e.enrolledAt,
+    }));
+  }
+
+  // ── Admin: approve a pending enrollment ───────────────────────────────────
+  async approveEnrollment(enrollmentId: number) {
+    const enrollment = await this.prisma.enrollment.findUnique({
+      where: { id: enrollmentId },
+    });
+    if (!enrollment) throw new NotFoundException('Enrollment not found');
+    if (enrollment.status !== 'Pending')
+      throw new BadRequestException('Enrollment is not pending');
+    return this.prisma.enrollment.update({
+      where: { id: enrollmentId },
+      data: { status: 'Enrolled' },
+    });
+  }
+
+  // ── Admin: reject a pending enrollment ────────────────────────────────────
+  async rejectEnrollment(enrollmentId: number) {
+    const enrollment = await this.prisma.enrollment.findUnique({
+      where: { id: enrollmentId },
+    });
+    if (!enrollment) throw new NotFoundException('Enrollment not found');
+    if (enrollment.status !== 'Pending')
+      throw new BadRequestException('Enrollment is not pending');
+    return this.prisma.enrollment.update({
+      where: { id: enrollmentId },
+      data: { status: 'Dropped' },
+    });
   }
 
   // ── Course reports ────────────────────────────────────────────────────────
@@ -322,7 +397,6 @@ export class CoursesService {
         courseId: e.courseId,
         title: e.course.title,
         description: e.course.description,
-        level: e.course.level,
         hub: e.course.hub?.name ?? '',
         progress: e.progress,
         status: e.status,
