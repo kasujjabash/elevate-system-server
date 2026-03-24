@@ -5,13 +5,12 @@
   "author": "Elevate Academy",
   "license": "MIT",
   "engines": {
-    "npm": "7.5.2",
-    "node": "12.22.5"
+    "node": ">=18.0.0"
   },
   "scripts": {
     "heroku-postbuild": "npm run build",
     "prebuild": "rimraf dist",
-    "build": "nest build",
+    "build": "npx prisma generate && nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "format:fix": "npm run lint:fix && npm run format",
     "start": "nest start",

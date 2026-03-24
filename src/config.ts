@@ -22,23 +22,32 @@ export function normalizePort(val: any) {
   return false;
 }
 
-const database: TypeOrmModuleOptions = {
-  type: 'postgres',
-  host: process.env.DB_HOST,
-  port: normalizePort(process.env.DB_PORT),
-  username: process.env.DB_USERNAME,
-  password: process.env.DB_PASSWORD,
-  ssl:
-    process.env.DB_PORT === '25060'
-      ? {
-          rejectUnauthorized: false,
-        }
-      : undefined,
-  database: process.env.DB_DATABASE,
-  synchronize: process.env.DB_SYNCHRONIZE === 'true',
-  cache: true,
-  logging: process.env.DB_LOGGING === 'true',
-};
+const isProduction = process.env.NODE_ENV === 'production';
+
+// Support both DATABASE_URL (Render/Railway) and individual DB_* vars (local)
+const databaseUrl = process.env.DATABASE_URL;
+
+const database: TypeOrmModuleOptions = databaseUrl
+  ? {
+      type: 'postgres',
+      url: databaseUrl,
+      ssl: isProduction ? { rejectUnauthorized: false } : undefined,
+      synchronize: process.env.DB_SYNCHRONIZE === 'true',
+      cache: true,
+      logging: process.env.DB_LOGGING === 'true',
+    }
+  : {
+      type: 'postgres',
+      host: process.env.DB_HOST,
+      port: normalizePort(process.env.DB_PORT),
+      username: process.env.DB_USERNAME,
+      password: process.env.DB_PASSWORD,
+      ssl: isProduction ? { rejectUnauthorized: false } : undefined,
+      database: process.env.DB_DATABASE,
+      synchronize: process.env.DB_SYNCHRONIZE === 'true',
+      cache: true,
+      logging: process.env.DB_LOGGING === 'true',
+    };
 
 const config = {
   app: {

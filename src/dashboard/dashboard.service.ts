@@ -8,14 +8,27 @@ export class DashboardService {
   async getStats() {
     const now = new Date();
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const startOfToday = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+    );
 
-    const [totalStudents, newThisWeek, totalCourses, activeEnrollments] =
-      await Promise.all([
-        this.prisma.student.count(),
-        this.prisma.student.count({ where: { enrolledAt: { gte: weekAgo } } }),
-        this.prisma.course.count({ where: { isActive: true } }),
-        this.prisma.enrollment.count({ where: { status: 'Enrolled' } }),
-      ]);
+    const [
+      totalStudents,
+      newThisWeek,
+      totalCourses,
+      activeEnrollments,
+      todayAttendance,
+    ] = await Promise.all([
+      this.prisma.student.count(),
+      this.prisma.student.count({ where: { enrolledAt: { gte: weekAgo } } }),
+      this.prisma.course.count({ where: { isActive: true } }),
+      this.prisma.enrollment.count({ where: { status: 'Enrolled' } }),
+      this.prisma.attendance_record.count({
+        where: { checkedInAt: { gte: startOfToday } },
+      }),
+    ]);
 
     return {
       totalStudents,
@@ -24,6 +37,7 @@ export class DashboardService {
       pendingExams: 0,
       totalCourses,
       activeEnrollments,
+      todayAttendance,
     };
   }
 
