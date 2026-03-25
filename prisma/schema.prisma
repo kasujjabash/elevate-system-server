@@ -147,6 +147,7 @@ model student {
   submissions        submission[]
   contentProgress    content_progress[]
   attendanceRecords  attendance_record[]
+  requests           student_request[]
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
 }
@@ -402,4 +403,34 @@ enum module_content_type_enum {
   Quiz
   Assignment
   Resource
+}
+
+model student_request {
+  id         Int                  @id @default(autoincrement())
+  studentId  Int
+  subject    String               @db.VarChar(300)
+  body       String               @db.Text
+  type       String               @default("inquiry")
+  status     request_status_enum  @default(Open)
+  student    student              @relation(fields: [studentId], references: [id])
+  messages   request_message[]
+  createdAt  DateTime             @default(now())
+  updatedAt  DateTime             @updatedAt
+}
+
+model request_message {
+  id         Int              @id @default(autoincrement())
+  requestId  Int
+  body       String           @db.Text
+  senderType String           @default("student")
+  senderId   Int?
+  request    student_request  @relation(fields: [requestId], references: [id])
+  createdAt  DateTime         @default(now())
+}
+
+enum request_status_enum {
+  Open
+  InProgress
+  Resolved
+  Closed
 }

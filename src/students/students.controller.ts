@@ -10,6 +10,7 @@ import {
   ParseIntPipe,
   UseInterceptors,
   UploadedFile,
+  NotFoundException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { StudentsService } from './students.service';
@@ -104,8 +105,30 @@ export class StudentsController {
 
   // GET /api/students/requests
   @Get('requests')
-  getRequests(@Query('studentId') studentId?: string) {
-    return [];
+  getRequests(@Query('type') type?: string, @Request() req?: any) {
+    return this.studentsService.getRequests(req?.user?.id, type);
+  }
+
+  // POST /api/students/requests
+  @Post('requests')
+  createRequest(@Body() body: any, @Request() req?: any) {
+    return this.studentsService.createRequest(req?.user?.id, body);
+  }
+
+  // GET /api/students/requests/:id/messages
+  @Get('requests/:id/messages')
+  getRequestMessages(@Param('id', ParseIntPipe) id: number) {
+    return this.studentsService.getRequestMessages(id);
+  }
+
+  // POST /api/students/requests/:id/messages
+  @Post('requests/:id/messages')
+  addRequestMessage(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: any,
+    @Request() req?: any,
+  ) {
+    return this.studentsService.addRequestMessage(id, body.body, req?.user?.id);
   }
 
   // PUT /api/students/student/avatar

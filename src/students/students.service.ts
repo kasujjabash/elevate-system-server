@@ -555,4 +555,63 @@ export class StudentsService {
       totalModules: e.course._count.modules,
     }));
   }
+
+  async getRequests(userId?: number, type?: string) {
+    if (!userId) return [];
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { contact: true },
+    });
+    if (!user?.contactId) return [];
+    const student = await this.prisma.student.findFirst({
+      where: { contactId: user.contactId },
+    });
+    if (!student) return [];
+    return this.prisma.student_request.findMany({
+      where: { studentId: student.id, ...(type ? { type } : {}) },
+      include: { messages: { orderBy: { createdAt: 'asc' }, take: 1 } },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async createRequest(
+    userId: number,
+    dto: { subject: string; body: string; type?: string },
+  ) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { contact: true },
+    });
+    if (!user?.contactId) throw new Error('Student not found');
+    const student = await this.prisma.student.findFirst({
+      where: { contactId: user.contactId },
+    });
+    if (!student) throw new Error('Student not found');
+    return this.prisma.student_request.create({
+      data: {
+        studentId: student.id,
+        subject: dto.subject,
+        body: dto.body,
+        type: dto.type || 'inquiry',
+      },
+    });
+  }
+
+  async getRequestMessages(requestId: number) {
+    return this.prisma.request_message.findMany({
+      where: { requestId },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  async addRequestMessage(requestId: number, body: string, senderId?: number) {
+    return this.prisma.request_message.create({
+      data: {
+        requestId,
+        body,
+        senderType: 'student',
+        senderId: senderId || null,
+      },
+    });
+  }
 }

@@ -31,7 +31,7 @@ const database: TypeOrmModuleOptions = databaseUrl
   ? {
       type: 'postgres',
       url: databaseUrl,
-      ssl: isProduction ? { rejectUnauthorized: false } : undefined,
+      ssl: isProduction ? { rejectUnauthorized: false } : false,
       synchronize: process.env.DB_SYNCHRONIZE === 'true',
       cache: true,
       logging: process.env.DB_LOGGING === 'true',
@@ -42,7 +42,7 @@ const database: TypeOrmModuleOptions = databaseUrl
       port: normalizePort(process.env.DB_PORT),
       username: process.env.DB_USERNAME,
       password: process.env.DB_PASSWORD,
-      ssl: isProduction ? { rejectUnauthorized: false } : undefined,
+      ssl: isProduction ? { rejectUnauthorized: false } : false,
       database: process.env.DB_DATABASE,
       synchronize: process.env.DB_SYNCHRONIZE === 'true',
       cache: true,
