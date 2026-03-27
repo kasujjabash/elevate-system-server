@@ -100,6 +100,7 @@ model hub {
   courses             course[]
   instructors         instructor[]
   attendanceSessions  attendance_session[]
+  timetableSessions   timetable_session[]
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
 }
@@ -130,6 +131,7 @@ model course {
   assignments         assignment[]
   modules             course_module[]
   attendanceSessions  attendance_session[]
+  timetableSessions   timetable_session[]
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 }
@@ -433,4 +435,19 @@ enum request_status_enum {
   InProgress
   Resolved
   Closed
+}
+
+model timetable_session {
+  id             Int      @id @default(autoincrement())
+  courseId       Int
+  hubId          Int?
+  instructorName String?  @db.VarChar(200)
+  dayOfWeek      Int
+  startTime      String   @db.VarChar(5)
+  endTime        String   @db.VarChar(5)
+  room           String?  @db.VarChar(100)
+  course         course   @relation(fields: [courseId], references: [id])
+  hub            hub?     @relation(fields: [hubId], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }

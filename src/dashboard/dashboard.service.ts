@@ -7,12 +7,21 @@ export class DashboardService {
 
   async getStats() {
     const now = new Date();
-    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    // Start of current Monday (week boundary for newThisWeek)
+    const startOfMonday = new Date(now);
+    startOfMonday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+    startOfMonday.setHours(0, 0, 0, 0);
+
     const startOfToday = new Date(
       now.getFullYear(),
       now.getMonth(),
       now.getDate(),
     );
+    const startOfTomorrow = new Date(
+      startOfToday.getTime() + 24 * 60 * 60 * 1000,
+    );
+    const todayDow = now.getDay();
 
     const [
       totalStudents,
@@ -20,20 +29,24 @@ export class DashboardService {
       totalCourses,
       activeEnrollments,
       todayAttendance,
+      todayClasses,
     ] = await Promise.all([
       this.prisma.student.count(),
-      this.prisma.student.count({ where: { enrolledAt: { gte: weekAgo } } }),
+      this.prisma.student.count({
+        where: { enrolledAt: { gte: startOfMonday } },
+      }),
       this.prisma.course.count({ where: { isActive: true } }),
       this.prisma.enrollment.count({ where: { status: 'Enrolled' } }),
       this.prisma.attendance_record.count({
-        where: { checkedInAt: { gte: startOfToday } },
+        where: { checkedInAt: { gte: startOfToday, lt: startOfTomorrow } },
       }),
+      this.prisma.timetable_session.count({ where: { dayOfWeek: todayDow } }),
     ]);
 
     return {
       totalStudents,
       newThisWeek,
-      todayClasses: 0,
+      todayClasses,
       pendingExams: 0,
       totalCourses,
       activeEnrollments,

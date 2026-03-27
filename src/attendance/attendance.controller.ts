@@ -35,6 +35,24 @@ export class AttendanceController {
     return this.attendanceService.getSessions(+page, +limit);
   }
 
+  /** Student: daily attendance count for last N days (dashboard chart) */
+  @Get('student-summary')
+  async getStudentSummary(
+    @Query('contactId') contactId: string,
+    @Query('days') days = '7',
+  ) {
+    return this.attendanceService.getStudentSummary(
+      contactId,
+      parseInt(days, 10),
+    );
+  }
+
+  /** Admin: full attendance history for a student */
+  @Get('student-history')
+  async getStudentHistory(@Query('contactId') contactId: string) {
+    return this.attendanceService.getStudentHistory(contactId);
+  }
+
   /** Admin: get a single session with full check-in list */
   @Get('sessions/:id')
   async getSession(@Param('id', ParseIntPipe) id: number) {

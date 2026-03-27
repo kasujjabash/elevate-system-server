@@ -257,4 +257,72 @@ export class AttendanceService {
       throw e;
     }
   }
+
+  /**
+   * GET /api/attendance/student-summary?contactId=X&days=7
+   * Returns exactly `days` entries ordered oldest-first, 0-filled for missing dates.
+   */
+  async getStudentSummary(contactId: string, days = 7) {
+    const student = await this.prisma.student.findFirst({
+      where: { contactId: parseInt(contactId, 10) },
+      select: { id: true },
+    });
+
+    const result: { date: string; count: number }[] = [];
+    const now = new Date();
+
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().slice(0, 10);
+      const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+
+      const count = student
+        ? await this.prisma.attendance_record.count({
+            where: {
+              studentId: student.id,
+              checkedInAt: { gte: dayStart, lt: dayEnd },
+            },
+          })
+        : 0;
+
+      result.push({ date: dateStr, count });
+    }
+
+    return result;
+  }
+
+  /**
+   * GET /api/attendance/student-history?contactId=X
+   * All check-in records for the student, newest first.
+   */
+  async getStudentHistory(contactId: string) {
+    const student = await this.prisma.student.findFirst({
+      where: { contactId: parseInt(contactId, 10) },
+      select: { id: true },
+    });
+    if (!student) return [];
+
+    const records = await this.prisma.attendance_record.findMany({
+      where: { studentId: student.id },
+      orderBy: { checkedInAt: 'desc' },
+      include: {
+        session: {
+          include: {
+            course: { select: { title: true } },
+          },
+        },
+      },
+    });
+
+    return records.map((r) => ({
+      sessionId: r.sessionId,
+      sessionLabel: r.session?.label ?? `Session #${r.sessionId}`,
+      date: r.checkedInAt.toISOString().slice(0, 10),
+      checkedInAt: r.checkedInAt.toISOString(),
+      course: r.session?.course ? { title: r.session.course.title } : null,
+      method: r.method,
+    }));
+  }
 }

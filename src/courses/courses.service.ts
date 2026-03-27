@@ -262,22 +262,11 @@ export class CoursesService {
     });
     if (existing) return { status: existing.status, enrollment: existing };
 
-    // Check for any active enrollment in another course
-    const activeEnrollment = await this.prisma.enrollment.findFirst({
-      where: {
-        studentId,
-        status: { in: ['Enrolled', 'InProgress'] },
-        courseId: { not: courseId },
-      },
-    });
-
-    // If already in another course → create a pending request instead
-    const enrollmentStatus = activeEnrollment ? 'Pending' : 'Enrolled';
-
+    // All self-enrollments require admin approval
     const enrollment = await this.prisma.enrollment.create({
-      data: { studentId, courseId, status: enrollmentStatus, progress: 0 },
+      data: { studentId, courseId, status: 'Pending', progress: 0 },
     });
-    return { status: enrollmentStatus, enrollment };
+    return { status: 'Pending', enrollment };
   }
 
   // ── Admin: list pending enrollment requests ───────────────────────────────
