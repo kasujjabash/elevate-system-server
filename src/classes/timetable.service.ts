@@ -71,30 +71,73 @@ export class TimetableService {
     return sessions.map((s) => this.toResponse(s));
   }
 
-  async findForStudent(studentId: string) {
-    // studentId here is actually contactId from the JWT
-    const student = await this.prisma.student.findFirst({
-      where: { contactId: parseInt(studentId, 10) },
+  async findForStudent(studentIdOrUserId: string) {
+    const parsed = parseInt(studentIdOrUserId, 10);
+    if (isNaN(parsed)) return [];
+
+    // Resolve real contactId — the value may be a userId when user.contactId is null in JWT
+    let resolvedContactId: number = parsed;
+    let student = await this.prisma.student.findFirst({
+      where: { contactId: parsed },
       select: { id: true },
     });
-    if (!student) return [];
 
-    const enrollments = await this.prisma.enrollment.findMany({
-      where: {
-        studentId: student.id,
-        status: { in: ['Enrolled', 'InProgress'] },
-      },
-      select: { courseId: true },
-    });
-    const courseIds = enrollments.map((e) => e.courseId);
-    if (!courseIds.length) return [];
+    if (!student) {
+      const user = await this.prisma.user.findFirst({
+        where: { id: parsed },
+        select: { contactId: true },
+      });
+      if (user?.contactId) {
+        resolvedContactId = user.contactId;
+        student = await this.prisma.student.findFirst({
+          where: { contactId: user.contactId },
+          select: { id: true },
+        });
+      }
+    }
 
-    const sessions = await this.prisma.timetable_session.findMany({
-      where: { courseId: { in: courseIds } },
-      include: this.include,
-      orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
+    // ── Student path: return sessions for enrolled courses ─────────────────
+    if (student) {
+      const enrollments = await this.prisma.enrollment.findMany({
+        where: {
+          studentId: student.id,
+          status: { in: ['Enrolled', 'InProgress'] },
+        },
+        select: { courseId: true },
+      });
+      const courseIds = enrollments.map((e) => e.courseId);
+      if (courseIds.length) {
+        const sessions = await this.prisma.timetable_session.findMany({
+          where: { courseId: { in: courseIds } },
+          include: this.include,
+          orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
+        });
+        return sessions.map((s) => this.toResponse(s));
+      }
+    }
+
+    // ── Instructor/Trainer path: return sessions for assigned courses ───────
+    const instructor = await this.prisma.instructor.findFirst({
+      where: { contactId: resolvedContactId },
+      select: { id: true },
     });
-    return sessions.map((s) => this.toResponse(s));
+    if (instructor) {
+      const courses = await this.prisma.course.findMany({
+        where: { instructorId: instructor.id },
+        select: { id: true },
+      });
+      const courseIds = courses.map((c) => c.id);
+      if (courseIds.length) {
+        const sessions = await this.prisma.timetable_session.findMany({
+          where: { courseId: { in: courseIds } },
+          include: this.include,
+          orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
+        });
+        return sessions.map((s) => this.toResponse(s));
+      }
+    }
+
+    return [];
   }
 
   async create(dto: TimetableSessionDto) {

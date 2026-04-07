@@ -66,6 +66,13 @@ export class StudentsController {
     return this.studentsService.getStudentSchedule(req.user.id, from, to);
   }
 
+  // POST /api/students/people – create a new student
+  @Post('people')
+  @ApiOperation({ summary: 'Create a new student with contact, enrollment' })
+  createPerson(@Body() body: any) {
+    return this.studentsService.createPerson(body);
+  }
+
   // GET /api/students/people – people list for autocomplete
   @Get('people')
   @ApiOperation({ summary: 'People list for autocomplete' })
@@ -75,8 +82,8 @@ export class StudentsController {
 
   // GET /api/students/people/combo
   @Get('people/combo')
-  getPeopleCombo() {
-    return this.studentsService.getPeopleCombo();
+  getPeopleCombo(@Query('skipUsers') skipUsers?: string) {
+    return this.studentsService.getPeopleCombo(skipUsers === 'true');
   }
 
   // GET /api/students/emails

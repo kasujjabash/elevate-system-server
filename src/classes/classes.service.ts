@@ -21,13 +21,27 @@ export class ClassesService {
   async getTimetable(studentId?: string, contactId?: string) {
     const where: any = {};
 
-    if (studentId) {
-      where.studentId = parseInt(studentId, 10);
-    } else if (contactId) {
-      const student = await this.prisma.student.findFirst({
-        where: { contactId: parseInt(contactId, 10) },
+    if (studentId || contactId) {
+      const rawId = studentId || contactId!;
+      const parsed = parseInt(rawId, 10);
+      if (isNaN(parsed)) return [];
+
+      let student = await this.prisma.student.findFirst({
+        where: { contactId: parsed },
         select: { id: true },
       });
+      if (!student) {
+        const user = await this.prisma.user.findFirst({
+          where: { id: parsed },
+          select: { contactId: true },
+        });
+        if (user?.contactId) {
+          student = await this.prisma.student.findFirst({
+            where: { contactId: user.contactId },
+            select: { id: true },
+          });
+        }
+      }
       if (!student) return [];
       where.studentId = student.id;
     }

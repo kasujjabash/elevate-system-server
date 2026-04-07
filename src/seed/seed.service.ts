@@ -5,7 +5,7 @@ import { Repository, Connection } from 'typeorm';
 import Roles from 'src/users/entities/roles.entity';
 import { roleAdmin, roleStudent, roleTrainer } from 'src/auth/constants';
 import { ContactsService } from 'src/crm/contacts.service';
-import { JwtHelperService } from 'src/auth/jwt-helpers.service';
+import { PrismaService } from 'src/shared/prisma.service';
 
 @Injectable()
 export class SeedService {
@@ -18,14 +18,14 @@ export class SeedService {
   async createAll(
     connection: Connection,
     contactsService: ContactsService,
-    jwtHelperservice: JwtHelperService,
+    prismaService: PrismaService,
   ) {
     this.rolesRepository = connection.getRepository(Roles);
 
     this.usersService = new UsersService(
       connection,
       contactsService,
-      jwtHelperservice,
+      prismaService,
     );
 
     await this.createRoles();

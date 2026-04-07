@@ -9,18 +9,6 @@ import { PrismaService } from '../shared/prisma.service';
 export class CoursesService {
   constructor(private prisma: PrismaService) {}
 
-  // Resolve prisma student.id from JWT user (has contactId)
-  async resolveStudentId(jwtUser: any): Promise<number | undefined> {
-    if (!jwtUser) return undefined;
-    const contactId = jwtUser.contactId ?? jwtUser.contact?.id;
-    if (!contactId) return undefined;
-    const student = await this.prisma.student.findFirst({
-      where: { contactId: Number(contactId) },
-      select: { id: true },
-    });
-    return student?.id;
-  }
-
   // ── Admin: create a course ────────────────────────────────────────────────
   async create(dto: any) {
     const {
@@ -113,9 +101,24 @@ export class CoursesService {
   }
 
   // ── List courses for client/student ──────────────────────────────────────
-  async findAllForClient(_hub?: string, isActive?: string) {
+  async findAllForClient(
+    _hub?: string,
+    isActive?: string,
+    instructorContactId?: number,
+  ) {
     const where: any = {};
     if (isActive !== undefined) where.isActive = isActive === 'true';
+    if (instructorContactId) {
+      const instructor = await this.prisma.instructor.findFirst({
+        where: { contactId: instructorContactId },
+        select: { id: true },
+      });
+      if (instructor) {
+        where.instructorId = instructor.id;
+      } else {
+        return []; // trainer has no instructor record yet
+      }
+    }
 
     const courses = await this.prisma.course.findMany({
       where,
@@ -154,16 +157,46 @@ export class CoursesService {
     return courses.map((c) => ({ id: c.id.toString(), name: c.title }));
   }
 
-  // ── Enrollments list ──────────────────────────────────────────────────────
+  // ── Resolve student.id from either a JWT user object or a contactId string ─
+  async resolveStudentId(input: any): Promise<number | null> {
+    // JWT user object (from req.user)
+    if (input && typeof input === 'object') {
+      const contactId = input.contactId ?? input.contact?.id;
+      if (!contactId) return null;
+      const student = await this.prisma.student.findFirst({
+        where: { contactId: Number(contactId) },
+        select: { id: true },
+      });
+      return student?.id ?? null;
+    }
+    // String / number contactId
+    const parsed = parseInt(String(input), 10);
+    if (isNaN(parsed)) return null;
+    let student = await this.prisma.student.findFirst({
+      where: { contactId: parsed },
+      select: { id: true },
+    });
+    if (!student) {
+      const user = await this.prisma.user.findFirst({
+        where: { id: parsed },
+        select: { contactId: true },
+      });
+      if (user?.contactId) {
+        student = await this.prisma.student.findFirst({
+          where: { contactId: user.contactId },
+          select: { id: true },
+        });
+      }
+    }
+    return student?.id ?? null;
+  }
+
   async getEnrollments(contactId?: string) {
     const where: any = {};
     if (contactId) {
-      const student = await this.prisma.student.findFirst({
-        where: { contactId: parseInt(contactId, 10) },
-        select: { id: true },
-      });
-      if (!student) return [];
-      where.studentId = student.id;
+      const studentId = await this.resolveStudentId(contactId);
+      if (!studentId) return [];
+      where.studentId = studentId;
     }
 
     const enrollments = await this.prisma.enrollment.findMany({
@@ -592,5 +625,202 @@ export class CoursesService {
         instructor: { include: { contact: { include: { person: true } } } },
       },
     });
+  }
+
+  // ── Resources ─────────────────────────────────────────────────────────────
+
+  async getCourseResources(courseId: number) {
+    return this.prisma.study_resource.findMany({
+      where: { courseId },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async addCourseResource(courseId: number, dto: any) {
+    return this.prisma.study_resource.create({
+      data: {
+        courseId,
+        title: dto.title,
+        description: dto.description ?? null,
+        type: dto.type ?? 'Document',
+        url: dto.url ?? null,
+        filePath: dto.filePath ?? null,
+        isPublic: true,
+      },
+    });
+  }
+
+  async removeCourseResource(courseId: number, resourceId: number) {
+    await this.prisma.study_resource.deleteMany({
+      where: { id: resourceId, courseId },
+    });
+    return { success: true };
+  }
+
+  // ── Trainer stats for a single course ────────────────────────────────────
+
+  async getCourseTrainerStats(courseId: number) {
+    const now = new Date();
+    const todayDow = now.getDay();
+    const startOfToday = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+    );
+    const startOfTomorrow = new Date(startOfToday.getTime() + 86400000);
+
+    const [
+      activeStudents,
+      classesToday,
+      todayAttendance,
+      submissions,
+      enrollments,
+    ] = await Promise.all([
+      this.prisma.enrollment.count({
+        where: { courseId, status: { in: ['Enrolled', 'InProgress'] } },
+      }),
+      this.prisma.timetable_session.count({
+        where: { courseId, dayOfWeek: todayDow },
+      }),
+      this.prisma.attendance_record.count({
+        where: {
+          session: { courseId },
+          checkedInAt: { gte: startOfToday, lt: startOfTomorrow },
+        },
+      }),
+      this.prisma.submission.findMany({
+        where: { assignment: { courseId }, status: 'Submitted' },
+        select: { id: true },
+      }),
+      this.prisma.enrollment.findMany({
+        where: {
+          courseId,
+          status: { in: ['Enrolled', 'InProgress', 'Completed'] },
+        },
+        include: {
+          student: { include: { contact: { include: { person: true } } } },
+        },
+        orderBy: { progress: 'desc' },
+        take: 5,
+      }),
+    ]);
+
+    const topStudents = enrollments.map((e: any) => ({
+      name:
+        [
+          e.student?.contact?.person?.firstName,
+          e.student?.contact?.person?.lastName,
+        ]
+          .filter(Boolean)
+          .join(' ') || 'Unknown',
+      progress: Math.round(e.progress || 0),
+    }));
+
+    return {
+      activeStudents,
+      classesToday,
+      todayAttendance,
+      pendingSubmissions: submissions.length,
+      topStudents,
+    };
+  }
+
+  // ── Trainer overall stats (all their courses) ─────────────────────────────
+
+  async getTrainerStats(contactId: number) {
+    const instructor = await this.prisma.instructor.findFirst({
+      where: { contactId },
+      select: { id: true },
+    });
+    if (!instructor)
+      return {
+        courses: 0,
+        activeStudents: 0,
+        classesToday: 0,
+        todayAttendance: 0,
+        pendingSubmissions: 0,
+        liveSessions: [],
+      };
+
+    const courses = await this.prisma.course.findMany({
+      where: { instructorId: instructor.id },
+      select: { id: true },
+    });
+    const courseIds = courses.map((c) => c.id);
+
+    const now = new Date();
+    const todayDow = now.getDay();
+    const startOfToday = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+    );
+    const startOfTomorrow = new Date(startOfToday.getTime() + 86400000);
+
+    const [
+      activeStudents,
+      classesToday,
+      todayAttendance,
+      pendingSubmissions,
+      timetableSessions,
+    ] = await Promise.all([
+      this.prisma.enrollment.count({
+        where: {
+          courseId: { in: courseIds },
+          status: { in: ['Enrolled', 'InProgress'] },
+        },
+      }),
+      this.prisma.timetable_session.count({
+        where: { courseId: { in: courseIds }, dayOfWeek: todayDow },
+      }),
+      this.prisma.attendance_record.count({
+        where: {
+          session: { courseId: { in: courseIds } },
+          checkedInAt: { gte: startOfToday, lt: startOfTomorrow },
+        },
+      }),
+      this.prisma.submission.count({
+        where: {
+          assignment: { courseId: { in: courseIds } },
+          status: 'Submitted',
+        },
+      }),
+      this.prisma.timetable_session.findMany({
+        where: { courseId: { in: courseIds } },
+        include: {
+          course: { select: { id: true, title: true } },
+          hub: { select: { id: true, name: true } },
+        },
+        orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
+      }),
+    ]);
+
+    const liveSessions = timetableSessions
+      .filter((s) => {
+        if (s.dayOfWeek !== todayDow) return false;
+        const [sh, sm] = s.startTime.split(':').map(Number);
+        const [eh, em] = s.endTime.split(':').map(Number);
+        const cur = now.getHours() * 60 + now.getMinutes();
+        return cur >= sh * 60 + sm && cur <= eh * 60 + em;
+      })
+      .map((s) => ({
+        id: s.id,
+        courseId: s.courseId,
+        courseName: s.course?.title ?? null,
+        hubName: (s as any).hub?.name ?? null,
+        startTime: s.startTime,
+        endTime: s.endTime,
+        room: s.room ?? null,
+        isLive: true,
+      }));
+
+    return {
+      courses: courseIds.length,
+      activeStudents,
+      classesToday,
+      todayAttendance,
+      pendingSubmissions,
+      liveSessions,
+    };
   }
 }

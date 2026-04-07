@@ -30,18 +30,38 @@ export class AssignmentsController {
   // ── List assignments ─────────────────────────────────────────────────────
   // GET /api/assignments?contactId=3   → student view (all with submission status)
   // GET /api/assignments?courseId=5    → admin/trainer view (by course)
-  // GET /api/assignments               → admin view (all)
+  // GET /api/assignments               → admin/trainer view (all, scoped by JWT for trainers)
   @Get()
-  findAll(
+  async findAll(
+    @Request() req: any,
     @Query('contactId') contactId?: string,
     @Query('courseId') courseId?: string,
-    @Request() req?: any,
   ) {
     if (contactId)
       return this.assignmentsService.findByContact(parseInt(contactId, 10));
-    if (courseId)
-      return this.assignmentsService.findByCourse(parseInt(courseId, 10));
-    return this.assignmentsService.findAll();
+
+    const roles: string[] = Array.isArray(req?.user?.roles)
+      ? req.user.roles
+      : (req?.user?.roles || '')
+          .split(',')
+          .map((r: string) => r.trim())
+          .filter(Boolean);
+    const isTrainerOnly =
+      (roles.includes('TRAINER') || roles.includes('INSTRUCTOR')) &&
+      !roles.includes('ADMIN') &&
+      !roles.includes('SUPER_ADMIN');
+
+    if (isTrainerOnly) {
+      const contactId = req.user.contactId ?? req.user.id ?? null;
+      return this.assignmentsService.findAllForTrainer(
+        contactId,
+        courseId ? parseInt(courseId, 10) : undefined,
+      );
+    }
+
+    return this.assignmentsService.findAll(
+      courseId ? { courseId: parseInt(courseId, 10) } : undefined,
+    );
   }
 
   // ── Student: get own assignments (uses JWT contactId) ────────────────────
@@ -82,6 +102,33 @@ export class AssignmentsController {
     @Body() dto: { score: number; feedback?: string },
   ) {
     return this.assignmentsService.gradeSubmission(submissionId, dto);
+  }
+
+  // ── Admin: list all submissions across all assignments ───────────────────
+  // GET /api/assignments/submissions?status=submitted&limit=100
+  @Get('submissions')
+  getAllSubmissions(
+    @Query('status') status?: string,
+    @Query('limit') limit?: string,
+    @Query('courseId') courseId?: string,
+  ) {
+    return this.assignmentsService.getAllSubmissions({
+      status,
+      limit: limit ? parseInt(limit, 10) : 50,
+      courseId,
+    });
+  }
+
+  // GET /api/assignments/files  — placeholder
+  @Get('files')
+  getFiles() {
+    return [];
+  }
+
+  // GET /api/assignments/grades  — placeholder
+  @Get('grades')
+  getGrades() {
+    return [];
   }
 
   // ── GET single assignment ─────────────────────────────────────────────────

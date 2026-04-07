@@ -1,13 +1,17 @@
-import { Controller, Get, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Request, UseInterceptors } from '@nestjs/common';
 import { SentryInterceptor } from '../utils/sentry.interceptor';
 import { ApiTags } from '@nestjs/swagger';
 import { DashboardService } from './dashboard.service';
+import { CoursesService } from '../courses/courses.service';
 
 @UseInterceptors(SentryInterceptor)
 @ApiTags('Dashboard')
 @Controller('api/dashboard')
 export class DashboardController {
-  constructor(private readonly dashboardService: DashboardService) {}
+  constructor(
+    private readonly dashboardService: DashboardService,
+    private readonly coursesService: CoursesService,
+  ) {}
 
   @Get('stats')
   async getStats() {
@@ -32,5 +36,21 @@ export class DashboardController {
   @Get('report-stats')
   async getReportStats() {
     return this.dashboardService.getReportStats();
+  }
+
+  /** GET /api/dashboard/trainer-stats — scoped to logged-in trainer */
+  @Get('trainer-stats')
+  async getTrainerStats(@Request() req: any) {
+    const contactId = req?.user?.contactId;
+    if (!contactId)
+      return {
+        courses: 0,
+        activeStudents: 0,
+        classesToday: 0,
+        todayAttendance: 0,
+        pendingSubmissions: 0,
+        liveSessions: [],
+      };
+    return this.coursesService.getTrainerStats(Number(contactId));
   }
 }

@@ -4,6 +4,7 @@ import {
   Post,
   Put,
   Patch,
+  Delete,
   Body,
   Param,
   Query,
@@ -20,13 +21,28 @@ export class CoursesController {
 
   // ── Course CRUD ───────────────────────────────────────────────────────────
 
-  // GET /api/courses  — list all courses (alias)
+  // GET /api/courses  — list all courses (alias); trainers only see their own
   @Get()
   findAllRoot(
+    @Request() req: any,
     @Query('hub') hub?: string,
     @Query('isActive') isActive?: string,
   ) {
-    return this.coursesService.findAllForClient(hub, isActive);
+    const roles: string[] = Array.isArray(req?.user?.roles)
+      ? req.user.roles
+      : (req?.user?.roles || '')
+          .split(',')
+          .map((r: string) => r.trim())
+          .filter(Boolean);
+    const isTrainerOnly =
+      (roles.includes('TRAINER') || roles.includes('INSTRUCTOR')) &&
+      !roles.includes('ADMIN') &&
+      !roles.includes('SUPER_ADMIN');
+    // contactId fallback: JWT may carry null contactId — use user.id as fallback
+    const contactId = isTrainerOnly
+      ? req.user.contactId ?? req.user.id ?? null
+      : undefined;
+    return this.coursesService.findAllForClient(hub, isActive, contactId);
   }
 
   // POST /api/courses  — admin: create a course (alias)
@@ -35,10 +51,27 @@ export class CoursesController {
     return this.coursesService.create(dto);
   }
 
-  // GET /api/courses/course  — list all courses
+  // GET /api/courses/course  — list all courses; trainers scoped to own
   @Get('course')
-  findAll(@Query('hub') hub?: string, @Query('isActive') isActive?: string) {
-    return this.coursesService.findAllForClient(hub, isActive);
+  findAll(
+    @Request() req: any,
+    @Query('hub') hub?: string,
+    @Query('isActive') isActive?: string,
+  ) {
+    const roles: string[] = Array.isArray(req?.user?.roles)
+      ? req.user.roles
+      : (req?.user?.roles || '')
+          .split(',')
+          .map((r: string) => r.trim())
+          .filter(Boolean);
+    const isTrainerOnly =
+      (roles.includes('TRAINER') || roles.includes('INSTRUCTOR')) &&
+      !roles.includes('ADMIN') &&
+      !roles.includes('SUPER_ADMIN');
+    const contactId = isTrainerOnly
+      ? req.user.contactId ?? req.user.id ?? null
+      : undefined;
+    return this.coursesService.findAllForClient(hub, isActive, contactId);
   }
 
   // POST /api/courses/course  — admin: create a course
@@ -202,6 +235,37 @@ export class CoursesController {
   @Post(':id/modules')
   createModule(@Param('id', ParseIntPipe) id: number, @Body() dto: any) {
     return this.coursesService.createModule(id, dto);
+  }
+
+  // ── Resources ─────────────────────────────────────────────────────────────
+
+  // GET /api/courses/:id/resources
+  @Get(':id/resources')
+  getCourseResources(@Param('id', ParseIntPipe) id: number) {
+    return this.coursesService.getCourseResources(id);
+  }
+
+  // POST /api/courses/:id/resources
+  @Post(':id/resources')
+  addCourseResource(@Param('id', ParseIntPipe) id: number, @Body() dto: any) {
+    return this.coursesService.addCourseResource(id, dto);
+  }
+
+  // DELETE /api/courses/:id/resources/:resourceId
+  @Delete(':id/resources/:resourceId')
+  removeCourseResource(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('resourceId', ParseIntPipe) resourceId: number,
+  ) {
+    return this.coursesService.removeCourseResource(id, resourceId);
+  }
+
+  // ── Trainer stats for a course ────────────────────────────────────────────
+
+  // GET /api/courses/:id/trainer-stats
+  @Get(':id/trainer-stats')
+  getCourseTrainerStats(@Param('id', ParseIntPipe) id: number) {
+    return this.coursesService.getCourseTrainerStats(id);
   }
 
   // GET /api/courses/:id  — single course detail (keep last)

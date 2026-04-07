@@ -1,4 +1,5 @@
 import { HttpException, Injectable, Inject, Logger } from '@nestjs/common';
+import { PrismaService } from '../shared/prisma.service';
 import { In, Repository, Connection, ILike } from 'typeorm';
 import { User } from './entities/user.entity';
 import Email from 'src/crm/entities/email.entity';
@@ -12,9 +13,7 @@ import { getPersonFullName } from '../crm/crm.helpers';
 import * as bcrypt from 'bcrypt';
 import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 import { CreateUserDto } from './dto/create-user.dto';
-import { IEmail, sendEmail } from 'src/utils/mailer';
 import { hasNoValue, hasValue, isArray } from '../utils/validation';
-import { JwtHelperService } from 'src/auth/jwt-helpers.service';
 import Roles from './entities/roles.entity';
 import UserRoles from './entities/userRoles.entity';
 import { differenceBy } from 'lodash';
@@ -31,7 +30,7 @@ export class UsersService {
   constructor(
     @Inject('CONNECTION') connection: Connection,
     private readonly contactsService: ContactsService,
-    private readonly jwtHelperService: JwtHelperService,
+    private readonly prisma: PrismaService,
   ) {
     this.repository = connection.getRepository(User);
     this.emailRepository = connection.getRepository(Email);
@@ -132,67 +131,56 @@ export class UsersService {
   }
 
   async createUser(data: CreateUserDto): Promise<UserListDto> {
-    if (!(await this.contactsService.findOne(data.contactId))) {
-      throw new HttpException('Visitor Not Found', 404);
-    }
-    const email = await this.emailRepository.findOne({
+    // Verify contact exists via Prisma (avoids broken TypeORM groupMemberships relation)
+    const contact = await this.prisma.contact.findUnique({
+      where: { id: data.contactId },
+      include: { person: true, email: true },
+    });
+    if (!contact) throw new HttpException('Contact Not Found', 404);
+
+    // Check contact doesn't already have a user account
+    const existing = await this.prisma.user.findUnique({
       where: { contactId: data.contactId },
     });
-    const toSave = new User();
-    toSave.id = data.contactId;
-    toSave.username = email.value;
-    toSave.contactId = data.contactId;
-    toSave.password = data.password;
-    toSave.isActive = data.isActive;
-    toSave.hashPassword();
+    if (existing)
+      throw new HttpException(
+        'A user account already exists for this contact',
+        400,
+      );
 
-    const saveUser = await this.create(toSave);
+    // Resolve username: use provided value, fall back to first email on the contact
+    const username = data.username || contact.email?.[0]?.value;
+    if (!username) throw new HttpException('Username is required', 400);
 
-    if (!saveUser) {
-      this.remove(saveUser.id);
-      throw new HttpException('User Not Created', 400);
-    } else {
-      this.saveUserRoles(saveUser.contactId, data.roles);
-    }
+    const rolesStr = Array.isArray(data.roles)
+      ? data.roles.join(',')
+      : data.roles || '';
 
-    const user = await this.findOne(saveUser.id);
+    const created = await this.prisma.user.create({
+      data: {
+        username,
+        password: await bcrypt.hash(data.password, 10),
+        contactId: data.contactId,
+        isActive: data.isActive ?? true,
+        roles: rolesStr,
+      },
+      include: { contact: { include: { person: true } } },
+    });
 
-    if (!user) {
-      this.remove(user.id);
+    const fullName = created.contact?.person
+      ? `${created.contact.person.firstName} ${created.contact.person.lastName}`.trim()
+      : username;
 
-      throw new HttpException('Failed To Create User', 400);
-    }
-
-    const tokenOptions = { expiresIn: '1d' };
-    const token = (
-      await this.jwtHelperService.generateToken(
-        {
-          id: user.id,
-          contactId: user.contactId,
-          username: user.username,
-          email: user.username,
-          fullName: user.fullName,
-          roles: user.roles,
-          isActive: user.isActive,
-        },
-        tokenOptions,
-      )
-    ).token;
-
-    const resetLink = `${process.env.APP_URL}/#/reset-password/${token}`;
-    const mailerData: IEmail = {
-      to: `${(await user).username}`,
-      subject: 'Project Zoe - Worship Harvest - Account Activated!',
-      html: `
-                <p>Hello ${user.fullName},</p></br>
-                <p>The Lamb has won! So, your account has been created in the Project Zoe church management platform.<p></br>
-                <p>Follow this <a href=${resetLink}>link</a> to reset your password</p>
-                <p>This link will expire in 1 day</p>
-            `,
-    };
-    const mailURL = await sendEmail(mailerData);
-    // return { token, mailURL, user };
-    return user;
+    return {
+      id: created.id,
+      username: created.username,
+      contactId: created.contactId,
+      isActive: created.isActive,
+      roles: rolesStr ? rolesStr.split(',') : [],
+      fullName,
+      email: created.username,
+      permissions: [],
+    } as any;
   }
 
   async register({

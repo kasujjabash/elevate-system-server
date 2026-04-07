@@ -317,17 +317,24 @@ export class StudentsService {
     });
   }
 
-  async getPeopleCombo() {
-    const students = await this.prisma.student.findMany({
-      include: { contact: { include: { person: true } } },
+  async getPeopleCombo(skipUsers = false) {
+    // For user creation: return all contacts with person records.
+    // When skipUsers=true, exclude contacts that already have a user account.
+    const existingUserContactIds = skipUsers
+      ? (await this.prisma.user.findMany({ select: { contactId: true } }))
+          .map((u) => u.contactId)
+          .filter((id): id is number => id !== null)
+      : [];
+
+    const persons = await this.prisma.person.findMany({
+      include: { contact: true },
+      where: skipUsers ? { contactId: { notIn: existingUserContactIds } } : {},
     });
-    return students.map((s) => {
-      const p = s.contact?.person;
-      return {
-        id: s.id.toString(),
-        name: p ? `${p.firstName} ${p.lastName}` : s.studentId,
-      };
-    });
+
+    return persons.map((p) => ({
+      id: p.contactId.toString(),
+      name: `${p.firstName} ${p.lastName}`.trim(),
+    }));
   }
 
   async getEmails(studentId?: string) {
@@ -554,6 +561,106 @@ export class StudentsService {
       enrolledAt: e.enrolledAt,
       totalModules: e.course._count.modules,
     }));
+  }
+
+  async createPerson(dto: {
+    firstName: string;
+    middleName?: string;
+    lastName: string;
+    dateOfBirth?: string;
+    gender: string;
+    civilStatus?: string;
+    ageGroup?: string;
+    placeOfWork?: string;
+    residence?: string;
+    hub: string;
+    course: string;
+    email: string;
+    phone?: string;
+  }) {
+    // Resolve hub by name
+    const hub = await this.prisma.hub.findFirst({
+      where: { name: { contains: dto.hub, mode: 'insensitive' } },
+    });
+    if (!hub) throw new Error(`Hub "${dto.hub}" not found`);
+
+    // Resolve course by title
+    const course = await this.prisma.course.findFirst({
+      where: {
+        title: { contains: dto.course, mode: 'insensitive' },
+        isActive: true,
+      },
+    });
+    if (!course) throw new Error(`Course "${dto.course}" not found`);
+
+    // Generate student ID
+    const count = await this.prisma.student.count();
+    const studentId = `EA${String(count + 1).padStart(6, '0')}`;
+
+    // Create contact → person → email → phone → student → enrollment in one transaction
+    const contact = await this.prisma.contact.create({
+      data: { category: 'Person' },
+    });
+
+    await this.prisma.person.create({
+      data: {
+        contactId: contact.id,
+        firstName: dto.firstName,
+        middleName: dto.middleName || null,
+        lastName: dto.lastName,
+        gender: dto.gender as any,
+        dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : null,
+      },
+    });
+
+    if (dto.email) {
+      await this.prisma.email.create({
+        data: {
+          contactId: contact.id,
+          value: dto.email,
+          isPrimary: true,
+          category: 'Personal' as any,
+        },
+      });
+    }
+
+    if (dto.phone) {
+      await this.prisma.phone.create({
+        data: {
+          contactId: contact.id,
+          value: dto.phone,
+          isPrimary: true,
+          category: 'Mobile' as any,
+        },
+      });
+    }
+
+    const student = await this.prisma.student.create({
+      data: {
+        studentId,
+        contactId: contact.id,
+        hubId: hub.id,
+        status: 'Active',
+      },
+    });
+
+    await this.prisma.enrollment.create({
+      data: {
+        studentId: student.id,
+        courseId: course.id,
+        status: 'Enrolled',
+      },
+    });
+
+    return {
+      id: student.id,
+      studentId: student.studentId,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      email: dto.email,
+      hub: hub.name,
+      course: course.title,
+    };
   }
 
   async getRequests(userId?: number, type?: string) {

@@ -13,6 +13,7 @@ import { RolesService } from './roles.service';
 import { RolesController } from './roles.controller';
 import { JwtHelperService } from 'src/auth/jwt-helpers.service';
 import { TenantsModule } from 'src/tenants/tenants.module';
+import { PrismaService } from '../shared/prisma.service';
 
 @Global()
 @Module({
@@ -30,6 +31,7 @@ import { TenantsModule } from 'src/tenants/tenants.module';
     JwtStrategy,
     RolesService,
     JwtHelperService,
+    PrismaService,
   ],
   exports: [UsersService],
   controllers: [UsersController, RolesController],

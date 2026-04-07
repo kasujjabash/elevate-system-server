@@ -52,13 +52,35 @@ Run `npm run seed:elevate && npm run seed:admin` to create all accounts.
 }
 ```
 
-### Admin & Staff
+### Super Admin
 
 | Email | Password | Role |
 |-------|----------|------|
-| `admin@era92elevate.org` | `elevate2024` | RoleAdmin |
-| `instructor@era92elevate.org` | `elevate2024` | RoleAdmin |
-| `trainer@era92elevate.org` | `elevate2024` | RoleTrainer |
+| `superadmin@elevate.org` | `admin2024` | SUPER_ADMIN |
+
+### Hub Managers
+
+| Email | Password | Role | Hub |
+|-------|----------|------|-----|
+| `robert.kizza@hub.elevate.org` | `hubmanager2024` | HUB_MANAGER | Katanga |
+| `annet.nabukenya@hub.elevate.org` | `hubmanager2024` | HUB_MANAGER | Kosovo |
+| `isaac.opio@hub.elevate.org` | `hubmanager2024` | HUB_MANAGER | Jinja |
+
+### Trainers / Instructors
+
+| Email | Password | Role | Specialization |
+|-------|----------|------|----------------|
+| `admin@era92elevate.org` | `elevate2024` | ADMIN | — |
+| `instructor@era92elevate.org` | `elevate2024` | TRAINER | Website Development |
+| `trainer@era92elevate.org` | `elevate2024` | TRAINER | General |
+| `daniel.ochieng@trainer.elevate.org` | `trainer2024` | TRAINER | Film & Photography |
+| `grace.akello@trainer.elevate.org` | `trainer2024` | TRAINER | ALX Course |
+| `patrick.ssali@trainer.elevate.org` | `trainer2024` | TRAINER | Graphic Design (Kosovo) |
+| `miriam.atim@trainer.elevate.org` | `trainer2024` | TRAINER | Website Development (Kosovo) |
+| `peter.mwanje@trainer.elevate.org` | `trainer2024` | TRAINER | Website Development |
+| `nickolus.onapa@trainer.elevate.org` | `trainer2024` | TRAINER | Graphic Design |
+| `andrew@trainer.elevate.org` | `trainer2024` | TRAINER | UI/UX Design |
+| `mark.omudigi@trainer.elevate.org` | `trainer2024` | TRAINER | Film & Photography |
 
 ### Demo Students
 

@@ -22,27 +22,122 @@ export class AssignmentsService {
         description: dto.description || '',
         dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
         maxScore: dto.maxScore ?? 100,
+        isMilestone: dto.isMilestone ?? false,
+        weekNumber: dto.weekNumber ?? null,
       },
       include: { course: true },
     });
   }
 
+  // ── Format a raw assignment row into the shape the client expects ──────────
+  private formatAssignment(a: any, enrolledMap: Record<number, number>): any {
+    const now = new Date();
+    const isOverdue = a.dueDate && new Date(a.dueDate) < now;
+    const submissionsCount = a.submissions?.length ?? 0;
+    const gradedCount =
+      a.submissions?.filter(
+        (s: any) => s.status === 'Graded' || s.status === 'Returned',
+      ).length ?? 0;
+    const totalStudents = enrolledMap[a.courseId] ?? 0;
+    return {
+      id: a.id,
+      title: a.title,
+      description: a.description,
+      dueDate: a.dueDate,
+      maxScore: a.maxScore,
+      weekNumber: a.weekNumber ?? null,
+      isMilestone: a.isMilestone ?? false,
+      status: isOverdue ? 'closed' : 'open',
+      course: a.course?.title ?? null,
+      courseId: a.courseId,
+      hub: a.course?.hub?.name ?? null,
+      courseStartDate: null,
+      submissionsCount,
+      gradedCount,
+      totalStudents,
+      filesCount: 0,
+      createdAt: a.createdAt,
+    };
+  }
+
   // ── Admin/Trainer: list all assignments (optionally filtered by course) ──
-  async findAll(courseId?: number) {
-    return this.prisma.assignment.findMany({
-      where: courseId ? { courseId } : undefined,
+  async findAll(options?: { courseId?: number; courseIds?: number[] }) {
+    const where: any = {};
+    if (options?.courseId) where.courseId = options.courseId;
+    else if (options?.courseIds?.length)
+      where.courseId = { in: options.courseIds };
+
+    const assignments = await this.prisma.assignment.findMany({
+      where,
       include: {
-        course: { select: { id: true, title: true } },
-        submissions: {
-          include: {
-            student: {
-              include: { contact: { include: { person: true } } },
-            },
+        course: {
+          select: {
+            id: true,
+            title: true,
+            hub: { select: { name: true } },
           },
         },
+        submissions: { select: { id: true, status: true } },
       },
       orderBy: [{ courseId: 'asc' }, { dueDate: 'asc' }],
     });
+
+    // Build enrolled-count map per courseId
+    const courseIds = [...new Set(assignments.map((a) => a.courseId))];
+    const enrollmentCounts = courseIds.length
+      ? await this.prisma.enrollment.groupBy({
+          by: ['courseId'],
+          where: {
+            courseId: { in: courseIds },
+            status: { in: ['Enrolled', 'InProgress'] },
+          },
+          _count: { _all: true },
+        })
+      : [];
+    const enrolledMap: Record<number, number> = {};
+    enrollmentCounts.forEach((e) => {
+      enrolledMap[e.courseId] = e._count._all;
+    });
+
+    return assignments.map((a) => this.formatAssignment(a, enrolledMap));
+  }
+
+  // ── Trainer: assignments only for courses they teach ─────────────────────
+  async findAllForTrainer(contactId: number, courseId?: number) {
+    let resolvedContactId = contactId;
+
+    // Fallback: if no instructor found by contactId, try resolving via user.id
+    let instructor = await this.prisma.instructor.findFirst({
+      where: { contactId: resolvedContactId },
+      select: { id: true },
+    });
+
+    if (!instructor) {
+      const user = await this.prisma.user.findFirst({
+        where: { id: resolvedContactId },
+        select: { contactId: true },
+      });
+      if (user?.contactId) {
+        resolvedContactId = user.contactId;
+        instructor = await this.prisma.instructor.findFirst({
+          where: { contactId: resolvedContactId },
+          select: { id: true },
+        });
+      }
+    }
+
+    if (!instructor) return [];
+
+    const courses = await this.prisma.course.findMany({
+      where: { instructorId: instructor.id },
+      select: { id: true },
+    });
+    const courseIds = courses.map((c) => c.id);
+    if (!courseIds.length) return [];
+
+    const effectiveCourseIds =
+      courseId && courseIds.includes(courseId) ? [courseId] : courseIds;
+    return this.findAll({ courseIds: effectiveCourseIds });
   }
 
   // ── Student: list ALL assignments for their enrolled courses ──────────────
@@ -199,6 +294,35 @@ export class AssignmentsService {
         student: { include: { contact: { include: { person: true } } } },
         assignment: true,
       },
+    });
+  }
+
+  // ── Admin: list all submissions across all assignments (for dashboard) ───
+  async getAllSubmissions(filters: {
+    status?: string;
+    limit?: number;
+    courseId?: string;
+  }) {
+    const where: any = {};
+    if (filters.status) {
+      // Normalize to PascalCase to match submission_status_enum (Submitted, Graded, Returned)
+      where.status =
+        filters.status.charAt(0).toUpperCase() +
+        filters.status.slice(1).toLowerCase();
+    }
+    if (filters.courseId) {
+      where.assignment = { courseId: parseInt(filters.courseId, 10) };
+    }
+    return this.prisma.submission.findMany({
+      where,
+      include: {
+        assignment: {
+          include: { course: { select: { id: true, title: true } } },
+        },
+        student: { include: { contact: { include: { person: true } } } },
+      },
+      orderBy: { submittedAt: 'desc' },
+      take: filters.limit ?? 50,
     });
   }
 

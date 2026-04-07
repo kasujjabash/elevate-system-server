@@ -14,7 +14,13 @@ import {
   RefreshTokenResponseDto,
   HierarchyDto,
 } from './dto/login-response.dto';
-import { roleAdmin, roleTrainer, roleStudent } from './constants';
+import {
+  roleAdmin,
+  roleSuperAdmin,
+  roleHubManager,
+  roleTrainer,
+  roleStudent,
+} from './constants';
 import { PrismaService } from '../shared/prisma.service';
 
 @Injectable()
@@ -126,7 +132,13 @@ export class AuthService {
   }
 
   async getPermissions(roles: string[]): Promise<string[]> {
-    const allRoleConfigs = [roleAdmin, roleTrainer, roleStudent];
+    const allRoleConfigs = [
+      roleSuperAdmin,
+      roleAdmin,
+      roleHubManager,
+      roleTrainer,
+      roleStudent,
+    ];
     const permissions: string[] = [];
     for (const roleName of roles) {
       const found = allRoleConfigs.find(
