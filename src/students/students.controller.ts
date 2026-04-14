@@ -29,17 +29,29 @@ export class StudentsController {
   @Get()
   @ApiOperation({ summary: 'Get all students with filters' })
   findAll(
+    @Request() req: any,
     @Query('query') query?: string,
     @Query('hub') hub?: string,
+    @Query('hubId') hubId?: string,
     @Query('course') course?: string,
     @Query('dateFrom') dateFrom?: string,
     @Query('dateTo') dateTo?: string,
     @Query('limit') limit?: string,
     @Query('skip') skip?: string,
   ) {
+    const roles: string = req?.user?.roles || '';
+    const isHubManager = roles.includes('HUB_MANAGER');
+    // Hub managers are auto-scoped to their hub regardless of query params
+    const resolvedHubId = isHubManager
+      ? req.user.hubId ?? (hubId ? parseInt(hubId, 10) : undefined)
+      : hubId
+      ? parseInt(hubId, 10)
+      : undefined;
+
     return this.studentsService.findAllForClient({
       query,
       hub,
+      hubId: resolvedHubId,
       course,
       dateFrom,
       dateTo,

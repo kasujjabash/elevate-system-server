@@ -53,4 +53,23 @@ export class DashboardController {
       };
     return this.coursesService.getTrainerStats(Number(contactId));
   }
+
+  /** GET /api/dashboard/hub-manager-stats — scoped to logged-in hub manager */
+  @Get('hub-manager-stats')
+  async getHubManagerStats(@Request() req: any) {
+    const hubId = req?.user?.hubId;
+    if (!hubId)
+      return {
+        hubId: null,
+        hubName: 'Your Hub',
+        totalStudents: 0,
+        activeStudents: 0,
+        inactiveStudents: 0,
+        totalCourses: 0,
+        classesToday: 0,
+        todayAttendance: 0,
+        recentStudents: [],
+      };
+    return this.dashboardService.getHubManagerStats(Number(hubId));
+  }
 }

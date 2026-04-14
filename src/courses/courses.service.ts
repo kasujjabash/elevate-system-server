@@ -191,8 +191,14 @@ export class CoursesService {
     return student?.id ?? null;
   }
 
-  async getEnrollments(contactId?: string) {
+  async getEnrollments(contactId?: string, groupId?: string) {
     const where: any = {};
+
+    // groupId is the course ID (used by trainer Students page)
+    if (groupId) {
+      where.courseId = parseInt(groupId, 10);
+    }
+
     if (contactId) {
       const studentId = await this.resolveStudentId(contactId);
       if (!studentId) return [];
@@ -201,23 +207,61 @@ export class CoursesService {
 
     const enrollments = await this.prisma.enrollment.findMany({
       where,
-      include: { course: { include: { hub: true } } },
+      include: {
+        course: { include: { hub: true } },
+        student: {
+          include: {
+            contact: {
+              include: {
+                person: true,
+                email: true,
+                phone: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { enrolledAt: 'desc' },
     });
 
-    return enrollments.map((e) => ({
-      id: e.id.toString(),
-      courseId: e.courseId.toString(),
-      course: {
-        id: e.courseId.toString(),
-        name: e.course?.title || '',
-        title: e.course?.title || '',
-      },
-      courseName: e.course?.title || '',
-      hubName: e.course?.hub?.name || '',
-      status: e.status.toLowerCase(),
-      progress: e.progress,
-      enrolledAt: e.enrolledAt,
-    }));
+    return enrollments.map((e) => {
+      const person = e.student?.contact?.person;
+      const emails = (e.student?.contact?.email as any[]) ?? [];
+      const phones = (e.student?.contact?.phone as any[]) ?? [];
+      return {
+        id: e.id.toString(),
+        courseId: e.courseId.toString(),
+        course: {
+          id: e.courseId.toString(),
+          name: e.course?.title || '',
+          title: e.course?.title || '',
+        },
+        courseName: e.course?.title || '',
+        hubName: e.course?.hub?.name || '',
+        status: e.status.toLowerCase(),
+        progress: e.progress,
+        enrolledAt: e.enrolledAt,
+        // flat student fields for easy consumption
+        contactId: e.student?.contactId?.toString() ?? null,
+        studentId: e.studentId.toString(),
+        firstName: person?.firstName ?? '',
+        lastName: person?.lastName ?? '',
+        email: emails[0]?.value ?? '',
+        phone: phones[0]?.value ?? '',
+        // nested for clients that prefer it
+        student: e.student
+          ? {
+              id: e.student.id,
+              contactId: e.student.contactId,
+              contact: {
+                person: person ?? null,
+                email: emails[0]?.value ?? null,
+                phone: phones[0]?.value ?? null,
+              },
+            }
+          : null,
+      };
+    });
   }
 
   // ── Enroll a student ──────────────────────────────────────────────────────

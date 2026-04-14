@@ -224,6 +224,7 @@ export class StudentsService {
   async findAllForClient(filters: {
     query?: string;
     hub?: string;
+    hubId?: number;
     course?: string;
     dateFrom?: string;
     dateTo?: string;
@@ -231,7 +232,8 @@ export class StudentsService {
     skip?: number;
   }) {
     const where: any = {};
-    if (filters.hub) where.hub = { code: filters.hub };
+    if (filters.hubId) where.hubId = filters.hubId;
+    else if (filters.hub) where.hub = { code: filters.hub };
     if (filters.dateFrom || filters.dateTo) {
       where.enrolledAt = {};
       if (filters.dateFrom) where.enrolledAt.gte = new Date(filters.dateFrom);

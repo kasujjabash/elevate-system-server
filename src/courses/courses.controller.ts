@@ -96,8 +96,12 @@ export class CoursesController {
 
   // GET /api/courses/enrollment  — list enrollments (admin, filter by contactId)
   @Get('enrollment')
-  getEnrollments(@Query('contactId') contactId?: string) {
-    return this.coursesService.getEnrollments(contactId);
+  getEnrollments(
+    @Query('contactId') contactId?: string,
+    @Query('groupId') groupId?: string,
+    @Query('courseId') courseId?: string,
+  ) {
+    return this.coursesService.getEnrollments(contactId, groupId ?? courseId);
   }
 
   // POST /api/courses/enrollment  — admin: enroll student by studentId or contactId
@@ -108,7 +112,7 @@ export class CoursesController {
 
   // POST /api/courses/:id/enroll  — student: self-enroll using JWT
   @Post(':id/enroll')
-  selfEnroll(@Param('id', ParseIntPipe) id: number, @Request() req) {
+  selfEnroll(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
     return this.coursesService.selfEnroll(req.user, id);
   }
 
@@ -174,30 +178,30 @@ export class CoursesController {
   @Get('content/:contentId')
   async getContent(
     @Param('contentId', ParseIntPipe) contentId: number,
-    @Request() req,
+    @Request() req: any,
   ) {
     const studentId = await this.coursesService.resolveStudentId(req.user);
-    return this.coursesService.getContent(contentId, studentId);
+    return this.coursesService.getContent(contentId, studentId ?? undefined);
   }
 
   // POST /api/courses/content/:contentId/complete  — mark lesson done
   @Post('content/:contentId/complete')
   async markComplete(
     @Param('contentId', ParseIntPipe) contentId: number,
-    @Request() req,
+    @Request() req: any,
   ) {
     const studentId = await this.coursesService.resolveStudentId(req.user);
-    return this.coursesService.markContentComplete(contentId, studentId);
+    return this.coursesService.markContentComplete(contentId, studentId!);
   }
 
   // GET /api/courses/modules/:moduleId
   @Get('modules/:moduleId')
   async getModule(
     @Param('moduleId', ParseIntPipe) moduleId: number,
-    @Request() req,
+    @Request() req: any,
   ) {
     const studentId = await this.coursesService.resolveStudentId(req.user);
-    return this.coursesService.getModule(moduleId, studentId);
+    return this.coursesService.getModule(moduleId, studentId ?? undefined);
   }
 
   // POST /api/courses/modules/:moduleId/content  — admin: add content to module
@@ -215,20 +219,20 @@ export class CoursesController {
   @Get(':id/modules')
   async getCourseModules(
     @Param('id', ParseIntPipe) id: number,
-    @Request() req,
+    @Request() req: any,
   ) {
     const studentId = await this.coursesService.resolveStudentId(req.user);
-    return this.coursesService.getCourseModules(id, studentId);
+    return this.coursesService.getCourseModules(id, studentId ?? undefined);
   }
 
   // GET /api/courses/:id/progress
   @Get(':id/progress')
   async getCourseProgress(
     @Param('id', ParseIntPipe) id: number,
-    @Request() req,
+    @Request() req: any,
   ) {
     const studentId = await this.coursesService.resolveStudentId(req.user);
-    return this.coursesService.getCourseProgress(id, studentId);
+    return this.coursesService.getCourseProgress(id, studentId!);
   }
 
   // POST /api/courses/:id/modules  — admin: add module to course

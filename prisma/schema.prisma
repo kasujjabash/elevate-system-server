@@ -101,6 +101,7 @@ model hub {
   instructors         instructor[]
   attendanceSessions  attendance_session[]
   timetableSessions   timetable_session[]
+  managers            user[]
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
 }
@@ -277,7 +278,9 @@ model user {
   contactId Int     @unique
   roles     String?
   isActive  Boolean
+  hubId     Int?
   contact   contact @relation(fields: [contactId], references: [id])
+  hub       hub?    @relation(fields: [hubId], references: [id])
 }
 
 model announcement {

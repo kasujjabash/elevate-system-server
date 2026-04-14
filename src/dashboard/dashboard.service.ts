@@ -89,7 +89,7 @@ export class DashboardService {
     };
   }
 
-  async getSummary(user: any) {
+  async getSummary(_user: any) {
     const stats = await this.getStats();
     return {
       overview: {
@@ -98,6 +98,85 @@ export class DashboardService {
         totalCourses: stats.totalCourses,
         activeEnrollments: stats.activeEnrollments,
       },
+    };
+  }
+
+  async getHubManagerStats(hubId: number) {
+    const now = new Date();
+    const todayDow = now.getDay();
+    const startOfToday = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+    );
+    const startOfTomorrow = new Date(startOfToday.getTime() + 86400000);
+
+    const [
+      hub,
+      totalStudents,
+      activeStudents,
+      totalCourses,
+      classesToday,
+      todayAttendance,
+      recentStudents,
+      courses,
+    ] = await Promise.all([
+      this.prisma.hub.findUnique({ where: { id: hubId } }),
+      this.prisma.student.count({ where: { hubId } }),
+      this.prisma.student.count({ where: { hubId, status: 'Active' } }),
+      this.prisma.course.count({ where: { hubId, isActive: true } }),
+      this.prisma.timetable_session.count({
+        where: { hubId, dayOfWeek: todayDow },
+      }),
+      this.prisma.attendance_record.count({
+        where: {
+          session: { hubId },
+          checkedInAt: { gte: startOfToday, lt: startOfTomorrow },
+        },
+      }),
+      this.prisma.student.findMany({
+        where: { hubId },
+        include: {
+          contact: { include: { person: true } },
+          enrollments: { include: { course: true }, take: 1 },
+        },
+        orderBy: { enrolledAt: 'desc' },
+        take: 8,
+      }),
+      this.prisma.course.findMany({
+        where: { hubId, isActive: true },
+        select: {
+          id: true,
+          title: true,
+          _count: { select: { enrollments: true } },
+        },
+        orderBy: { enrollments: { _count: 'desc' } },
+      }),
+    ]);
+
+    return {
+      hubId,
+      hubName: hub?.name ?? 'Your Hub',
+      totalStudents,
+      activeStudents,
+      inactiveStudents: totalStudents - activeStudents,
+      totalCourses,
+      classesToday,
+      todayAttendance,
+      courses: courses.map((c) => ({
+        id: c.id,
+        name: c.title,
+        enrolled: c._count.enrollments,
+      })),
+      recentStudents: recentStudents.map((s) => ({
+        id: s.id,
+        name: [s.contact?.person?.firstName, s.contact?.person?.lastName]
+          .filter(Boolean)
+          .join(' '),
+        status: s.status,
+        course: s.enrollments[0]?.course?.title ?? null,
+        enrolledAt: s.enrolledAt,
+      })),
     };
   }
 
