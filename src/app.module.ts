@@ -21,6 +21,7 @@ import { VendorModule } from './vendor/vendor.module';
 import { ChatModule } from './chat/chat.module';
 import { HelpModule } from './help/help.module';
 import { TenantsModule } from './tenants/tenants.module';
+import { WorkshopsModule } from './workshops/workshops.module';
 import { Tenant } from './tenants/entities/tenant.entity';
 import { TenantHeaderMiddleware } from './middleware/tenant-header.middleware';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
@@ -47,6 +48,7 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
     CoursesModule,
     StudentsModule,
     AnnouncementsModule,
+    WorkshopsModule,
 
     // Supporting modules
     SeedModule,

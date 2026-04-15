@@ -80,30 +80,31 @@ model person {
 }
 
 model hub {
-  id              Int          @id @default(autoincrement())
-  name            String       @db.VarChar(100)
-  code            String       @unique @db.VarChar(20)
-  description     String?      @db.VarChar(500)
-  location        String       @db.VarChar(100)
-  address         String?      @db.VarChar(500)
-  isActive        Boolean      @default(true)
+  id                 Int                  @id @default(autoincrement())
+  name               String               @db.VarChar(100)
+  code               String               @unique @db.VarChar(20)
+  description        String?              @db.VarChar(500)
+  location           String               @db.VarChar(100)
+  address            String?              @db.VarChar(500)
+  isActive           Boolean              @default(true)
   // Hub manager
-  managerName     String?      @db.VarChar(100)
-  managerPhone    String?      @db.VarChar(30)
-  managerEmail    String?      @db.VarChar(100)
+  managerName        String?              @db.VarChar(100)
+  managerPhone       String?              @db.VarChar(30)
+  managerEmail       String?              @db.VarChar(100)
   // Resources
-  computers       Int?         @default(0)
-  projectors      Int?         @default(0)
-  capacity        Int?
-  notes           String?      @db.Text
-  students            student[]
-  courses             course[]
-  instructors         instructor[]
-  attendanceSessions  attendance_session[]
-  timetableSessions   timetable_session[]
-  managers            user[]
-  createdAt           DateTime     @default(now())
-  updatedAt           DateTime     @updatedAt
+  computers          Int?                 @default(0)
+  projectors         Int?                 @default(0)
+  capacity           Int?
+  notes              String?              @db.Text
+  students           student[]
+  courses            course[]
+  instructors        instructor[]
+  attendanceSessions attendance_session[]
+  timetableSessions  timetable_session[]
+  managers           user[]
+  workshops          workshop[]
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
 }
 
 model skill_category {
@@ -114,46 +115,47 @@ model skill_category {
 }
 
 model course {
-  id              Int               @id @default(autoincrement())
-  title           String            @db.VarChar(200)
-  description     String            @db.VarChar(1000)
-  duration        String?           @db.VarChar(50)
-  isActive        Boolean           @default(true)
-  isEnrollable    Boolean           @default(true)
-  maxStudents     Int?
-  hubId           Int?
-  instructorId    Int?
-  skillCategoryId String?           @db.VarChar(40)
-  hub             hub?              @relation(fields: [hubId], references: [id])
-  instructor      instructor?       @relation(fields: [instructorId], references: [id])
-  skillCategory   skill_category?   @relation(fields: [skillCategoryId], references: [id])
-  enrollments         enrollment[]
-  study_resources     study_resource[]
-  assignments         assignment[]
-  modules             course_module[]
-  attendanceSessions  attendance_session[]
-  timetableSessions   timetable_session[]
-  chatRooms           chat_room[]
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
+  id                 Int                  @id @default(autoincrement())
+  title              String               @db.VarChar(200)
+  description        String               @db.VarChar(1000)
+  duration           String?              @db.VarChar(50)
+  isActive           Boolean              @default(true)
+  isEnrollable       Boolean              @default(true)
+  maxStudents        Int?
+  hubId              Int?
+  instructorId       Int?
+  skillCategoryId    String?              @db.VarChar(40)
+  hub                hub?                 @relation(fields: [hubId], references: [id])
+  instructor         instructor?          @relation(fields: [instructorId], references: [id])
+  skillCategory      skill_category?      @relation(fields: [skillCategoryId], references: [id])
+  enrollments        enrollment[]
+  study_resources    study_resource[]
+  assignments        assignment[]
+  modules            course_module[]
+  attendanceSessions attendance_session[]
+  timetableSessions  timetable_session[]
+  chatRooms          chat_room[]
+  workshops          workshop[]
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
 }
 
 model student {
-  id             Int                 @id @default(autoincrement())
-  studentId      String              @unique @db.VarChar(20)
-  contactId      Int                 @unique
-  hubId          Int
-  status         student_status_enum @default(Active)
-  enrolledAt     DateTime            @default(now())
-  contact        contact             @relation(fields: [contactId], references: [id])
-  hub            hub                 @relation(fields: [hubId], references: [id])
-  enrollments        enrollment[]
-  submissions        submission[]
-  contentProgress    content_progress[]
-  attendanceRecords  attendance_record[]
-  requests           student_request[]
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
+  id                Int                 @id @default(autoincrement())
+  studentId         String              @unique @db.VarChar(20)
+  contactId         Int                 @unique
+  hubId             Int
+  status            student_status_enum @default(Active)
+  enrolledAt        DateTime            @default(now())
+  contact           contact             @relation(fields: [contactId], references: [id])
+  hub               hub                 @relation(fields: [hubId], references: [id])
+  enrollments       enrollment[]
+  submissions       submission[]
+  contentProgress   content_progress[]
+  attendanceRecords attendance_record[]
+  requests          student_request[]
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
 }
 
 model instructor {
@@ -288,7 +290,7 @@ model announcement {
   id        Int       @id @default(autoincrement())
   title     String    @db.VarChar(200)
   body      String    @db.Text
-  type      String    @default("info")   // info | warning | event | success
+  type      String    @default("info") // info | warning | event | success
   pinned    Boolean   @default(false)
   isActive  Boolean   @default(true)
   expiresAt DateTime?
@@ -298,19 +300,19 @@ model announcement {
 }
 
 model attendance_session {
-  id         Int                   @id @default(autoincrement())
-  token      String                @unique @db.VarChar(64)
-  shortCode  String                @unique @db.VarChar(8)
-  courseId   Int?
-  hubId      Int?
-  label      String?               @db.VarChar(200)
-  expiresAt  DateTime
-  isActive   Boolean               @default(true)
-  createdBy  Int?
-  createdAt  DateTime              @default(now())
-  records    attendance_record[]
-  course     course?               @relation(fields: [courseId], references: [id])
-  hub        hub?                  @relation(fields: [hubId], references: [id])
+  id        Int                 @id @default(autoincrement())
+  token     String              @unique @db.VarChar(64)
+  shortCode String              @unique @db.VarChar(8)
+  courseId  Int?
+  hubId     Int?
+  label     String?             @db.VarChar(200)
+  expiresAt DateTime
+  isActive  Boolean             @default(true)
+  createdBy Int?
+  createdAt DateTime            @default(now())
+  records   attendance_record[]
+  course    course?             @relation(fields: [courseId], references: [id])
+  hub       hub?                @relation(fields: [hubId], references: [id])
 }
 
 model attendance_record {
@@ -318,7 +320,7 @@ model attendance_record {
   sessionId   Int
   studentId   Int
   checkedInAt DateTime           @default(now())
-  method      String             @default("QR")  // QR | Manual
+  method      String             @default("QR") // QR | Manual
   session     attendance_session @relation(fields: [sessionId], references: [id])
   student     student            @relation(fields: [studentId], references: [id])
 
@@ -414,26 +416,26 @@ enum module_content_type_enum {
 }
 
 model student_request {
-  id         Int                  @id @default(autoincrement())
-  studentId  Int
-  subject    String               @db.VarChar(300)
-  body       String               @db.Text
-  type       String               @default("inquiry")
-  status     request_status_enum  @default(Open)
-  student    student              @relation(fields: [studentId], references: [id])
-  messages   request_message[]
-  createdAt  DateTime             @default(now())
-  updatedAt  DateTime             @updatedAt
+  id        Int                 @id @default(autoincrement())
+  studentId Int
+  subject   String              @db.VarChar(300)
+  body      String              @db.Text
+  type      String              @default("inquiry")
+  status    request_status_enum @default(Open)
+  student   student             @relation(fields: [studentId], references: [id])
+  messages  request_message[]
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
 }
 
 model request_message {
-  id         Int              @id @default(autoincrement())
+  id         Int             @id @default(autoincrement())
   requestId  Int
-  body       String           @db.Text
-  senderType String           @default("student")
+  body       String          @db.Text
+  senderType String          @default("student")
   senderId   Int?
-  request    student_request  @relation(fields: [requestId], references: [id])
-  createdAt  DateTime         @default(now())
+  request    student_request @relation(fields: [requestId], references: [id])
+  createdAt  DateTime        @default(now())
 }
 
 enum request_status_enum {
@@ -487,4 +489,24 @@ model chat_message {
   content   String
   room      chat_room @relation(fields: [roomId], references: [id], onDelete: Cascade)
   createdAt DateTime  @default(now())
+}
+
+model workshop {
+  id          Int                @id @default(autoincrement())
+  title       String             @db.VarChar(200)
+  description String?            @db.VarChar(1000)
+  type        workshop_type_enum @default(Workshop)
+  url         String?            @db.VarChar(500)
+  courseId    Int?
+  hubId       Int?
+  isActive    Boolean            @default(true)
+  course      course?            @relation(fields: [courseId], references: [id])
+  hub         hub?               @relation(fields: [hubId], references: [id])
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+}
+
+enum workshop_type_enum {
+  Workshop
+  Podcast
 }
