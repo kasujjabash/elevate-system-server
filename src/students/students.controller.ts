@@ -10,7 +10,6 @@ import {
   ParseIntPipe,
   UseInterceptors,
   UploadedFile,
-  NotFoundException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { StudentsService } from './students.service';
@@ -63,7 +62,7 @@ export class StudentsController {
   // GET /api/students/me/courses — enrolled courses with progress
   @Get('me/courses')
   @ApiOperation({ summary: 'Get enrolled courses for the logged-in student' })
-  getMyCourses(@Request() req) {
+  getMyCourses(@Request() req: any) {
     return this.studentsService.getMyCourses(req.user.id);
   }
 
@@ -71,7 +70,7 @@ export class StudentsController {
   @Get('me/schedule')
   @ApiOperation({ summary: 'Get schedule/calendar for the logged-in student' })
   getMySchedule(
-    @Request() req,
+    @Request() req: any,
     @Query('from') from?: string,
     @Query('to') to?: string,
   ) {
@@ -112,13 +111,13 @@ export class StudentsController {
 
   // GET /api/students/addresses
   @Get('addresses')
-  getAddresses(@Query('studentId') studentId?: string) {
+  getAddresses(@Query('studentId') _studentId?: string) {
     return [];
   }
 
   // GET /api/students/identifications
   @Get('identifications')
-  getIdentifications(@Query('studentId') studentId?: string) {
+  getIdentifications(@Query('studentId') _studentId?: string) {
     return [];
   }
 
@@ -154,8 +153,8 @@ export class StudentsController {
   @Put('student/avatar')
   @UseInterceptors(FileInterceptor('avatar'))
   updateAvatar(
-    @UploadedFile() file: Express.Multer.File,
-    @Body('studentId') studentId: string,
+    @UploadedFile() _file: any,
+    @Body('studentId') _studentId: string,
   ) {
     return { avatarUrl: null };
   }
@@ -163,7 +162,7 @@ export class StudentsController {
   // POST /api/students/import
   @Post('import')
   @UseInterceptors(FileInterceptor('file'))
-  importStudents(@UploadedFile() file: Express.Multer.File) {
+  importStudents(@UploadedFile() _file: any) {
     return { imported: 0, failed: 0, errors: [] };
   }
 

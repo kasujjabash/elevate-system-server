@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsNumber } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional } from 'class-validator';
 
 export class CreateUserDto {
   @IsNotEmpty()
@@ -12,4 +12,9 @@ export class CreateUserDto {
   roles: string[];
   @IsNotEmpty()
   isActive: boolean;
+
+  /** Required when role is HUB_MANAGER — links the user to their hub */
+  @IsOptional()
+  @IsNumber()
+  hubId?: number;
 }

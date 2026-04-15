@@ -88,8 +88,8 @@ export class UsersService {
       return data.map((it) => {
         return this.toListModel(it);
       });
-    } catch (error) {
-      Logger.error(error.message);
+    } catch (error: any) {
+      Logger.error(error?.message ?? error);
       return [];
     }
   }
@@ -156,6 +156,11 @@ export class UsersService {
       ? data.roles.join(',')
       : data.roles || '';
 
+    const rolesArr = rolesStr ? rolesStr.split(',').map((r) => r.trim()) : [];
+    const isHubManager = rolesArr.includes('HUB_MANAGER');
+    const isTrainer =
+      rolesArr.includes('TRAINER') || rolesArr.includes('INSTRUCTOR');
+
     const created = await this.prisma.user.create({
       data: {
         username,
@@ -163,9 +168,28 @@ export class UsersService {
         contactId: data.contactId,
         isActive: data.isActive ?? true,
         roles: rolesStr,
+        ...(isHubManager && data.hubId ? { hubId: data.hubId } : {}),
       },
       include: { contact: { include: { person: true } } },
     });
+
+    // Auto-create instructor record for trainers
+    if (isTrainer) {
+      const existingInstructor = await this.prisma.instructor.findUnique({
+        where: { contactId: data.contactId },
+      });
+      if (!existingInstructor) {
+        const count = await this.prisma.instructor.count();
+        await this.prisma.instructor.create({
+          data: {
+            contactId: data.contactId,
+            hubId: data.hubId ?? 1,
+            employeeId: `TR${String(count + 1).padStart(4, '0')}`,
+            isActive: true,
+          },
+        });
+      }
+    }
 
     const fullName = created.contact?.person
       ? `${created.contact.person.firstName} ${created.contact.person.lastName}`.trim()
@@ -176,7 +200,7 @@ export class UsersService {
       username: created.username,
       contactId: created.contactId,
       isActive: created.isActive,
-      roles: rolesStr ? rolesStr.split(',') : [],
+      roles: rolesArr,
       fullName,
       email: created.username,
       permissions: [],
@@ -278,12 +302,20 @@ export class UsersService {
       update.roles = sentRolesStrArr.join(',');
     }
 
-    const resp = await this.repository
+    await this.repository
       .createQueryBuilder()
       .update()
       .set(update)
       .where('id = :id', { id: data.id })
       .execute();
+
+    // Persist hubId via Prisma (TypeORM entity doesn't know about this column)
+    if (data.hubId !== undefined) {
+      await this.prisma.user.update({
+        where: { id: data.id },
+        data: { hubId: data.hubId },
+      });
+    }
 
     return await this.findOne(data.id);
   }

@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsNumber } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional } from 'class-validator';
 
 export class UpdateUserDto {
   @IsNotEmpty()
@@ -10,4 +10,9 @@ export class UpdateUserDto {
   oldPassword?: string;
   password?: string;
   isActive?: boolean;
+
+  /** Update hub assignment for HUB_MANAGER users */
+  @IsOptional()
+  @IsNumber()
+  hubId?: number;
 }
