@@ -32,7 +32,7 @@ export class User {
   @Column({ length: 40 })
   username: string;
 
-  @Column({ length: 100 })
+  @Column({ length: 100, select: true })
   @Exclude()
   password: string;
 
@@ -48,6 +48,9 @@ export class User {
 
   @Column({ nullable: true, length: 50 })
   roles: string;
+
+  @Column({ nullable: true, type: 'int' })
+  hubId: number;
 
   @ManyToOne(() => Tenant, (tenant) => tenant.users, { nullable: true })
   tenant: Tenant;

@@ -613,6 +613,165 @@ async function main() {
     console.log('  ✓ Default student: student@era92elevate.org / student2024');
   }
 
+  // ── 8. HUB MANAGERS ─────────────────────────────────────────────────────────
+  const hubManagersData = [
+    {
+      firstName: 'Robert',
+      lastName: 'Kizza',
+      email: 'robert.kizza@hub.elevate.org',
+      hubCode: 'katanga',
+    },
+    {
+      firstName: 'Annet',
+      lastName: 'Nabukenya',
+      email: 'annet.nabukenya@hub.elevate.org',
+      hubCode: 'kosovo',
+    },
+    {
+      firstName: 'Isaac',
+      lastName: 'Opio',
+      email: 'isaac.opio@hub.elevate.org',
+      hubCode: 'jinja',
+    },
+  ];
+  const hmPassword = await bcrypt.hash('hubmanager2024', HASH_ROUNDS);
+  for (const hm of hubManagersData) {
+    const existingEmail = await prisma.email.findFirst({
+      where: { value: hm.email },
+    });
+    let contactId: number;
+    if (!existingEmail) {
+      const contact = await prisma.contact.create({
+        data: { category: 'Person' },
+      });
+      await prisma.person.create({
+        data: {
+          firstName: hm.firstName,
+          lastName: hm.lastName,
+          gender: 'Male',
+          contactId: contact.id,
+        },
+      });
+      await prisma.email.create({
+        data: {
+          value: hm.email,
+          category: 'Work',
+          isPrimary: true,
+          contactId: contact.id,
+        },
+      });
+      contactId = contact.id;
+    } else {
+      contactId = existingEmail.contactId;
+    }
+    await prisma.user.upsert({
+      where: { username: hm.email },
+      update: {
+        roles: 'HUB_MANAGER',
+        isActive: true,
+        hubId: hubs[hm.hubCode].id,
+      },
+      create: {
+        username: hm.email,
+        password: hmPassword,
+        contactId,
+        roles: 'HUB_MANAGER',
+        isActive: true,
+        hubId: hubs[hm.hubCode].id,
+      },
+    });
+    console.log(
+      `  ✓ Hub Manager: ${hm.email} / hubmanager2024 (${hm.hubCode})`,
+    );
+  }
+
+  // ── 9. TRAINERS ──────────────────────────────────────────────────────────────
+  const trainersData = [
+    {
+      firstName: 'Daniel',
+      lastName: 'Ochieng',
+      email: 'daniel.ochieng@trainer.elevate.org',
+    },
+    {
+      firstName: 'Grace',
+      lastName: 'Akello',
+      email: 'grace.akello@trainer.elevate.org',
+    },
+    {
+      firstName: 'Patrick',
+      lastName: 'Ssali',
+      email: 'patrick.ssali@trainer.elevate.org',
+    },
+    {
+      firstName: 'Miriam',
+      lastName: 'Atim',
+      email: 'miriam.atim@trainer.elevate.org',
+    },
+    {
+      firstName: 'Peter',
+      lastName: 'Mwanje',
+      email: 'peter.mwanje@trainer.elevate.org',
+    },
+    {
+      firstName: 'Nickolus',
+      lastName: 'Onapa',
+      email: 'nickolus.onapa@trainer.elevate.org',
+    },
+    {
+      firstName: 'Andrew',
+      lastName: 'Trainer',
+      email: 'andrew@trainer.elevate.org',
+    },
+    {
+      firstName: 'Mark',
+      lastName: 'Omudigi',
+      email: 'mark.omudigi@trainer.elevate.org',
+    },
+  ];
+  const trainerPassword = await bcrypt.hash('trainer2024', HASH_ROUNDS);
+  for (const t of trainersData) {
+    const existingEmail = await prisma.email.findFirst({
+      where: { value: t.email },
+    });
+    let contactId: number;
+    if (!existingEmail) {
+      const contact = await prisma.contact.create({
+        data: { category: 'Person' },
+      });
+      await prisma.person.create({
+        data: {
+          firstName: t.firstName,
+          lastName: t.lastName,
+          gender: 'Male',
+          contactId: contact.id,
+        },
+      });
+      await prisma.email.create({
+        data: {
+          value: t.email,
+          category: 'Work',
+          isPrimary: true,
+          contactId: contact.id,
+        },
+      });
+      contactId = contact.id;
+    } else {
+      contactId = existingEmail.contactId;
+    }
+    await prisma.user.upsert({
+      where: { username: t.email },
+      update: { roles: 'TRAINER', isActive: true },
+      create: {
+        username: t.email,
+        password: trainerPassword,
+        contactId,
+        roles: 'TRAINER',
+        isActive: true,
+      },
+    });
+    console.log(`  ✓ Trainer: ${t.email} / trainer2024`);
+  }
+
   console.log('\n✅ Prisma seed complete!');
   console.log('\n📋 STUDENT LOGINS:');
   console.log('   Email pattern: firstname.lastname@student.elevate.org');

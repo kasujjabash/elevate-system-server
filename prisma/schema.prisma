@@ -133,6 +133,7 @@ model course {
   modules             course_module[]
   attendanceSessions  attendance_session[]
   timetableSessions   timetable_session[]
+  chatRooms           chat_room[]
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 }
@@ -451,8 +452,39 @@ model timetable_session {
   startTime      String   @db.VarChar(5)
   endTime        String   @db.VarChar(5)
   room           String?  @db.VarChar(100)
+  meetLink       String?  @db.VarChar(500)
   course         course   @relation(fields: [courseId], references: [id])
   hub            hub?     @relation(fields: [hubId], references: [id])
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+}
+
+model chat_room {
+  id        Int            @id @default(autoincrement())
+  type      String         @db.VarChar(10)
+  title     String?        @db.VarChar(200)
+  courseId  Int?
+  course    course?        @relation(fields: [courseId], references: [id])
+  members   chat_member[]
+  messages  chat_message[]
+  createdAt DateTime       @default(now())
+}
+
+model chat_member {
+  id        Int       @id @default(autoincrement())
+  roomId    Int
+  userId    Int
+  room      chat_room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+
+  @@unique([roomId, userId])
+}
+
+model chat_message {
+  id        Int       @id @default(autoincrement())
+  roomId    Int
+  senderId  Int
+  content   String
+  room      chat_room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
 }

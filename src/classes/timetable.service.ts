@@ -9,6 +9,7 @@ export interface TimetableSessionDto {
   startTime: string;
   endTime: string;
   room?: string | null;
+  meetLink?: string | null;
 }
 
 @Injectable()
@@ -38,6 +39,7 @@ export class TimetableService {
       startTime: s.startTime,
       endTime: s.endTime,
       room: s.room ?? null,
+      meetLink: s.meetLink ?? null,
       courseId: s.courseId,
       courseName: s.course?.title ?? null,
       moduleCode: s.course?.skillCategory?.id ?? null,
@@ -150,6 +152,7 @@ export class TimetableService {
         startTime: dto.startTime,
         endTime: dto.endTime,
         room: dto.room ?? null,
+        meetLink: dto.meetLink ?? null,
       },
       include: this.include,
     });
@@ -174,6 +177,7 @@ export class TimetableService {
         ...(dto.startTime !== undefined && { startTime: dto.startTime }),
         ...(dto.endTime !== undefined && { endTime: dto.endTime }),
         ...(dto.room !== undefined && { room: dto.room }),
+        ...(dto.meetLink !== undefined && { meetLink: dto.meetLink }),
       },
       include: this.include,
     });

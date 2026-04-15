@@ -48,6 +48,13 @@ export class AuthService {
     }
 
     const valid = await user.validatePassword(pass);
+    console.log(
+      `[AUTH DEBUG] passLen=${pass?.length}, storedHashLen=${(user as any)
+        .password?.length}, storedHash=${(user as any).password?.substring(
+        0,
+        10,
+      )}, valid=${valid}`,
+    );
     if (!valid) {
       Logger.warn('Invalid password for:', username);
       return null;

@@ -27,7 +27,7 @@ async function main() {
     username: process.env.DB_USERNAME || 'macbookpro',
     password: process.env.DB_PASSWORD || '',
     database: process.env.DB_DATABASE || 'elevate-academy-db',
-    synchronize: false,
+    synchronize: true,
     logging: false,
     ssl:
       process.env.DB_HOST !== 'localhost'
@@ -53,10 +53,10 @@ async function main() {
 
     // Create RoleAdmin role
     const rolesRepo = connection.getRepository('Roles');
-    let adminRole = await rolesRepo.findOne({ where: { role: 'RoleAdmin' } });
+    let adminRole = await rolesRepo.findOne({ where: { role: 'ADMIN' } });
     if (!adminRole) {
       adminRole = rolesRepo.create({
-        role: 'RoleAdmin',
+        role: 'ADMIN',
         description: 'System Administrator',
         permissions: [
           'DASHBOARD',
@@ -86,11 +86,11 @@ async function main() {
 
     // Create RoleTrainer role
     let trainerRole = await rolesRepo.findOne({
-      where: { role: 'RoleTrainer' },
+      where: { role: 'TRAINER' },
     });
     if (!trainerRole) {
       trainerRole = rolesRepo.create({
-        role: 'RoleTrainer',
+        role: 'TRAINER',
         description: 'Trainer / Instructor',
         permissions: [
           'DASHBOARD',

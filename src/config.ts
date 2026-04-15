@@ -33,7 +33,7 @@ const database: TypeOrmModuleOptions = databaseUrl
       url: databaseUrl,
       ssl: isProduction ? { rejectUnauthorized: false } : false,
       synchronize: process.env.DB_SYNCHRONIZE === 'true',
-      cache: true,
+      cache: false,
       logging: process.env.DB_LOGGING === 'true',
     }
   : {
@@ -45,7 +45,7 @@ const database: TypeOrmModuleOptions = databaseUrl
       ssl: isProduction ? { rejectUnauthorized: false } : false,
       database: process.env.DB_DATABASE,
       synchronize: process.env.DB_SYNCHRONIZE === 'true',
-      cache: true,
+      cache: false,
       logging: process.env.DB_LOGGING === 'true',
     };
 
