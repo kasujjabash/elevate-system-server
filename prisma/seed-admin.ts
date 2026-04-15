@@ -29,6 +29,10 @@ async function main() {
     database: process.env.DB_DATABASE || 'elevate-academy-db',
     synchronize: true,
     logging: false,
+    ssl:
+      process.env.DB_HOST !== 'localhost'
+        ? { rejectUnauthorized: false }
+        : false,
     entities: [path.join(__dirname, '../src/**/*.entity{.ts,.js}')],
   });
   await connection.initialize();
