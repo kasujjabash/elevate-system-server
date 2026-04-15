@@ -27,7 +27,7 @@ async function main() {
     username: process.env.DB_USERNAME || 'macbookpro',
     password: process.env.DB_PASSWORD || '',
     database: process.env.DB_DATABASE || 'elevate-academy-db',
-    synchronize: true,
+    synchronize: false,
     logging: false,
     ssl:
       process.env.DB_HOST !== 'localhost'
