@@ -67,17 +67,23 @@ export class AuthService {
     user.permissions = userPermissions;
 
     // Fetch hubId from DB so hub managers get it in their JWT
-    const dbUser = await this.prisma.user.findUnique({
-      where: { id: user.id },
-      select: { hubId: true },
-    });
+    let hubId: number | null = null;
+    try {
+      const dbUser = await this.prisma.user.findUnique({
+        where: { id: user.id },
+        select: { hubId: true },
+      });
+      hubId = dbUser?.hubId ?? null;
+    } catch (e) {
+      Logger.warn('Could not fetch hubId for user ' + user.id);
+    }
 
     const payload = {
       ...user,
       sub: user.id,
       aud: tenant,
       permissions: userPermissions,
-      hubId: dbUser?.hubId ?? null,
+      hubId,
     };
     const token = await this.jwtService.signAsync(payload);
     const hierarchy = await this.getUserHierarchy(user.id);
