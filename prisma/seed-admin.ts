@@ -165,12 +165,31 @@ async function main() {
     const userRolesRepo = connection.getRepository('UserRoles');
 
     for (const u of users) {
-      const existing = await userRepo.findOne({ where: { username: u.email } });
-      if (existing) {
-        console.log(`  ⚠️  User exists: ${u.email}`);
-        continue;
+      let user = await userRepo.findOne({
+        where: { username: u.email },
+        relations: ['userRoles', 'userRoles.roles'],
+      });
+
+      if (user) {
+        // User exists - check if they have the correct role
+        const hasRole = user.userRoles?.some(
+          (ur) => ur.roles?.role === u.role.role,
+        );
+        if (hasRole) {
+          console.log(`  ✓ User exists with role: ${u.email} (${u.role.role})`);
+          continue;
+        } else {
+          // User exists but doesn't have the role - assign it
+          const userRole = userRolesRepo.create({ user: user, roles: u.role });
+          await userRolesRepo.save(userRole);
+          console.log(
+            `  ✓ Role assigned to existing user: ${u.email} (${u.role.role})`,
+          );
+          continue;
+        }
       }
 
+      // User doesn't exist - create them
       const contact = contactRepo.create({ category: 'Person', tenant });
       const savedContact = await contactRepo.save(contact);
 
@@ -191,7 +210,7 @@ async function main() {
       await emailRepo.save(email);
 
       const hashedPassword = bcrypt.hashSync(u.password, HASH_ROUNDS);
-      const user = userRepo.create({
+      user = userRepo.create({
         username: u.email,
         password: hashedPassword,
         contactId: savedContact.id,
