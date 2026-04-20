@@ -134,6 +134,38 @@ async function main() {
       console.log('  ✓ Role: RoleTrainer');
     }
 
+    // Create HUB_MANAGER role
+    let hubManagerRole = await rolesRepo.findOne({
+      where: { role: 'HUB_MANAGER' },
+    });
+    if (!hubManagerRole) {
+      hubManagerRole = rolesRepo.create({
+        role: 'HUB_MANAGER',
+        description: 'Hub Manager',
+        permissions: [
+          'DASHBOARD',
+          'STUDENT_VIEW',
+          'STUDENT_EDIT',
+          'USER_VIEW',
+          'USER_EDIT',
+          'COURSE_VIEW',
+          'COURSE_EDIT',
+          'CLASS_VIEW',
+          'CLASS_EDIT',
+          'HUB_VIEW',
+          'HUB_EDIT',
+          'REPORT_VIEW',
+          'REPORT_VIEW_SUBMISSIONS',
+          'TAG_VIEW',
+          'TAG_EDIT',
+        ],
+        isActive: true,
+        tenant,
+      });
+      hubManagerRole = await rolesRepo.save(hubManagerRole);
+      console.log('  ✓ Role: RoleHubManager');
+    }
+
     const users = [
       {
         firstName: 'Elevate',
@@ -155,6 +187,28 @@ async function main() {
         email: 'trainer@era92elevate.org',
         password: 'elevate2024',
         role: trainerRole,
+      },
+      // Hub Managers
+      {
+        firstName: 'Robert',
+        lastName: 'Kizza',
+        email: 'robert.kizza@hub.elevate.org',
+        password: 'hubmanager2024',
+        role: hubManagerRole,
+      },
+      {
+        firstName: 'Annet',
+        lastName: 'Nabukenya',
+        email: 'annet.nabukenya@hub.elevate.org',
+        password: 'hubmanager2024',
+        role: hubManagerRole,
+      },
+      {
+        firstName: 'Isaac',
+        lastName: 'Opio',
+        email: 'isaac.opio@hub.elevate.org',
+        password: 'hubmanager2024',
+        role: hubManagerRole,
       },
     ];
 
@@ -230,6 +284,16 @@ async function main() {
     console.log('   admin@era92elevate.org      / elevate2024  (RoleAdmin)');
     console.log('   instructor@era92elevate.org / elevate2024  (RoleAdmin)');
     console.log('   trainer@era92elevate.org    / elevate2024  (RoleTrainer)');
+    console.log('\n🏢 HUB MANAGER CREDENTIALS:');
+    console.log(
+      '   robert.kizza@hub.elevate.org     / hubmanager2024 (RoleHubManager)',
+    );
+    console.log(
+      '   annet.nabukenya@hub.elevate.org  / hubmanager2024 (RoleHubManager)',
+    );
+    console.log(
+      '   isaac.opio@hub.elevate.org       / hubmanager2024 (RoleHubManager)',
+    );
   } finally {
     await connection.destroy();
   }
