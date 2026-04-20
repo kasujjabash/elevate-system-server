@@ -1,38 +1,26 @@
 import { Controller, Get, Post } from '@nestjs/common';
 import { Public } from '../auth/decorators/public.decorator';
-import { PrismaService } from '../shared/prisma.service';
-import { Connection } from 'typeorm';
 import { execSync } from 'child_process';
 
-@Controller('seed')
+@Controller('api/seed')
 export class SeedController {
-  constructor(
-    private readonly prismaService: PrismaService,
-    private readonly connection: Connection,
-  ) {}
+  constructor() {}
 
   @Public()
   @Get('status')
   async getDatabaseStatus() {
     try {
-      // Test database connections
-      const prismaTest = await this.prismaService.hub.count();
-      const typeormTest = await this.connection.query(
-        'SELECT COUNT(*) FROM "user"',
-      );
-
       return {
         success: true,
-        prisma: { connected: true, hubs: prismaTest },
-        typeorm: { connected: true, users: typeormTest[0].count },
-        message: 'Database connections working',
+        message:
+          'Seed controller is working. Use POST /api/seed/users to trigger seeding.',
+        timestamp: new Date().toISOString(),
       };
     } catch (error) {
       return {
         success: false,
         error: error.message,
-        stack: error.stack,
-        message: 'Database connection failed',
+        message: 'Seed controller error',
       };
     }
   }
@@ -41,23 +29,33 @@ export class SeedController {
   @Post('users')
   async seedUsers() {
     try {
-      // Run the specific commands we need
-
-      // Run Prisma seed
-      execSync('npm run seed:elevate', { stdio: 'inherit' });
-
-      // Run admin seed
-      execSync('npm run seed:admin', { stdio: 'inherit' });
+      // Run the admin seed with proper environment variables
+      const result = execSync('npm run seed:admin', {
+        stdio: 'pipe',
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          // Ensure the script uses the production database URL
+          DB_HOST: process.env.DB_HOST || undefined,
+          DB_PORT: process.env.DB_PORT || undefined,
+          DB_USERNAME: process.env.DB_USERNAME || undefined,
+          DB_PASSWORD: process.env.DB_PASSWORD || undefined,
+          DB_DATABASE: process.env.DB_DATABASE || undefined,
+          DATABASE_URL: process.env.DATABASE_URL || undefined,
+        },
+      });
 
       return {
         success: true,
-        message: 'Users seeded successfully',
+        message: 'Admin users seeded successfully',
+        output: result,
       };
     } catch (error) {
       return {
         success: false,
         error: error.message,
-        message: 'Seeding failed',
+        message: 'Admin seeding failed',
+        output: error.stdout || '',
       };
     }
   }

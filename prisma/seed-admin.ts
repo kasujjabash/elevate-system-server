@@ -18,23 +18,47 @@ const HASH_ROUNDS = 10;
 
 async function main() {
   console.log('🔐 Seeding admin TypeORM users...');
-  console.log('   DB:', process.env.DB_DATABASE);
+  console.log('   DB:', process.env.DB_DATABASE || 'from DATABASE_URL');
+  console.log(
+    '   DATABASE_URL:',
+    process.env.DATABASE_URL ? 'present' : 'not set',
+  );
 
-  const connection = new DataSource({
-    type: 'postgres',
-    host: process.env.DB_HOST || 'localhost',
-    port: parseInt(process.env.DB_PORT || '5432', 10),
-    username: process.env.DB_USERNAME || 'macbookpro',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_DATABASE || 'elevate-academy-db',
-    synchronize: true,
-    logging: false,
-    ssl:
-      process.env.DB_HOST !== 'localhost'
-        ? { rejectUnauthorized: false }
-        : false,
-    entities: [path.join(__dirname, '../src/**/*.entity{.ts,.js}')],
-  });
+  // Support both DATABASE_URL (Render/Railway) and individual DB_* vars (local)
+  const databaseUrl = process.env.DATABASE_URL;
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  const connectionConfig = databaseUrl
+    ? {
+        type: 'postgres' as const,
+        url: databaseUrl,
+        ssl: isProduction ? { rejectUnauthorized: false } : false,
+        synchronize: true,
+        logging: false,
+        entities: [path.join(__dirname, '../src/**/*.entity{.ts,.js}')],
+      }
+    : {
+        type: 'postgres' as const,
+        host: process.env.DB_HOST || 'localhost',
+        port: parseInt(process.env.DB_PORT || '5432', 10),
+        username: process.env.DB_USERNAME || 'macbookpro',
+        password: process.env.DB_PASSWORD || '',
+        database: process.env.DB_DATABASE || 'elevate-academy-db',
+        synchronize: true,
+        logging: false,
+        ssl:
+          process.env.DB_HOST !== 'localhost'
+            ? { rejectUnauthorized: false }
+            : false,
+        entities: [path.join(__dirname, '../src/**/*.entity{.ts,.js}')],
+      };
+
+  console.log(
+    '   Connection method:',
+    databaseUrl ? 'DATABASE_URL' : 'individual vars',
+  );
+
+  const connection = new DataSource(connectionConfig);
   await connection.initialize();
 
   try {
