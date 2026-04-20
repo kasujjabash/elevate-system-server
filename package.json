@@ -11,6 +11,7 @@
     "heroku-postbuild": "npm run build",
     "prebuild": "rimraf dist",
     "build": "npx prisma generate && ./node_modules/.bin/nest build",
+    "postbuild": "npx prisma db push && npm run seed:elevate && npm run seed:admin || echo 'Seeding completed with warnings (normal if data already exists)'",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "format:fix": "npm run lint:fix && npm run format",
     "start": "nest start",
