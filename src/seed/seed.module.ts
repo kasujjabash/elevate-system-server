@@ -1,5 +1,6 @@
 import { forwardRef, Module } from '@nestjs/common';
 import { SeedService } from './seed.service';
+import { SeedController } from './seed.controller';
 import { ComprehensiveSeedService } from './comprehensive-seed.service';
 import { CrmModule } from '../crm/crm.module';
 import { UsersModule } from '../users/users.module';
@@ -28,6 +29,7 @@ import { usersEntities } from '../users/users.helpers';
       // ...eventEntities, // Disabled - church-specific
     ]),
   ],
+  controllers: [SeedController],
   providers: [SeedService, ComprehensiveSeedService],
   exports: [SeedService, ComprehensiveSeedService],
 })
