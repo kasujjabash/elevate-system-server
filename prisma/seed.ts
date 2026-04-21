@@ -536,7 +536,7 @@ async function main() {
     const hashedPassword = await bcrypt.hash(s.password, HASH_ROUNDS);
     await prisma.user.upsert({
       where: { username: s.email },
-      update: {},
+      update: { roles: 'STUDENT', isActive: true },
       create: {
         username: s.email,
         password: hashedPassword,
@@ -601,7 +601,7 @@ async function main() {
     const hashedPassword = await bcrypt.hash('student2024', HASH_ROUNDS);
     await prisma.user.upsert({
       where: { username: 'student@era92elevate.org' },
-      update: {},
+      update: { roles: 'STUDENT', isActive: true },
       create: {
         username: 'student@era92elevate.org',
         password: hashedPassword,
@@ -611,6 +611,13 @@ async function main() {
       },
     });
     console.log('  ✓ Default student: student@era92elevate.org / student2024');
+  } else {
+    // Ensure existing default student has roles set
+    await prisma.user.updateMany({
+      where: { username: 'student@era92elevate.org' },
+      data: { roles: 'STUDENT', isActive: true },
+    });
+    console.log('  ✓ Default student roles updated: student@era92elevate.org');
   }
 
   // ── 8. HUB MANAGERS ─────────────────────────────────────────────────────────

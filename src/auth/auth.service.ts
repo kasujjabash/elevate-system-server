@@ -35,7 +35,7 @@ export class AuthService {
   async validateUser(
     username: string,
     pass: string,
-    hub?: string,
+    _hub?: string,
   ): Promise<UserDto | null> {
     const user = await this.usersService.findByName(username);
     if (!user) {
@@ -48,13 +48,6 @@ export class AuthService {
     }
 
     const valid = await user.validatePassword(pass);
-    console.log(
-      `[AUTH DEBUG] passLen=${pass?.length}, storedHashLen=${(user as any)
-        .password?.length}, storedHash=${(user as any).password?.substring(
-        0,
-        10,
-      )}, valid=${valid}`,
-    );
     if (!valid) {
       Logger.warn('Invalid password for:', username);
       return null;
@@ -142,11 +135,9 @@ export class AuthService {
     if (!user) throw new HttpException('User Password Not Updated', 404);
 
     const mailerData: IEmail = {
-      to: (await user).username,
+      to: user.username,
       subject: 'Password Change Confirmation',
-      html: `<h3>Hello ${
-        (await user).fullName
-      },</h3><p>Your password has been changed successfully!</p>`,
+      html: `<h3>Hello ${user.fullName},</h3><p>Your password has been changed successfully!</p>`,
     };
     const mailURL = await sendEmail(mailerData);
     return { message: 'Password Change Successful', mailURL, user };
@@ -170,7 +161,7 @@ export class AuthService {
     return [...new Set(permissions)];
   }
 
-  async refreshToken(refreshToken: string): Promise<RefreshTokenResponseDto> {
+  async refreshToken(_refreshToken: string): Promise<RefreshTokenResponseDto> {
     return {
       token: 'mock_jwt_token_' + Date.now(),
       refreshToken: 'mock_refresh_token_' + Date.now(),

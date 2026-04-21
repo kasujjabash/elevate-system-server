@@ -269,6 +269,7 @@ async function main() {
         password: hashedPassword,
         contactId: savedContact.id,
         isActive: true,
+        roles: u.role.role,
         tenant,
       });
       const savedUser = await userRepo.save(user);
