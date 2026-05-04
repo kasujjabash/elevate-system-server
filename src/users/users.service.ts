@@ -189,6 +189,14 @@ export class UsersService {
     const isHubManager = rolesArr.includes('HUB_MANAGER');
     const isTrainer =
       rolesArr.includes('TRAINER') || rolesArr.includes('INSTRUCTOR');
+    const isStudent = rolesArr.includes('STUDENT');
+
+    if (isStudent && !data.hubId) {
+      throw new HttpException(
+        'A hub must be selected for student accounts',
+        400,
+      );
+    }
 
     const created = await this.prisma.user.create({
       data: {
@@ -205,16 +213,34 @@ export class UsersService {
     // Auto-create instructor record for trainers
     if (isTrainer) {
       const existingInstructor = await this.prisma.instructor.findUnique({
-        where: { contactId: data.contactId },
+        where: { contactId: contactId },
       });
       if (!existingInstructor) {
         const count = await this.prisma.instructor.count();
         await this.prisma.instructor.create({
           data: {
-            contactId: data.contactId,
+            contactId: contactId,
             hubId: data.hubId ?? 1,
             employeeId: `TR${String(count + 1).padStart(4, '0')}`,
             isActive: true,
+          },
+        });
+      }
+    }
+
+    // Auto-create student record linked to their hub
+    if (isStudent) {
+      const existingStudent = await this.prisma.student.findUnique({
+        where: { contactId },
+      });
+      if (!existingStudent) {
+        const count = await this.prisma.student.count();
+        await this.prisma.student.create({
+          data: {
+            contactId,
+            hubId: data.hubId,
+            studentId: `EA${String(count + 1).padStart(6, '0')}`,
+            status: 'Active',
           },
         });
       }
