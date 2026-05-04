@@ -131,26 +131,55 @@ export class UsersService {
   }
 
   async createUser(data: CreateUserDto): Promise<UserListDto> {
-    // Verify contact exists via Prisma (avoids broken TypeORM groupMemberships relation)
-    const contact = await this.prisma.contact.findUnique({
-      where: { id: data.contactId },
-      include: { person: true, email: true },
-    });
-    if (!contact) throw new HttpException('Contact Not Found', 404);
+    const username = data.username;
+    if (!username) throw new HttpException('Email/username is required', 400);
 
-    // Check contact doesn't already have a user account
-    const existing = await this.prisma.user.findUnique({
-      where: { contactId: data.contactId },
-    });
-    if (existing)
-      throw new HttpException(
-        'A user account already exists for this contact',
-        400,
-      );
+    let contactId = data.contactId;
 
-    // Resolve username: use provided value, fall back to first email on the contact
-    const username = data.username || contact.email?.[0]?.value;
-    if (!username) throw new HttpException('Username is required', 400);
+    if (!contactId) {
+      // Auto-create contact + person + email from the provided name/email
+      const existingUser = await this.prisma.user.findUnique({
+        where: { username },
+      });
+      if (existingUser)
+        throw new HttpException('A user with this email already exists', 400);
+
+      const contact = await this.prisma.contact.create({
+        data: { category: 'Person' },
+      });
+      await this.prisma.person.create({
+        data: {
+          firstName: data.firstName || '',
+          lastName: data.lastName || '',
+          gender: 'Male',
+          contactId: contact.id,
+        },
+      });
+      await this.prisma.email.create({
+        data: {
+          value: username,
+          category: 'Work',
+          isPrimary: true,
+          contactId: contact.id,
+        },
+      });
+      contactId = contact.id;
+    } else {
+      const contact = await this.prisma.contact.findUnique({
+        where: { id: contactId },
+        include: { person: true, email: true },
+      });
+      if (!contact) throw new HttpException('Contact Not Found', 404);
+
+      const existing = await this.prisma.user.findUnique({
+        where: { contactId },
+      });
+      if (existing)
+        throw new HttpException(
+          'A user account already exists for this contact',
+          400,
+        );
+    }
 
     const rolesStr = Array.isArray(data.roles)
       ? data.roles.join(',')
@@ -165,7 +194,7 @@ export class UsersService {
       data: {
         username,
         password: await bcrypt.hash(data.password, 10),
-        contactId: data.contactId,
+        contactId,
         isActive: data.isActive ?? true,
         roles: rolesStr,
         ...(isHubManager && data.hubId ? { hubId: data.hubId } : {}),
