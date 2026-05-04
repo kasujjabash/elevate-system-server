@@ -229,13 +229,14 @@ export class UsersService {
     }
 
     // Auto-create student record linked to their hub
+    let studentDbId: number | null = null;
     if (isStudent) {
-      const existingStudent = await this.prisma.student.findUnique({
+      let studentRecord = await this.prisma.student.findUnique({
         where: { contactId },
       });
-      if (!existingStudent) {
+      if (!studentRecord) {
         const count = await this.prisma.student.count();
-        await this.prisma.student.create({
+        studentRecord = await this.prisma.student.create({
           data: {
             contactId,
             hubId: data.hubId,
@@ -243,6 +244,40 @@ export class UsersService {
             status: 'Active',
           },
         });
+      }
+      studentDbId = studentRecord.id;
+    }
+
+    // Assign courses
+    if (data.courseIds?.length) {
+      if (isStudent && studentDbId) {
+        // Enroll student in each course
+        for (const courseId of data.courseIds) {
+          await this.prisma.enrollment
+            .create({
+              data: { studentId: studentDbId, courseId, status: 'Enrolled' },
+            })
+            .catch(() => {
+              /* skip duplicate */
+            });
+        }
+      } else if (isTrainer) {
+        // Find the instructor record for this trainer
+        const instructor = await this.prisma.instructor.findUnique({
+          where: { contactId },
+        });
+        if (instructor) {
+          for (const courseId of data.courseIds) {
+            await this.prisma.course
+              .update({
+                where: { id: courseId },
+                data: { instructorId: instructor.id },
+              })
+              .catch(() => {
+                /* skip missing course */
+              });
+          }
+        }
       }
     }
 

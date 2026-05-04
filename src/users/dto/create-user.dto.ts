@@ -1,4 +1,10 @@
-import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import {
+  IsArray,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
 export class CreateUserDto {
   @IsOptional()
@@ -27,4 +33,8 @@ export class CreateUserDto {
   @IsOptional()
   @IsNumber()
   hubId?: number;
+
+  @IsOptional()
+  @IsArray()
+  courseIds?: number[];
 }
