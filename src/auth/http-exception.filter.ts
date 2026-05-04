@@ -11,50 +11,46 @@ import { Request, Response } from 'express';
 import ClientFriendlyException from '../shared/exceptions/client-friendly.exception';
 import { QueryFailedError } from 'typeorm';
 
-function parseValidationErrors(exception: any) {
-  try {
-    if (exception instanceof BadRequestException) {
-      return {
-        message: exception.message,
-        errors: [exception.message],
-      };
-    }
-  } catch (ex) {
-    return {
-      message: 'Validation Error',
-      errorMessage: exception.message,
-    };
-  }
+function parseValidationErrors(exception: BadRequestException) {
+  const res = exception.getResponse() as any;
+  // ValidationPipe puts the array of messages in res.message
+  const messages: string[] = Array.isArray(res?.message)
+    ? res.message
+    : [res?.message || exception.message];
+  return {
+    message: messages[0],
+    errors: messages,
+  };
 }
 
 function handleHttpException(exception: HttpException, host: ArgumentsHost) {
   const ctx = host.switchToHttp();
   const response = ctx.getResponse<Response>();
-  const request = ctx.getRequest<Request>();
   const status = exception.getStatus();
+
   if (exception instanceof BadRequestException) {
     const data = parseValidationErrors(exception);
-    data['statusCode'] = status;
-    response.status(status).json(data);
+    response.status(status).json({ ...data, statusCode: status });
     return;
   }
+
   if (exception instanceof ClientFriendlyException) {
+    const msg = exception.getResponse();
     response.status(HttpStatus.BAD_REQUEST).json({
-      message: exception.getResponse(),
+      statusCode: HttpStatus.BAD_REQUEST,
+      message:
+        typeof msg === 'string' ? msg : (msg as any)?.message || 'Bad request',
     });
     return;
   }
-  if (exception instanceof QueryFailedError) {
-    response.status(HttpStatus.BAD_REQUEST).json({
-      message: exception.getResponse(),
-    });
-    return;
-  }
-  response.status(status).json({
-    statusCode: status,
-    timestamp: new Date().toISOString(),
-    path: request.url,
-  });
+
+  // All other HttpExceptions (NotFoundException, plain HttpException, etc.)
+  const res = exception.getResponse() as any;
+  const message =
+    typeof res === 'string'
+      ? res
+      : res?.message || exception.message || 'Request failed';
+  response.status(status).json({ statusCode: status, message });
 }
 
 function handleQueryFailedError(
