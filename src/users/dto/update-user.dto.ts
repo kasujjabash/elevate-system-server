@@ -1,12 +1,13 @@
-import { IsNotEmpty, IsNumber, IsOptional } from 'class-validator';
+import { IsArray, IsNotEmpty, IsNumber, IsOptional } from 'class-validator';
 
 export class UpdateUserDto {
   @IsNotEmpty()
   @IsNumber()
   id: number;
 
-  @IsNotEmpty()
-  roles: string[];
+  @IsOptional()
+  @IsArray()
+  roles?: string[];
   oldPassword?: string;
   password?: string;
   isActive?: boolean;
