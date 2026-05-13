@@ -151,9 +151,20 @@ export class TimetableService {
   }
 
   async create(dto: TimetableSessionDto) {
+    const courseId = parseInt(String(dto.courseId), 10);
+    if (isNaN(courseId)) throw new NotFoundException('Invalid courseId');
+
+    const course = await this.prisma.course.findUnique({
+      where: { id: courseId },
+    });
+    if (!course)
+      throw new NotFoundException(
+        `Course ${courseId} not found — timetable not saved`,
+      );
+
     const session = await this.prisma.timetable_session.create({
       data: {
-        courseId: dto.courseId,
+        courseId,
         hubId: dto.hubId ?? null,
         instructorName: dto.instructorName ?? null,
         dayOfWeek: dto.dayOfWeek,
