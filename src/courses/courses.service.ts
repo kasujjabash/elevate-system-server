@@ -195,6 +195,9 @@ export class CoursesService {
       where.studentId = studentId;
     }
 
+    // Never show rejected enrollments to students or in normal views
+    where.status = { not: 'Dropped' };
+
     const enrollments = await this.prisma.enrollment.findMany({
       where,
       include: {
@@ -314,7 +317,15 @@ export class CoursesService {
         studentId_courseId: { studentId: studentDbId, courseId: courseDbId },
       },
     });
-    if (existing) return existing;
+    if (existing) {
+      if (existing.status === 'Dropped') {
+        return this.prisma.enrollment.update({
+          where: { id: existing.id },
+          data: { status: 'Enrolled' },
+        });
+      }
+      return existing;
+    }
 
     return this.prisma.enrollment.create({
       data: {
@@ -357,7 +368,15 @@ export class CoursesService {
     const existing = await this.prisma.enrollment.findUnique({
       where: { studentId_courseId: { studentId: studentDbId, courseId } },
     });
-    if (existing) return existing;
+    if (existing) {
+      if (existing.status === 'Dropped') {
+        return this.prisma.enrollment.update({
+          where: { id: existing.id },
+          data: { status: 'Enrolled' },
+        });
+      }
+      return existing;
+    }
 
     return this.prisma.enrollment.create({
       data: {
