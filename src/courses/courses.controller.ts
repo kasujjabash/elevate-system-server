@@ -18,12 +18,20 @@ import { ApiTags } from '@nestjs/swagger';
 const ADMIN_ROLES = ['admin', 'super_admin', 'hub_manager'];
 
 function requireAdminOrHubManager(req: any) {
-  const roles: string[] = Array.isArray(req?.user?.roles)
-    ? req.user.roles
-    : (req?.user?.roles || '')
+  const raw = req?.user?.roles;
+  console.log(
+    '[enrollGuard] user id:',
+    req?.user?.id,
+    '| raw roles:',
+    JSON.stringify(raw),
+  );
+  const roles: string[] = Array.isArray(raw)
+    ? raw
+    : (raw || '')
         .split(',')
         .map((r: string) => r.trim())
         .filter(Boolean);
+  console.log('[enrollGuard] parsed roles:', roles);
   if (!roles.some((r) => ADMIN_ROLES.includes(r.toLowerCase()))) {
     throw new ForbiddenException(
       'Only admins and hub managers can enroll students',
