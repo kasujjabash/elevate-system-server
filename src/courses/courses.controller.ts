@@ -122,6 +122,17 @@ export class CoursesController {
     return this.coursesService.enrollStudent(body);
   }
 
+  // POST /api/courses/:id/enroll  — admin/hub-manager: enroll a student (role-guarded)
+  @Post(':id/enroll')
+  enrollById(
+    @Request() req: any,
+    @Param('id', ParseIntPipe) courseId: number,
+    @Body() body: { studentId?: string; contactId?: string },
+  ) {
+    requireAdminOrHubManager(req);
+    return this.coursesService.adminEnrollStudent(courseId, body);
+  }
+
   // POST /api/courses/:id/admin-enroll  — admin/hub-manager: force-enroll a student
   @Post(':id/admin-enroll')
   adminEnroll(
