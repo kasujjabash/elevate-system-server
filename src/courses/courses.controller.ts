@@ -15,7 +15,7 @@ import {
 import { CoursesService } from './courses.service';
 import { ApiTags } from '@nestjs/swagger';
 
-const ADMIN_ROLES = ['ADMIN', 'SUPER_ADMIN', 'HUB_MANAGER'];
+const ADMIN_ROLES = ['admin', 'super_admin', 'hub_manager'];
 
 function requireAdminOrHubManager(req: any) {
   const roles: string[] = Array.isArray(req?.user?.roles)
@@ -24,7 +24,7 @@ function requireAdminOrHubManager(req: any) {
         .split(',')
         .map((r: string) => r.trim())
         .filter(Boolean);
-  if (!roles.some((r) => ADMIN_ROLES.includes(r))) {
+  if (!roles.some((r) => ADMIN_ROLES.includes(r.toLowerCase()))) {
     throw new ForbiddenException(
       'Only admins and hub managers can enroll students',
     );
