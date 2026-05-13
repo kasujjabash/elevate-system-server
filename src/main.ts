@@ -1,4 +1,7 @@
+import 'module-alias/register';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
 import 'reflect-metadata';
 import { AppModule } from './app.module';
 import helmet from 'helmet';
@@ -11,7 +14,8 @@ import { HttpExceptionFilter } from './auth/http-exception.filter';
 import * as Sentry from '@sentry/node';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  app.useStaticAssets(join(__dirname, '..', 'uploads'), { prefix: '/uploads' });
   app.use(helmet());
   app.enableCors({
     origin: '*',

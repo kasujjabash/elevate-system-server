@@ -69,21 +69,58 @@ export class DashboardService {
     }));
   }
 
-  async getTopPerformers() {
-    const topEnrolledCourse = await this.prisma.course.findFirst({
-      include: {
-        _count: { select: { enrollments: true } },
-      },
-      orderBy: { enrollments: { _count: 'desc' } },
-    });
+  async getTopPerformers(hubId?: number) {
+    const [gradedSubs, topCourse] = await Promise.all([
+      this.prisma.submission.findMany({
+        where: {
+          status: { in: ['Graded', 'Returned'] },
+          score: { not: null },
+          ...(hubId ? { student: { hubId } } : {}),
+        },
+        include: {
+          assignment: { select: { maxScore: true } },
+          student: { include: { contact: { include: { person: true } } } },
+        },
+      }),
+      this.prisma.course.findFirst({
+        include: { _count: { select: { enrollments: true } } },
+        orderBy: { enrollments: { _count: 'desc' } },
+        ...(hubId ? { where: { hubId } } : {}),
+      }),
+    ]);
+
+    // Aggregate per-student avg grade
+    const gradeMap = new Map<number, { name: string; scores: number[] }>();
+    for (const sub of gradedSubs) {
+      const sid = sub.studentId;
+      const maxScore = (sub.assignment?.maxScore as number) ?? 100;
+      const pct = maxScore > 0 ? (sub.score! / maxScore) * 100 : 0;
+      if (!gradeMap.has(sid)) {
+        const p = sub.student?.contact?.person;
+        gradeMap.set(sid, {
+          name:
+            [p?.firstName, p?.lastName].filter(Boolean).join(' ') || 'Unknown',
+          scores: [],
+        });
+      }
+      gradeMap.get(sid)!.scores.push(pct);
+    }
+
+    const topStudents = Array.from(gradeMap.values())
+      .map(({ name, scores }) => ({
+        name,
+        avgGrade: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
+        submissionCount: scores.length,
+      }))
+      .sort((a, b) => b.avgGrade - a.avgGrade)
+      .slice(0, 10);
 
     return {
-      topStudent: null,
-      topCourse: topEnrolledCourse
+      topStudents,
+      topCourse: topCourse
         ? {
-            name: topEnrolledCourse.title,
-            enrolledCount: topEnrolledCourse._count.enrollments,
-            avgScore: 0,
+            name: topCourse.title,
+            enrolledCount: topCourse._count.enrollments,
           }
         : null,
     };
@@ -124,7 +161,13 @@ export class DashboardService {
       this.prisma.hub.findUnique({ where: { id: hubId } }),
       this.prisma.student.count({ where: { hubId } }),
       this.prisma.student.count({ where: { hubId, status: 'Active' } }),
-      this.prisma.course.count({ where: { hubId, isActive: true } }),
+      this.prisma.enrollment
+        .findMany({
+          where: { student: { hubId }, status: { not: 'Dropped' } },
+          select: { courseId: true },
+          distinct: ['courseId'],
+        })
+        .then((rows) => rows.length),
       this.prisma.timetable_session.count({
         where: { hubId, dayOfWeek: todayDow },
       }),
@@ -143,16 +186,24 @@ export class DashboardService {
         orderBy: { enrolledAt: 'desc' },
         take: 8,
       }),
-      this.prisma.course.findMany({
-        where: { hubId, isActive: true },
-        select: {
-          id: true,
-          title: true,
-          _count: { select: { enrollments: true } },
-        },
-        orderBy: { enrollments: { _count: 'desc' } },
+      // Courses that hub students are actually enrolled in (not just courses tagged to this hub)
+      this.prisma.enrollment.groupBy({
+        by: ['courseId'],
+        where: { student: { hubId }, status: { not: 'Dropped' } },
+        _count: { studentId: true },
+        orderBy: { _count: { studentId: 'desc' } },
       }),
     ]);
+
+    // Resolve course titles for the enrollment groups
+    const courseIds = (courses as any[]).map((e: any) => e.courseId);
+    const courseDetails = courseIds.length
+      ? await this.prisma.course.findMany({
+          where: { id: { in: courseIds } },
+          select: { id: true, title: true },
+        })
+      : [];
+    const courseTitleMap = new Map(courseDetails.map((c) => [c.id, c.title]));
 
     return {
       hubId,
@@ -163,10 +214,10 @@ export class DashboardService {
       totalCourses,
       classesToday,
       todayAttendance,
-      courses: courses.map((c) => ({
-        id: c.id,
-        name: c.title,
-        enrolled: c._count.enrollments,
+      courses: (courses as any[]).map((e: any) => ({
+        id: e.courseId,
+        name: courseTitleMap.get(e.courseId) ?? 'Unknown',
+        enrolled: e._count.studentId,
       })),
       recentStudents: recentStudents.map((s) => ({
         id: s.id,
@@ -177,6 +228,7 @@ export class DashboardService {
         course: s.enrollments[0]?.course?.title ?? null,
         enrolledAt: s.enrolledAt,
       })),
+      ...(await this.getTopPerformers(hubId)),
     };
   }
 

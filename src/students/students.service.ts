@@ -239,6 +239,16 @@ export class StudentsService {
       if (filters.dateFrom) where.enrolledAt.gte = new Date(filters.dateFrom);
       if (filters.dateTo) where.enrolledAt.lte = new Date(filters.dateTo);
     }
+    if (filters.query) {
+      const q = filters.query.trim();
+      where.contact = {
+        OR: [
+          { person: { firstName: { contains: q, mode: 'insensitive' } } },
+          { person: { lastName: { contains: q, mode: 'insensitive' } } },
+          { email: { some: { value: { contains: q, mode: 'insensitive' } } } },
+        ],
+      };
+    }
 
     const [students, total] = await Promise.all([
       this.prisma.student.findMany({
@@ -289,6 +299,7 @@ export class StudentsService {
       hub: s.hub?.code || '',
       hubName: s.hub?.name || '',
       course: primaryEnrollment?.course?.skillCategory?.id || '',
+      courseName: primaryEnrollment?.course?.title || '',
       ageGroup: '',
       gender: person?.gender || '',
       civilStatus: '',

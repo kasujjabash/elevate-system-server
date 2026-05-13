@@ -79,16 +79,6 @@ export class CoursesService {
   }
 
   // ── Admin: toggle isEnrollable ────────────────────────────────────────────
-  async toggleEnrollable(id: number) {
-    const course = await this.prisma.course.findUnique({ where: { id } });
-    if (!course) throw new NotFoundException('Course not found');
-    return this.prisma.course.update({
-      where: { id },
-      data: { isEnrollable: !course.isEnrollable },
-      select: { id: true, title: true, isEnrollable: true },
-    });
-  }
-
   // ── List all courses ──────────────────────────────────────────────────────
   async findAll() {
     return this.prisma.course.findMany({
@@ -218,6 +208,15 @@ export class CoursesService {
                 phone: true,
               },
             },
+            // Include graded submissions for this course to compute avgGrade
+            submissions: {
+              where: {
+                assignment: { courseId: where.courseId ?? undefined },
+                status: { in: ['Graded', 'Returned'] },
+                score: { not: null },
+              },
+              include: { assignment: { select: { maxScore: true } } },
+            },
           },
         },
       },
@@ -228,6 +227,16 @@ export class CoursesService {
       const person = e.student?.contact?.person;
       const emails = (e.student?.contact?.email as any[]) ?? [];
       const phones = (e.student?.contact?.phone as any[]) ?? [];
+      const gradedSubs = (e.student?.submissions as any[]) ?? [];
+      const avgGrade =
+        gradedSubs.length > 0
+          ? Math.round(
+              gradedSubs.reduce((sum: number, s: any) => {
+                const max = s.assignment?.maxScore ?? 100;
+                return sum + (max > 0 ? (s.score / max) * 100 : 0);
+              }, 0) / gradedSubs.length,
+            )
+          : null;
       return {
         id: e.id.toString(),
         courseId: e.courseId.toString(),
@@ -240,6 +249,8 @@ export class CoursesService {
         hubName: e.course?.hub?.name || '',
         status: e.status.toLowerCase(),
         progress: e.progress,
+        avgGrade,
+        submissionCount: gradedSubs.length,
         enrolledAt: e.enrolledAt,
         // flat student fields for easy consumption
         contactId: e.student?.contactId?.toString() ?? null,
@@ -293,13 +304,10 @@ export class CoursesService {
       );
     }
 
-    // Check course is enrollable
     const course = await this.prisma.course.findUnique({
       where: { id: courseDbId },
     });
     if (!course) throw new NotFoundException('Course not found');
-    if (!course.isEnrollable)
-      throw new BadRequestException('This course is not open for enrollment');
 
     const existing = await this.prisma.enrollment.findUnique({
       where: {
@@ -318,32 +326,47 @@ export class CoursesService {
     });
   }
 
-  // ── Student self-enroll (from JWT) ────────────────────────────────────────
-  async selfEnroll(jwtUser: any, courseId: number) {
-    const studentId = await this.resolveStudentId(jwtUser);
-    if (!studentId)
-      throw new BadRequestException(
-        'No student profile found for this account',
-      );
+  // ── Admin/hub-manager: force-enroll a student (bypasses isEnrollable) ──────
+  async adminEnrollStudent(
+    courseId: number,
+    body: { studentId?: string; contactId?: string },
+  ) {
+    let studentDbId: number;
+
+    if (body.studentId) {
+      studentDbId = parseInt(body.studentId, 10);
+    } else if (body.contactId) {
+      const student = await this.prisma.student.findFirst({
+        where: { contactId: parseInt(body.contactId, 10) },
+        select: { id: true },
+      });
+      if (!student)
+        throw new BadRequestException(
+          'Student not found for contactId ' + body.contactId,
+        );
+      studentDbId = student.id;
+    } else {
+      throw new BadRequestException('studentId or contactId is required');
+    }
 
     const course = await this.prisma.course.findUnique({
       where: { id: courseId },
     });
     if (!course) throw new NotFoundException('Course not found');
-    if (!course.isEnrollable)
-      throw new BadRequestException('This course is not open for enrollment');
 
-    // Already enrolled or pending in this course?
     const existing = await this.prisma.enrollment.findUnique({
-      where: { studentId_courseId: { studentId, courseId } },
+      where: { studentId_courseId: { studentId: studentDbId, courseId } },
     });
-    if (existing) return { status: existing.status, enrollment: existing };
+    if (existing) return existing;
 
-    // All self-enrollments require admin approval
-    const enrollment = await this.prisma.enrollment.create({
-      data: { studentId, courseId, status: 'Pending', progress: 0 },
+    return this.prisma.enrollment.create({
+      data: {
+        studentId: studentDbId,
+        courseId,
+        status: 'Enrolled',
+        progress: 0,
+      },
     });
-    return { status: 'Pending', enrollment };
   }
 
   // ── Admin: list pending enrollment requests ───────────────────────────────
@@ -736,29 +759,44 @@ export class CoursesService {
         where: { assignment: { courseId }, status: 'Submitted' },
         select: { id: true },
       }),
-      this.prisma.enrollment.findMany({
+      // Graded submissions for this course — used to rank top students by real grade
+      this.prisma.submission.findMany({
         where: {
-          courseId,
-          status: { in: ['Enrolled', 'InProgress', 'Completed'] },
+          assignment: { courseId },
+          status: { in: ['Graded', 'Returned'] },
+          score: { not: null },
         },
         include: {
+          assignment: { select: { maxScore: true } },
           student: { include: { contact: { include: { person: true } } } },
         },
-        orderBy: { progress: 'desc' },
-        take: 5,
       }),
     ]);
 
-    const topStudents = enrollments.map((e: any) => ({
-      name:
-        [
-          e.student?.contact?.person?.firstName,
-          e.student?.contact?.person?.lastName,
-        ]
-          .filter(Boolean)
-          .join(' ') || 'Unknown',
-      progress: Math.round(e.progress || 0),
-    }));
+    // Aggregate per-student avg grade from graded submissions
+    const gradeMap = new Map<number, { name: string; scores: number[] }>();
+    for (const sub of enrollments as any[]) {
+      const sid: number = sub.studentId;
+      const maxScore: number = sub.assignment?.maxScore ?? 100;
+      const pct = maxScore > 0 ? Math.round((sub.score! / maxScore) * 100) : 0;
+      if (!gradeMap.has(sid)) {
+        const p = sub.student?.contact?.person;
+        gradeMap.set(sid, {
+          name:
+            [p?.firstName, p?.lastName].filter(Boolean).join(' ') || 'Unknown',
+          scores: [],
+        });
+      }
+      gradeMap.get(sid)!.scores.push(pct);
+    }
+
+    const topStudents = Array.from(gradeMap.values())
+      .map(({ name, scores }) => ({
+        name,
+        avgGrade: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
+      }))
+      .sort((a, b) => b.avgGrade - a.avgGrade)
+      .slice(0, 5);
 
     return {
       activeStudents,
@@ -858,6 +896,42 @@ export class CoursesService {
         isLive: true,
       }));
 
+    // Top performers across all trainer's courses
+    const gradedSubs = await this.prisma.submission.findMany({
+      where: {
+        assignment: { courseId: { in: courseIds } },
+        status: { in: ['Graded', 'Returned'] },
+        score: { not: null },
+      },
+      include: {
+        assignment: { select: { maxScore: true } },
+        student: { include: { contact: { include: { person: true } } } },
+      },
+    });
+    const tpMap = new Map<number, { name: string; scores: number[] }>();
+    for (const sub of gradedSubs) {
+      const sid = sub.studentId;
+      const max = (sub.assignment?.maxScore as number) ?? 100;
+      const pct = max > 0 ? Math.round((sub.score! / max) * 100) : 0;
+      if (!tpMap.has(sid)) {
+        const p = sub.student?.contact?.person;
+        tpMap.set(sid, {
+          name:
+            [p?.firstName, p?.lastName].filter(Boolean).join(' ') || 'Unknown',
+          scores: [],
+        });
+      }
+      tpMap.get(sid)!.scores.push(pct);
+    }
+    const topStudents = Array.from(tpMap.values())
+      .map(({ name, scores }) => ({
+        name,
+        avgGrade: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
+        submissionCount: scores.length,
+      }))
+      .sort((a, b) => b.avgGrade - a.avgGrade)
+      .slice(0, 10);
+
     return {
       courses: courseIds.length,
       activeStudents,
@@ -865,6 +939,7 @@ export class CoursesService {
       todayAttendance,
       pendingSubmissions,
       liveSessions,
+      topStudents,
     };
   }
 }

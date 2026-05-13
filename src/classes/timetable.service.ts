@@ -73,6 +73,14 @@ export class TimetableService {
     return sessions.map((s) => this.toResponse(s));
   }
 
+  /** Resolve timetable from the JWT payload directly — no query param needed. */
+  async findForJwtUser(jwtUser: any) {
+    if (!jwtUser) return [];
+    // contactId in the JWT is the most reliable identifier; fall back to user id
+    const key = String(jwtUser.contactId ?? jwtUser.id ?? '');
+    return this.findForStudent(key);
+  }
+
   async findForStudent(studentIdOrUserId: string) {
     const parsed = parseInt(studentIdOrUserId, 10);
     if (isNaN(parsed)) return [];

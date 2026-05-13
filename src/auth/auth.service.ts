@@ -55,6 +55,27 @@ export class AuthService {
 
     cleanUpUser(user);
     const dto = createUserDto(user);
+
+    // Prisma fallback: if TypeORM returned empty roles (e.g. join table empty
+    // AND string column missing), re-read the roles column directly from Prisma
+    // so the JWT always carries the correct role set.
+    if (!dto.roles?.length) {
+      try {
+        const dbUser = await this.prisma.user.findUnique({
+          where: { id: user.id },
+          select: { roles: true },
+        });
+        if (dbUser?.roles) {
+          dto.roles = dbUser.roles
+            .split(',')
+            .map((r) => r.trim())
+            .filter(Boolean);
+        }
+      } catch (e) {
+        Logger.warn('Prisma roles fallback failed for user ' + user.id);
+      }
+    }
+
     dto.permissions = await this.getPermissions(dto.roles);
     return dto;
   }

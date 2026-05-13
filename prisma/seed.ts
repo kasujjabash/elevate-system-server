@@ -4,7 +4,7 @@
  *
  * Creates:
  *  - 5 hubs
- *  - 4 skill categories / courses
+ *  - 4 skill categories: Graphic Design, Website Development, Film & Photography, UI/UX Design
  *  - 2 instructors
  *  - 10 students across different hubs/courses
  *  - Enrollments linking students to courses
@@ -82,9 +82,9 @@ async function main() {
       description: 'Filmmaking, video editing and photography techniques',
     },
     {
-      id: 'alx-course',
-      name: 'ALX Course',
-      description: 'ALX Africa software engineering programme',
+      id: 'ui-ux-design',
+      name: 'UI/UX Design',
+      description: 'User interface and user experience design principles',
     },
   ];
 
@@ -194,23 +194,9 @@ async function main() {
       maxStudents: 20,
     },
     {
-      title: 'ALX Course',
-      skillCategoryId: 'alx-course',
+      title: 'UI/UX Design',
+      skillCategoryId: 'ui-ux-design',
       hubCode: 'namayemba',
-      instructorId: instructors['INS-002']?.id,
-      maxStudents: 40,
-    },
-    {
-      title: 'Website Development',
-      skillCategoryId: 'website-development',
-      hubCode: 'lyantode',
-      instructorId: instructors['INS-001']?.id,
-      maxStudents: 25,
-    },
-    {
-      title: 'Graphic Design',
-      skillCategoryId: 'graphic-design',
-      hubCode: 'katanga',
       instructorId: instructors['INS-002']?.id,
       maxStudents: 25,
     },
@@ -218,8 +204,9 @@ async function main() {
 
   const courseMap: any[] = [];
   for (const c of coursesData) {
+    // Match by title only — prevents creating the same course twice across hubs
     const existing = await prisma.course.findFirst({
-      where: { title: c.title, hubId: hubs[c.hubCode].id },
+      where: { title: c.title },
     });
     if (!existing) {
       const course = await prisma.course.create({
@@ -323,7 +310,7 @@ async function main() {
       course: 'film-photography',
       password: 'student2024',
     },
-    // Namayemba – ALX
+    // Namayemba – UI/UX Design
     {
       firstName: 'Moses',
       lastName: 'Waiswa',
@@ -331,10 +318,10 @@ async function main() {
       email: 'moses.waiswa@student.elevate.org',
       phone: '0772100008',
       hubCode: 'namayemba',
-      course: 'alx-course',
+      course: 'ui-ux-design',
       password: 'student2024',
     },
-    // Lyantode – Website Development
+    // Lyantode – UI/UX Design
     {
       firstName: 'Esther',
       lastName: 'Nanyanzi',
@@ -342,7 +329,7 @@ async function main() {
       email: 'esther.nanyanzi@student.elevate.org',
       phone: '0772100009',
       hubCode: 'lyantode',
-      course: 'website-development',
+      course: 'ui-ux-design',
       password: 'student2024',
     },
     {
@@ -352,7 +339,7 @@ async function main() {
       email: 'samuel.kato@student.elevate.org',
       phone: '0772100010',
       hubCode: 'lyantode',
-      course: 'website-development',
+      course: 'film-photography',
       password: 'student2024',
     },
   ];

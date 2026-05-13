@@ -7,6 +7,7 @@ import {
   Body,
   Param,
   Query,
+  Request,
   ParseIntPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
@@ -17,6 +18,15 @@ import { TimetableService, TimetableSessionDto } from './timetable.service';
 @Controller('api/timetable')
 export class TimetableController {
   constructor(private readonly timetableService: TimetableService) {}
+
+  /**
+   * GET /api/timetable/mine — student/trainer: sessions scoped to the JWT user.
+   * Always returns only what belongs to the logged-in person.
+   */
+  @Get('mine')
+  getMyTimetable(@Request() req: any) {
+    return this.timetableService.findForJwtUser(req.user);
+  }
 
   /**
    * GET /api/timetable                  — admin: all sessions (filter by hubId / courseId)

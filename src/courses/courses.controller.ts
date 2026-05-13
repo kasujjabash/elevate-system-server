@@ -10,9 +10,26 @@ import {
   Query,
   Request,
   ParseIntPipe,
+  ForbiddenException,
 } from '@nestjs/common';
 import { CoursesService } from './courses.service';
 import { ApiTags } from '@nestjs/swagger';
+
+const ADMIN_ROLES = ['ADMIN', 'SUPER_ADMIN', 'HUB_MANAGER'];
+
+function requireAdminOrHubManager(req: any) {
+  const roles: string[] = Array.isArray(req?.user?.roles)
+    ? req.user.roles
+    : (req?.user?.roles || '')
+        .split(',')
+        .map((r: string) => r.trim())
+        .filter(Boolean);
+  if (!roles.some((r) => ADMIN_ROLES.includes(r))) {
+    throw new ForbiddenException(
+      'Only admins and hub managers can enroll students',
+    );
+  }
+}
 
 @ApiTags('courses')
 @Controller('api/courses')
@@ -86,12 +103,6 @@ export class CoursesController {
     return this.coursesService.update(id, dto);
   }
 
-  // PATCH /api/courses/:id/enrollable  — admin: toggle open/closed enrollment
-  @Patch(':id/enrollable')
-  toggleEnrollable(@Param('id', ParseIntPipe) id: number) {
-    return this.coursesService.toggleEnrollable(id);
-  }
-
   // ── Enrollment ────────────────────────────────────────────────────────────
 
   // GET /api/courses/enrollment  — list enrollments (admin, filter by contactId)
@@ -104,16 +115,22 @@ export class CoursesController {
     return this.coursesService.getEnrollments(contactId, groupId ?? courseId);
   }
 
-  // POST /api/courses/enrollment  — admin: enroll student by studentId or contactId
+  // POST /api/courses/enrollment  — admin/hub-manager: enroll student by studentId or contactId
   @Post('enrollment')
-  enroll(@Body() body: any) {
+  enroll(@Request() req: any, @Body() body: any) {
+    requireAdminOrHubManager(req);
     return this.coursesService.enrollStudent(body);
   }
 
-  // POST /api/courses/:id/enroll  — student: self-enroll using JWT
-  @Post(':id/enroll')
-  selfEnroll(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
-    return this.coursesService.selfEnroll(req.user, id);
+  // POST /api/courses/:id/admin-enroll  — admin/hub-manager: force-enroll a student
+  @Post(':id/admin-enroll')
+  adminEnroll(
+    @Request() req: any,
+    @Param('id', ParseIntPipe) courseId: number,
+    @Body() body: { studentId?: string; contactId?: string },
+  ) {
+    requireAdminOrHubManager(req);
+    return this.coursesService.adminEnrollStudent(courseId, body);
   }
 
   // GET /api/courses/enrollment/pending  — admin: list pending enrollment requests

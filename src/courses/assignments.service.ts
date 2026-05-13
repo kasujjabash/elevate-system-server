@@ -238,7 +238,13 @@ export class AssignmentsService {
   async submitAssignment(
     assignmentId: number,
     contactId: number,
-    body: { type?: string; content?: string; link?: string; fileName?: string },
+    body: {
+      type?: string;
+      content?: string;
+      link?: string;
+      fileName?: string;
+      filePath?: string;
+    },
   ) {
     const student = await this.prisma.student.findFirst({
       where: { contactId },
@@ -260,7 +266,7 @@ export class AssignmentsService {
     };
     if (body.type === 'text') data.content = body.content;
     if (body.type === 'link') data.filePath = body.link;
-    if (body.type === 'file') data.filePath = body.fileName; // real path set by file upload
+    if (body.type === 'file') data.filePath = body.filePath ?? body.fileName;
 
     // Upsert: allow re-submission
     return this.prisma.submission.upsert({
@@ -297,22 +303,62 @@ export class AssignmentsService {
     });
   }
 
-  // ── Admin: list all submissions across all assignments (for dashboard) ───
+  // ── Admin/Trainer: list submissions (always scoped to trainer's courses) ──
   async getAllSubmissions(filters: {
     status?: string;
     limit?: number;
     courseId?: string;
+    instructorContactId?: number;
   }) {
     const where: any = {};
+
     if (filters.status) {
-      // Normalize to PascalCase to match submission_status_enum (Submitted, Graded, Returned)
       where.status =
         filters.status.charAt(0).toUpperCase() +
         filters.status.slice(1).toLowerCase();
     }
-    if (filters.courseId) {
+
+    // Scope to a specific instructor's courses
+    if (filters.instructorContactId != null) {
+      let resolvedContactId = filters.instructorContactId;
+      let instructor = await this.prisma.instructor.findFirst({
+        where: { contactId: resolvedContactId },
+        select: { id: true },
+      });
+      if (!instructor) {
+        const user = await this.prisma.user.findFirst({
+          where: { id: resolvedContactId },
+          select: { contactId: true },
+        });
+        if (user?.contactId) {
+          resolvedContactId = user.contactId;
+          instructor = await this.prisma.instructor.findFirst({
+            where: { contactId: resolvedContactId },
+            select: { id: true },
+          });
+        }
+      }
+      if (!instructor) return [];
+
+      const courses = await this.prisma.course.findMany({
+        where: { instructorId: instructor.id },
+        select: { id: true },
+      });
+      const courseIds = courses.map((c) => c.id);
+      if (!courseIds.length) return [];
+
+      const effectiveCourseId =
+        filters.courseId && courseIds.includes(parseInt(filters.courseId, 10))
+          ? parseInt(filters.courseId, 10)
+          : undefined;
+
+      where.assignment = {
+        courseId: effectiveCourseId ? effectiveCourseId : { in: courseIds },
+      };
+    } else if (filters.courseId) {
       where.assignment = { courseId: parseInt(filters.courseId, 10) };
     }
+
     return this.prisma.submission.findMany({
       where,
       include: {
@@ -324,6 +370,44 @@ export class AssignmentsService {
       orderBy: { submittedAt: 'desc' },
       take: filters.limit ?? 50,
     });
+  }
+
+  // ── Check whether a trainer (by contactId) owns the course an assignment belongs to ──
+  async trainerOwnsAssignment(
+    contactId: number,
+    assignmentId: number,
+  ): Promise<boolean> {
+    let resolvedContactId = contactId;
+    let instructor = await this.prisma.instructor.findFirst({
+      where: { contactId: resolvedContactId },
+      select: { id: true },
+    });
+    if (!instructor) {
+      const user = await this.prisma.user.findFirst({
+        where: { id: resolvedContactId },
+        select: { contactId: true },
+      });
+      if (user?.contactId) {
+        resolvedContactId = user.contactId;
+        instructor = await this.prisma.instructor.findFirst({
+          where: { contactId: resolvedContactId },
+          select: { id: true },
+        });
+      }
+    }
+    if (!instructor) return false;
+
+    const assignment = await this.prisma.assignment.findUnique({
+      where: { id: assignmentId },
+      select: { courseId: true },
+    });
+    if (!assignment) return false;
+
+    const course = await this.prisma.course.findFirst({
+      where: { id: assignment.courseId, instructorId: instructor.id },
+      select: { id: true },
+    });
+    return !!course;
   }
 
   // ── Admin: list all submissions for an assignment ───────────────────────
