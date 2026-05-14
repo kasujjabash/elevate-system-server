@@ -249,6 +249,21 @@ export class CoursesController {
     return this.coursesService.createContent(moduleId, dto);
   }
 
+  // PATCH /api/courses/content/:contentId  — admin: update content
+  @Patch('content/:contentId')
+  updateContent(
+    @Param('contentId', ParseIntPipe) contentId: number,
+    @Body() dto: any,
+  ) {
+    return this.coursesService.updateContent(contentId, dto);
+  }
+
+  // DELETE /api/courses/content/:contentId  — admin: remove content
+  @Delete('content/:contentId')
+  deleteContent(@Param('contentId', ParseIntPipe) contentId: number) {
+    return this.coursesService.deleteContent(contentId);
+  }
+
   // ── Course-level routes ───────────────────────────────────────────────────
 
   // GET /api/courses/:id/modules

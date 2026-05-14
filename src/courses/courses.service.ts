@@ -704,6 +704,26 @@ export class CoursesService {
     });
   }
 
+  // ── Admin: update a content item ────────────────────────────────────────
+  async updateContent(contentId: number, dto: any) {
+    return this.prisma.module_content.update({
+      where: { id: contentId },
+      data: {
+        ...(dto.title !== undefined && { title: dto.title }),
+        ...(dto.body !== undefined && { body: dto.body }),
+        ...(dto.videoUrl !== undefined && { videoUrl: dto.videoUrl }),
+        ...(dto.type !== undefined && { type: dto.type }),
+        ...(dto.durationMin !== undefined && { durationMin: dto.durationMin }),
+      },
+    });
+  }
+
+  // ── Admin: delete a content item ─────────────────────────────────────────
+  async deleteContent(contentId: number) {
+    await this.prisma.content_progress.deleteMany({ where: { contentId } });
+    return this.prisma.module_content.delete({ where: { id: contentId } });
+  }
+
   async findByHub(hubId: number) {
     return this.prisma.course.findMany({
       where: { hubId },

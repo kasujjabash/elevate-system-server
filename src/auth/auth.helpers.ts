@@ -7,15 +7,22 @@ export const cleanUpUser = (user: User) => {
 };
 
 export const createUserDto = (user: User): UserDto => {
-  // Prefer the userRoles join table (authoritative); fall back to legacy roles string column
-  const roleNames = user.userRoles?.length
+  // Try userRoles join table first (authoritative for staff)
+  const fromUserRoles = user.userRoles?.length
     ? user.userRoles.map((ur) => ur.roles?.role).filter(Boolean)
-    : user.roles
-    ? user.roles
-        .split(',')
-        .map((r) => r.trim())
-        .filter(Boolean)
     : [];
+
+  // Fall back to legacy roles string column if userRoles gives nothing
+  const roleNames =
+    fromUserRoles.length > 0
+      ? fromUserRoles
+      : user.roles
+      ? user.roles
+          .split(',')
+          .map((r) => r.trim())
+          .filter(Boolean)
+      : [];
+
   return {
     contactId: user.contact.id,
     email: user.username,
