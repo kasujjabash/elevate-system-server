@@ -766,6 +766,10 @@ async function main() {
     console.log(`  ✓ Trainer: ${t.email} / trainer2024`);
   }
 
+  // Ensure all roles are correctly set
+  await prisma.$executeRaw`UPDATE "user" SET roles = 'STUDENT' WHERE id IN (SELECT u.id FROM "user" u JOIN student s ON s."contactId" = u."contactId" WHERE u.roles IS NULL OR u.roles = '')`;
+  await prisma.$executeRaw`UPDATE "user" SET roles = 'TRAINER' WHERE id IN (SELECT u.id FROM "user" u JOIN instructor i ON i."contactId" = u."contactId" WHERE u.roles IS NULL OR u.roles = '')`;
+
   console.log('\n✅ Prisma seed complete!');
   console.log('\n📋 STUDENT LOGINS:');
   console.log('   Email pattern: firstname.lastname@student.elevate.org');
