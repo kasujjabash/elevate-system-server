@@ -7,12 +7,10 @@ export const cleanUpUser = (user: User) => {
 };
 
 export const createUserDto = (user: User): UserDto => {
-  // Try userRoles join table first (authoritative for staff)
   const fromUserRoles = user.userRoles?.length
     ? user.userRoles.map((ur) => ur.roles?.role).filter(Boolean)
     : [];
 
-  // Fall back to legacy roles string column if userRoles gives nothing
   const roleNames =
     fromUserRoles.length > 0
       ? fromUserRoles
