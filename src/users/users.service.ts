@@ -198,6 +198,13 @@ export class UsersService {
       );
     }
 
+    if (isHubManager && !data.hubId) {
+      throw new HttpException(
+        'A hub must be selected for hub manager accounts',
+        400,
+      );
+    }
+
     const created = await this.prisma.user.create({
       data: {
         username,
