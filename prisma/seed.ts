@@ -679,45 +679,62 @@ async function main() {
       firstName: 'Daniel',
       lastName: 'Ochieng',
       email: 'daniel.ochieng@trainer.elevate.org',
+      hubCode: 'katanga',
+      specialization: 'Website Development',
     },
     {
       firstName: 'Grace',
       lastName: 'Akello',
       email: 'grace.akello@trainer.elevate.org',
+      hubCode: 'kosovo',
+      specialization: 'Graphic Design',
     },
     {
       firstName: 'Patrick',
       lastName: 'Ssali',
       email: 'patrick.ssali@trainer.elevate.org',
+      hubCode: 'jinja',
+      specialization: 'Film & Photography',
     },
     {
       firstName: 'Miriam',
       lastName: 'Atim',
       email: 'miriam.atim@trainer.elevate.org',
+      hubCode: 'namayemba',
+      specialization: 'UI/UX Design',
     },
     {
       firstName: 'Peter',
       lastName: 'Mwanje',
       email: 'peter.mwanje@trainer.elevate.org',
+      hubCode: 'lyantode',
+      specialization: 'Website Development',
     },
     {
       firstName: 'Nickolus',
       lastName: 'Onapa',
       email: 'nickolus.onapa@trainer.elevate.org',
+      hubCode: 'katanga',
+      specialization: 'Graphic Design',
     },
     {
       firstName: 'Andrew',
       lastName: 'Trainer',
       email: 'andrew@trainer.elevate.org',
+      hubCode: 'kosovo',
+      specialization: 'UI/UX Design',
     },
     {
       firstName: 'Mark',
       lastName: 'Omudigi',
       email: 'mark.omudigi@trainer.elevate.org',
+      hubCode: 'jinja',
+      specialization: 'Film & Photography',
     },
   ];
   const trainerPassword = await bcrypt.hash('trainer2024', HASH_ROUNDS);
-  for (const t of trainersData) {
+  for (let idx = 0; idx < trainersData.length; idx++) {
+    const t = trainersData[idx];
     const existingEmail = await prisma.email.findFirst({
       where: { value: t.email },
     });
@@ -754,6 +771,21 @@ async function main() {
         password: trainerPassword,
         contactId,
         roles: 'TRAINER',
+        isActive: true,
+      },
+    });
+    await prisma.instructor.upsert({
+      where: { contactId },
+      update: {
+        hubId: hubs[t.hubCode].id,
+        specialization: t.specialization,
+        isActive: true,
+      },
+      create: {
+        contactId,
+        employeeId: `TRN-${String(idx + 1).padStart(3, '0')}`,
+        hubId: hubs[t.hubCode].id,
+        specialization: t.specialization,
         isActive: true,
       },
     });
