@@ -138,6 +138,8 @@ model course {
   workshops          workshop[]
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
+
+  @@unique([title, hubId])
 }
 
 model student {

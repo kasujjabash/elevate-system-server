@@ -204,35 +204,29 @@ async function main() {
 
   const courseMap: any[] = [];
   for (const c of coursesData) {
-    // Match by title only — prevents creating the same course twice across hubs
-    const existing = await prisma.course.findFirst({
-      where: { title: c.title },
-    });
-    if (!existing) {
-      const course = await prisma.course.create({
-        data: {
+    const course = await prisma.course.upsert({
+      where: {
+        title_hubId: {
           title: c.title,
-          description: `${c.title} course at ${hubs[c.hubCode].name}`,
-          skillCategoryId: c.skillCategoryId,
           hubId: hubs[c.hubCode].id,
-          instructorId: c.instructorId,
-          maxStudents: c.maxStudents,
-          isActive: true,
         },
-      });
-      courseMap.push({
-        ...course,
-        hubCode: c.hubCode,
+      },
+      update: {},
+      create: {
+        title: c.title,
+        description: `${c.title} course at ${hubs[c.hubCode].name}`,
         skillCategoryId: c.skillCategoryId,
-      });
-      console.log(`  ✓ Course: ${c.title} @ ${hubs[c.hubCode].name}`);
-    } else {
-      courseMap.push({
-        ...existing,
-        hubCode: c.hubCode,
-        skillCategoryId: c.skillCategoryId,
-      });
-    }
+        hubId: hubs[c.hubCode].id,
+        isActive: true,
+        isEnrollable: true,
+      },
+    });
+    courseMap.push({
+      ...course,
+      hubCode: c.hubCode,
+      skillCategoryId: c.skillCategoryId,
+    });
+    console.log(`  ✓ Course: ${c.title} @ ${hubs[c.hubCode].name}`);
   }
 
   // ── 5. STUDENTS + USER ACCOUNTS ─────────────────────────────────────────────
