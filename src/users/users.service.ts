@@ -414,6 +414,25 @@ export class UsersService {
       });
     }
 
+    // Assign courses to trainer: update course.instructorId for each courseId
+    if (data.courseIds?.length && data.contactId) {
+      const instructor = await this.prisma.instructor.findUnique({
+        where: { contactId: data.contactId },
+      });
+      if (instructor) {
+        for (const courseId of data.courseIds) {
+          await this.prisma.course
+            .update({
+              where: { id: courseId },
+              data: { instructorId: instructor.id },
+            })
+            .catch(() => {
+              /* skip missing course */
+            });
+        }
+      }
+    }
+
     return await this.findOne(data.id);
   }
 

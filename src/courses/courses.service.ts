@@ -72,10 +72,18 @@ export class CoursesService {
     });
     return instructors.map((i) => ({
       id: i.id,
+      contactId: i.contactId,
       name: [i.contact?.person?.firstName, i.contact?.person?.lastName]
         .filter(Boolean)
         .join(' '),
     }));
+  }
+
+  async updateInstructor(courseId: number, instructorId: number) {
+    return this.prisma.course.update({
+      where: { id: courseId },
+      data: { instructorId },
+    });
   }
 
   // ── Admin: toggle isEnrollable ────────────────────────────────────────────

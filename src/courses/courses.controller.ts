@@ -323,6 +323,15 @@ export class CoursesController {
     return this.coursesService.getCourseTrainerStats(id);
   }
 
+  // PUT /api/courses/:id/instructor  — assign instructor to a course
+  @Put(':id/instructor')
+  assignInstructor(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: { instructorId: number },
+  ) {
+    return this.coursesService.updateInstructor(id, dto.instructorId);
+  }
+
   // GET /api/courses/:id  — single course detail (keep last)
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {

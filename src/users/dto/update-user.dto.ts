@@ -12,8 +12,15 @@ export class UpdateUserDto {
   password?: string;
   isActive?: boolean;
 
-  /** Update hub assignment for HUB_MANAGER users */
+  @IsOptional()
+  @IsNumber()
+  contactId?: number;
+
   @IsOptional()
   @IsNumber()
   hubId?: number;
+
+  @IsOptional()
+  @IsArray()
+  courseIds?: number[];
 }
