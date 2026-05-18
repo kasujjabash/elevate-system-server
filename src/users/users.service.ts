@@ -217,17 +217,24 @@ export class UsersService {
       include: { contact: { include: { person: true } } },
     });
 
-    // Auto-create instructor record for trainers
+    // Auto-create instructor record for trainers (no hub required — fall back to first available hub)
     if (isTrainer) {
       const existingInstructor = await this.prisma.instructor.findUnique({
         where: { contactId: contactId },
       });
       if (!existingInstructor) {
         const count = await this.prisma.instructor.count();
+        let instructorHubId: number = data.hubId;
+        if (!instructorHubId) {
+          const firstHub = await this.prisma.hub.findFirst({
+            orderBy: { id: 'asc' },
+          });
+          instructorHubId = firstHub?.id ?? 1;
+        }
         await this.prisma.instructor.create({
           data: {
             contactId: contactId,
-            hubId: data.hubId ?? 1,
+            hubId: instructorHubId,
             employeeId: `TR${String(count + 1).padStart(4, '0')}`,
             isActive: true,
           },
