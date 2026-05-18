@@ -303,6 +303,31 @@ export class AssignmentsService {
     });
   }
 
+  // ── Trainer: like/acknowledge a submission ───────────────────────────────
+  async likeSubmission(submissionId: number) {
+    const sub = await this.prisma.submission.findUnique({
+      where: { id: submissionId },
+    });
+    if (!sub) throw new NotFoundException('Submission not found');
+    const updated = await this.prisma.submission.update({
+      where: { id: submissionId },
+      data: { status: 'Graded', gradedAt: sub.gradedAt ?? new Date() },
+    });
+    return { liked: true, submissionId, status: updated.status };
+  }
+
+  // ── Admin/Trainer: grade via POST body ───────────────────────────────────
+  async gradeByBody(dto: {
+    submissionId: number;
+    score: number;
+    feedback?: string;
+  }) {
+    return this.gradeSubmission(dto.submissionId, {
+      score: dto.score,
+      feedback: dto.feedback,
+    });
+  }
+
   // ── Admin/Trainer: list submissions (always scoped to trainer's courses) ──
   async getAllSubmissions(filters: {
     status?: string;

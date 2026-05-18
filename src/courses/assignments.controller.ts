@@ -213,6 +213,20 @@ export class AssignmentsController {
     return [];
   }
 
+  // POST /api/assignments/grades  — grade a submission via body
+  @Post('grades')
+  gradeByBody(
+    @Body() dto: { submissionId: number; score: number; feedback?: string },
+  ) {
+    return this.assignmentsService.gradeByBody(dto);
+  }
+
+  // POST /api/assignments/submissions/:id/like  — trainer likes/acknowledges a submission
+  @Post('submissions/:id/like')
+  likeSubmission(@Param('id', ParseIntPipe) id: number) {
+    return this.assignmentsService.likeSubmission(id);
+  }
+
   // ── GET single assignment ─────────────────────────────────────────────────
   // GET /api/assignments/:id
   @Get(':id')
