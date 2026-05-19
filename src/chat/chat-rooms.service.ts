@@ -16,7 +16,13 @@ export class ChatRoomsService {
       include: {
         room: {
           include: {
-            members: true,
+            members: {
+              include: {
+                user: {
+                  include: { contact: { include: { person: true } } },
+                },
+              },
+            },
             messages: { orderBy: { createdAt: 'desc' }, take: 1 },
             course: { select: { id: true, title: true } },
           },
@@ -27,13 +33,38 @@ export class ChatRoomsService {
     return memberships.map((m) => {
       const room = m.room;
       const last = room.messages[0] ?? null;
+
+      const resolveName = (u: any): string | null => {
+        if (!u) return null;
+        if (u.contact?.person) {
+          const p = u.contact.person;
+          return `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim() || null;
+        }
+        return u.username ?? null;
+      };
+
+      // For direct rooms expose the other participant with their name
+      const otherMember = room.members.find((mm) => mm.userId !== userId);
+      const participants = room.members.map((mm) => ({
+        userId: mm.userId,
+        name: resolveName(mm.user),
+      }));
+
+      // Use the other person's name as the room title for direct rooms
+      // so the frontend can display it without extra lookups
+      const displayTitle =
+        room.type === 'direct'
+          ? resolveName(otherMember?.user) ?? room.title
+          : room.title;
+
       return {
         id: room.id,
         type: room.type,
-        title: room.title,
+        title: displayTitle,
         courseId: room.courseId,
         courseName: room.course?.title ?? null,
         memberCount: room.members.length,
+        participants,
         lastMessage: last
           ? { content: last.content, createdAt: last.createdAt }
           : null,
