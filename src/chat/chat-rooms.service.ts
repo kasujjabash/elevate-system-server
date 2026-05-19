@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  ForbiddenException,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../shared/prisma.service';
 
 @Injectable()
@@ -16,13 +12,7 @@ export class ChatRoomsService {
       include: {
         room: {
           include: {
-            members: {
-              include: {
-                user: {
-                  include: { contact: { include: { person: true } } },
-                },
-              },
-            },
+            members: true,
             messages: { orderBy: { createdAt: 'desc' }, take: 1 },
             course: { select: { id: true, title: true } },
           },
@@ -30,31 +20,46 @@ export class ChatRoomsService {
       },
     });
 
+    // Collect all unique userIds across all rooms then batch-fetch names
+    const allUserIds = new Set<number>();
+    memberships.forEach((m) =>
+      m.room.members.forEach((mm) => allUserIds.add(mm.userId)),
+    );
+
+    const users = await this.prisma.user.findMany({
+      where: { id: { in: [...allUserIds] } },
+      include: { contact: { include: { person: true } } },
+    });
+
+    const resolveName = (u: (typeof users)[0] | undefined): string | null => {
+      if (!u) return null;
+      if (u.contact?.person) {
+        const p = u.contact.person;
+        return `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim() || null;
+      }
+      return u.username ?? null;
+    };
+
+    const nameMap = new Map<number, string>();
+    users.forEach((u) => {
+      const name = resolveName(u);
+      if (name) nameMap.set(u.id, name);
+    });
+
     return memberships.map((m) => {
       const room = m.room;
       const last = room.messages[0] ?? null;
 
-      const resolveName = (u: any): string | null => {
-        if (!u) return null;
-        if (u.contact?.person) {
-          const p = u.contact.person;
-          return `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim() || null;
-        }
-        return u.username ?? null;
-      };
-
-      // For direct rooms expose the other participant with their name
       const otherMember = room.members.find((mm) => mm.userId !== userId);
       const participants = room.members.map((mm) => ({
         userId: mm.userId,
-        name: resolveName(mm.user),
+        name: nameMap.get(mm.userId) ?? null,
       }));
 
-      // Use the other person's name as the room title for direct rooms
-      // so the frontend can display it without extra lookups
       const displayTitle =
         room.type === 'direct'
-          ? resolveName(otherMember?.user) ?? room.title
+          ? (otherMember ? nameMap.get(otherMember.userId) ?? null : null) ??
+            room.title
           : room.title;
 
       return {
