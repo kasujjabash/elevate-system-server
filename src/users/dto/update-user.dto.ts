@@ -23,4 +23,10 @@ export class UpdateUserDto {
   @IsOptional()
   @IsArray()
   courseIds?: number[];
+
+  @IsOptional()
+  phone?: string;
+
+  @IsOptional()
+  dateOfBirth?: string;
 }

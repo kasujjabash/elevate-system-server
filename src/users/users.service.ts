@@ -153,6 +153,9 @@ export class UsersService {
           lastName: data.lastName || '',
           gender: 'Male',
           contactId: contact.id,
+          ...(data.dateOfBirth
+            ? { dateOfBirth: new Date(data.dateOfBirth) }
+            : {}),
         },
       });
       await this.prisma.email.create({
@@ -163,6 +166,16 @@ export class UsersService {
           contactId: contact.id,
         },
       });
+      if (data.phone) {
+        await this.prisma.phone.create({
+          data: {
+            value: data.phone,
+            category: 'Mobile',
+            isPrimary: true,
+            contactId: contact.id,
+          },
+        });
+      }
       contactId = contact.id;
     } else {
       const contact = await this.prisma.contact.findUnique({
@@ -419,6 +432,41 @@ export class UsersService {
         where: { id: data.id },
         data: { hubId: data.hubId },
       });
+    }
+
+    // Persist phone and dateOfBirth via Prisma (contact → person / phone tables)
+    if (
+      data.contactId &&
+      (data.phone !== undefined || data.dateOfBirth !== undefined)
+    ) {
+      if (data.dateOfBirth !== undefined) {
+        await this.prisma.person.updateMany({
+          where: { contactId: data.contactId },
+          data: {
+            dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
+          },
+        });
+      }
+      if (data.phone !== undefined) {
+        const existing = await this.prisma.phone.findFirst({
+          where: { contactId: data.contactId },
+        });
+        if (existing) {
+          await this.prisma.phone.update({
+            where: { id: existing.id },
+            data: { value: data.phone },
+          });
+        } else if (data.phone) {
+          await this.prisma.phone.create({
+            data: {
+              value: data.phone,
+              category: 'Mobile',
+              isPrimary: true,
+              contactId: data.contactId,
+            },
+          });
+        }
+      }
     }
 
     // Assign courses to trainer: update course.instructorId for each courseId

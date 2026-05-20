@@ -37,4 +37,12 @@ export class CreateUserDto {
   @IsOptional()
   @IsArray()
   courseIds?: number[];
+
+  @IsOptional()
+  @IsString()
+  phone?: string;
+
+  @IsOptional()
+  @IsString()
+  dateOfBirth?: string;
 }
