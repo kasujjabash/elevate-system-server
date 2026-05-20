@@ -21,22 +21,25 @@ export class PersonEditDto {
 
   middleName?: string;
 
+  @IsOptional()
   @IsEnum(Gender)
-  gender: Gender;
+  gender?: Gender;
 
   @IsOptional()
   @IsEnum(CivilStatus)
   civilStatus?: CivilStatus;
 
+  @IsOptional()
   @IsDateString()
-  dateOfBirth: Date;
+  dateOfBirth?: Date;
 
   residence?: string;
 
   placeOfWork?: string;
 
+  @IsOptional()
   @IsNumber()
-  contactId: number;
+  contactId?: number;
 
   @IsOptional()
   @IsEnum(Salutation)
