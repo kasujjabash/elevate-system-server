@@ -434,17 +434,26 @@ export class UsersService {
       });
     }
 
-    // Persist phone and dateOfBirth via Prisma (contact → person / phone tables)
+    // Persist phone, dateOfBirth, firstName, lastName via Prisma (contact → person / phone tables)
     if (
       data.contactId &&
-      (data.phone !== undefined || data.dateOfBirth !== undefined)
+      (data.phone !== undefined ||
+        data.dateOfBirth !== undefined ||
+        data.firstName !== undefined ||
+        data.lastName !== undefined)
     ) {
+      const personData: any = {};
       if (data.dateOfBirth !== undefined) {
+        personData.dateOfBirth = data.dateOfBirth
+          ? new Date(data.dateOfBirth)
+          : null;
+      }
+      if (data.firstName !== undefined) personData.firstName = data.firstName;
+      if (data.lastName !== undefined) personData.lastName = data.lastName;
+      if (Object.keys(personData).length > 0) {
         await this.prisma.person.updateMany({
           where: { contactId: data.contactId },
-          data: {
-            dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
-          },
+          data: personData,
         });
       }
       if (data.phone !== undefined) {

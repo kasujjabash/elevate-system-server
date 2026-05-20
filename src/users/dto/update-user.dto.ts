@@ -29,4 +29,10 @@ export class UpdateUserDto {
 
   @IsOptional()
   dateOfBirth?: string;
+
+  @IsOptional()
+  firstName?: string;
+
+  @IsOptional()
+  lastName?: string;
 }
