@@ -696,6 +696,20 @@ export class CoursesService {
     });
   }
 
+  // ── Admin: update a module (e.g. rename) ────────────────────────────────
+  async updateModule(
+    moduleId: number,
+    dto: { title?: string; description?: string },
+  ) {
+    return this.prisma.course_module.update({
+      where: { id: moduleId },
+      data: {
+        ...(dto.title !== undefined && { title: dto.title }),
+        ...(dto.description !== undefined && { description: dto.description }),
+      },
+    });
+  }
+
   // ── Admin: add content to a module ───────────────────────────────────────
   async createContent(moduleId: number, dto: any) {
     return this.prisma.module_content.create({

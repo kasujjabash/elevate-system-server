@@ -240,6 +240,15 @@ export class CoursesController {
     return this.coursesService.getModule(moduleId, studentId ?? undefined);
   }
 
+  // PATCH /api/courses/modules/:moduleId  — admin/trainer: rename a module
+  @Patch('modules/:moduleId')
+  updateModule(
+    @Param('moduleId', ParseIntPipe) moduleId: number,
+    @Body() dto: any,
+  ) {
+    return this.coursesService.updateModule(moduleId, dto);
+  }
+
   // POST /api/courses/modules/:moduleId/content  — admin: add content to module
   @Post('modules/:moduleId/content')
   createContent(
