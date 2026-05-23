@@ -41,4 +41,8 @@ prisma/.env
 #Eslint cache file
 .eslintcache
 
+# Docs
+README.md
+*.md
+
 
