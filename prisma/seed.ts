@@ -21,6 +21,9 @@ async function main() {
   console.log('🌱 Seeding Elevate Academy database...');
 
   // ── 1. HUBS ─────────────────────────────────────────────────────────────────
+  // Normalize any existing hub codes to lowercase so upserts match correctly
+  await prisma.$executeRaw`UPDATE hub SET code = LOWER(code) WHERE code != LOWER(code)`;
+
   const hubsData = [
     {
       name: 'Katanga Hub',
