@@ -72,7 +72,7 @@ export class StudentsService {
   }
 
   async findOne(id: number) {
-    return this.prisma.student.findUnique({
+    const student = await this.prisma.student.findUnique({
       where: { id },
       include: {
         contact: {
@@ -122,6 +122,12 @@ export class StudentsService {
         },
       },
     });
+    if (!student) return null;
+    const user = await this.prisma.user.findFirst({
+      where: { contactId: student.contactId },
+      select: { id: true },
+    });
+    return { ...student, userId: user?.id ?? null };
   }
 
   async getStudentProgress(studentId: number) {
