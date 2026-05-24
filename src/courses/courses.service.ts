@@ -902,6 +902,7 @@ export class CoursesService {
 
     const [
       activeStudents,
+      totalEnrolled,
       classesToday,
       todayAttendance,
       pendingSubmissions,
@@ -911,6 +912,12 @@ export class CoursesService {
         where: {
           courseId: { in: courseIds },
           status: { in: ['Enrolled', 'InProgress'] },
+        },
+      }),
+      this.prisma.enrollment.count({
+        where: {
+          courseId: { in: courseIds },
+          status: { not: 'Dropped' },
         },
       }),
       this.prisma.timetable_session.count({
@@ -1006,6 +1013,7 @@ export class CoursesService {
     return {
       courses: courseIds.length,
       activeStudents,
+      inactiveStudents: Math.max(0, totalEnrolled - activeStudents),
       classesToday,
       todayAttendance,
       pendingSubmissions,
