@@ -107,7 +107,7 @@ export class DashboardService {
   }
 
   async getTopPerformers(hubId?: number, limit = 10) {
-    const [gradedSubs, topCourses] = await Promise.all([
+    const [gradedSubs, enrollmentGroups] = await Promise.all([
       this.prisma.submission.findMany({
         where: {
           status: { in: ['Graded', 'Returned'] },
@@ -124,13 +124,28 @@ export class DashboardService {
           student: { include: { contact: { include: { person: true } } } },
         },
       }),
-      this.prisma.course.findMany({
-        include: { _count: { select: { enrollments: true } } },
-        orderBy: { enrollments: { _count: 'desc' } },
-        ...(hubId ? { where: { hubId } } : {}),
+      // Group enrollments by course, scoped to hub when provided
+      this.prisma.enrollment.groupBy({
+        by: ['courseId'],
+        where: {
+          status: { not: 'Dropped' },
+          ...(hubId ? { student: { hubId } } : {}),
+        },
+        _count: { studentId: true },
+        orderBy: { _count: { studentId: 'desc' } },
         take: 2,
       }),
     ]);
+
+    // Resolve course titles for the top enrollment groups
+    const topCourseIds = enrollmentGroups.map((e) => e.courseId);
+    const courseDetails = topCourseIds.length
+      ? await this.prisma.course.findMany({
+          where: { id: { in: topCourseIds } },
+          select: { id: true, title: true },
+        })
+      : [];
+    const titleMap = new Map(courseDetails.map((c) => [c.id, c.title]));
 
     // Aggregate per-student avg grade
     const gradeMap = new Map<
@@ -165,9 +180,9 @@ export class DashboardService {
 
     return {
       topStudents,
-      topCourses: topCourses.map((c) => ({
-        name: c.title,
-        enrolledCount: c._count.enrollments,
+      topCourses: enrollmentGroups.map((e) => ({
+        name: titleMap.get(e.courseId) ?? 'Unknown',
+        enrolledCount: e._count.studentId,
       })),
     };
   }
