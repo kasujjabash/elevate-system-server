@@ -965,11 +965,19 @@ export class CoursesService {
         score: { not: null },
       },
       include: {
-        assignment: { select: { maxScore: true } },
+        assignment: {
+          select: {
+            maxScore: true,
+            course: { select: { title: true } },
+          },
+        },
         student: { include: { contact: { include: { person: true } } } },
       },
     });
-    const tpMap = new Map<number, { name: string; scores: number[] }>();
+    const tpMap = new Map<
+      number,
+      { name: string; courseName: string; scores: number[] }
+    >();
     for (const sub of gradedSubs) {
       const sid = sub.studentId;
       const max = (sub.assignment?.maxScore as number) ?? 100;
@@ -979,14 +987,16 @@ export class CoursesService {
         tpMap.set(sid, {
           name:
             [p?.firstName, p?.lastName].filter(Boolean).join(' ') || 'Unknown',
+          courseName: (sub.assignment as any)?.course?.title ?? '',
           scores: [],
         });
       }
       tpMap.get(sid)!.scores.push(pct);
     }
     const topStudents = Array.from(tpMap.values())
-      .map(({ name, scores }) => ({
+      .map(({ name, courseName, scores }) => ({
         name,
+        courseName,
         avgGrade: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
         submissionCount: scores.length,
       }))

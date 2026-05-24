@@ -325,4 +325,79 @@ export class AttendanceService {
       method: r.method,
     }));
   }
+
+  async getStats(hubId?: number, courseId?: number) {
+    const where: any = {};
+    if (hubId) where.hubId = hubId;
+    if (courseId) where.courseId = courseId;
+
+    // Count enrolled (non-graduated) students
+    const studentWhere: any = {};
+    if (hubId) studentWhere.hubId = hubId;
+
+    const enrollmentWhere: any = { status: { not: 'Dropped' } };
+    if (courseId) enrollmentWhere.courseId = courseId;
+    if (hubId) enrollmentWhere.student = { hubId };
+
+    const [enrolled, inactive] = await Promise.all([
+      courseId
+        ? this.prisma.enrollment.count({ where: enrollmentWhere })
+        : this.prisma.student.count({ where: studentWhere }),
+      this.prisma.student.count({
+        where: { ...studentWhere, status: 'Inactive' },
+      }),
+    ]);
+
+    // Find most recent session for this hub/course
+    const lastSession = await this.prisma.attendance_session.findFirst({
+      where,
+      orderBy: { createdAt: 'desc' },
+      include: { _count: { select: { records: true } } },
+    });
+
+    const presentLastSession = lastSession?._count.records ?? 0;
+
+    return {
+      enrolled,
+      presentLastSession,
+      absentLastSession: Math.max(0, enrolled - presentLastSession),
+      inactive,
+    };
+  }
+
+  async getHubAttendanceStats() {
+    const now = new Date();
+    const startOfToday = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+    );
+    const startOfTomorrow = new Date(startOfToday.getTime() + 86400000);
+
+    const [todayRecords, inactiveByHub] = await Promise.all([
+      this.prisma.attendance_record.findMany({
+        where: { checkedInAt: { gte: startOfToday, lt: startOfTomorrow } },
+        include: { session: { select: { hubId: true } } },
+        distinct: ['studentId'],
+      }),
+      this.prisma.student.groupBy({
+        by: ['hubId'],
+        where: { status: 'Inactive' },
+        _count: { id: true },
+      }),
+    ]);
+
+    const presentMap = new Map<number, number>();
+    for (const rec of todayRecords) {
+      const hid = (rec.session as any)?.hubId;
+      if (hid) presentMap.set(hid, (presentMap.get(hid) ?? 0) + 1);
+    }
+
+    const inactiveMap = new Map<number, number>();
+    for (const row of inactiveByHub) {
+      if (row.hubId) inactiveMap.set(row.hubId, row._count.id);
+    }
+
+    return { presentMap, inactiveMap };
+  }
 }

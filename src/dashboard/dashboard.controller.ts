@@ -1,4 +1,10 @@
-import { Controller, Get, Request, UseInterceptors } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Query,
+  Request,
+  UseInterceptors,
+} from '@nestjs/common';
 import { SentryInterceptor } from '../utils/sentry.interceptor';
 import { ApiTags } from '@nestjs/swagger';
 import { DashboardService } from './dashboard.service';
@@ -24,8 +30,39 @@ export class DashboardController {
   }
 
   @Get('stats/top-performers')
-  async getTopPerformers() {
-    return this.dashboardService.getTopPerformers();
+  async getTopPerformers(
+    @Query('hubId') hubId?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.dashboardService.getTopPerformers(
+      hubId ? Number(hubId) : undefined,
+      limit ? Number(limit) : undefined,
+    );
+  }
+
+  @Get('all-performance')
+  async getAllPerformance(
+    @Request() req: any,
+    @Query('hubId') hubId?: string,
+    @Query('courseId') courseId?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const user = req?.user;
+    const roles: string[] = user?.roles ?? [];
+    const isTrainer = roles.includes('TRAINER');
+    const isHubManager = roles.includes('HUB_MANAGER');
+
+    return this.dashboardService.getAllPerformance({
+      hubId: hubId
+        ? Number(hubId)
+        : isHubManager && user?.hubId
+        ? Number(user.hubId)
+        : undefined,
+      courseId: courseId ? Number(courseId) : undefined,
+      instructorContactId:
+        isTrainer && user?.contactId ? Number(user.contactId) : undefined,
+      limit: limit ? Number(limit) : undefined,
+    });
   }
 
   @Get('summary')

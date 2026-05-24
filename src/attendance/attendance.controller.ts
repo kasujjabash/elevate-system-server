@@ -86,6 +86,18 @@ export class AttendanceController {
     return this.attendanceService.getSessionByToken(token);
   }
 
+  /** Stats: enrolled, presentLastSession, absentLastSession, inactive */
+  @Get('stats')
+  async getStats(
+    @Query('hubId') hubId?: string,
+    @Query('courseId') courseId?: string,
+  ) {
+    return this.attendanceService.getStats(
+      hubId ? Number(hubId) : undefined,
+      courseId ? Number(courseId) : undefined,
+    );
+  }
+
   /** Admin: manually add a student to a session */
   @Post('sessions/:id/manual')
   async addManual(

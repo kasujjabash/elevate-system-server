@@ -55,22 +55,59 @@ export class DashboardService {
   }
 
   async getHubStats() {
-    const hubs = await this.prisma.hub.findMany({
-      include: {
-        _count: { select: { students: true } },
-      },
-    });
+    const now = new Date();
+    const startOfToday = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+    );
+    const startOfTomorrow = new Date(startOfToday.getTime() + 86400000);
 
-    return hubs.map((h) => ({
-      hub: h.name,
-      hubCode: h.code,
-      studentCount: h._count.students,
-      activeCount: h._count.students,
-    }));
+    const [hubs, inactiveByHub, todayRecords] = await Promise.all([
+      this.prisma.hub.findMany({
+        include: { _count: { select: { students: true } } },
+      }),
+      this.prisma.student.groupBy({
+        by: ['hubId'],
+        where: { status: 'Inactive' },
+        _count: { id: true },
+      }),
+      this.prisma.attendance_record.findMany({
+        where: { checkedInAt: { gte: startOfToday, lt: startOfTomorrow } },
+        include: { session: { select: { hubId: true } } },
+        distinct: ['studentId'],
+      }),
+    ]);
+
+    const inactiveMap = new Map<number, number>();
+    for (const row of inactiveByHub) {
+      if (row.hubId) inactiveMap.set(row.hubId, row._count.id);
+    }
+
+    const presentMap = new Map<number, number>();
+    for (const rec of todayRecords) {
+      const hid = (rec.session as any)?.hubId;
+      if (hid) presentMap.set(hid, (presentMap.get(hid) ?? 0) + 1);
+    }
+
+    return hubs.map((h) => {
+      const total = h._count.students;
+      const inactive = inactiveMap.get(h.id) ?? 0;
+      const presentToday = presentMap.get(h.id) ?? 0;
+      return {
+        hub: h.name,
+        hubCode: h.code,
+        studentCount: total,
+        activeCount: total - inactive,
+        inactive,
+        presentToday,
+        absentToday: Math.max(0, total - presentToday),
+      };
+    });
   }
 
-  async getTopPerformers(hubId?: number) {
-    const [gradedSubs, topCourse] = await Promise.all([
+  async getTopPerformers(hubId?: number, limit = 10) {
+    const [gradedSubs, topCourses] = await Promise.all([
       this.prisma.submission.findMany({
         where: {
           status: { in: ['Graded', 'Returned'] },
@@ -78,19 +115,28 @@ export class DashboardService {
           ...(hubId ? { student: { hubId } } : {}),
         },
         include: {
-          assignment: { select: { maxScore: true } },
+          assignment: {
+            select: {
+              maxScore: true,
+              course: { select: { title: true } },
+            },
+          },
           student: { include: { contact: { include: { person: true } } } },
         },
       }),
-      this.prisma.course.findFirst({
+      this.prisma.course.findMany({
         include: { _count: { select: { enrollments: true } } },
         orderBy: { enrollments: { _count: 'desc' } },
         ...(hubId ? { where: { hubId } } : {}),
+        take: 2,
       }),
     ]);
 
     // Aggregate per-student avg grade
-    const gradeMap = new Map<number, { name: string; scores: number[] }>();
+    const gradeMap = new Map<
+      number,
+      { name: string; courseName: string; scores: number[] }
+    >();
     for (const sub of gradedSubs) {
       const sid = sub.studentId;
       const maxScore = (sub.assignment?.maxScore as number) ?? 100;
@@ -100,6 +146,7 @@ export class DashboardService {
         gradeMap.set(sid, {
           name:
             [p?.firstName, p?.lastName].filter(Boolean).join(' ') || 'Unknown',
+          courseName: (sub.assignment as any)?.course?.title ?? '',
           scores: [],
         });
       }
@@ -107,23 +154,119 @@ export class DashboardService {
     }
 
     const topStudents = Array.from(gradeMap.values())
-      .map(({ name, scores }) => ({
+      .map(({ name, courseName, scores }) => ({
         name,
+        courseName,
         avgGrade: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
         submissionCount: scores.length,
       }))
       .sort((a, b) => b.avgGrade - a.avgGrade)
-      .slice(0, 10);
+      .slice(0, limit);
 
     return {
       topStudents,
-      topCourse: topCourse
-        ? {
-            name: topCourse.title,
-            enrolledCount: topCourse._count.enrollments,
-          }
-        : null,
+      topCourses: topCourses.map((c) => ({
+        name: c.title,
+        enrolledCount: c._count.enrollments,
+      })),
     };
+  }
+
+  async getAllPerformance(opts: {
+    hubId?: number;
+    courseId?: number;
+    instructorContactId?: number;
+    limit?: number;
+  }) {
+    const { hubId, courseId, instructorContactId, limit = 200 } = opts;
+
+    let courseIds: number[] | undefined;
+    if (instructorContactId) {
+      const instructor = await this.prisma.instructor.findFirst({
+        where: { contactId: instructorContactId },
+        select: { id: true },
+      });
+      if (instructor) {
+        const trainerCourses = await this.prisma.course.findMany({
+          where: { instructorId: instructor.id },
+          select: { id: true },
+        });
+        courseIds = trainerCourses.map((c) => c.id);
+      } else {
+        courseIds = [];
+      }
+    } else if (courseId) {
+      courseIds = [courseId];
+    }
+
+    const gradedSubs = await this.prisma.submission.findMany({
+      where: {
+        status: { in: ['Graded', 'Returned'] },
+        score: { not: null },
+        ...(hubId ? { student: { hubId } } : {}),
+        ...(courseIds !== undefined
+          ? { assignment: { courseId: { in: courseIds } } }
+          : {}),
+      },
+      include: {
+        assignment: {
+          select: {
+            maxScore: true,
+            course: { select: { title: true } },
+          },
+        },
+        student: {
+          include: {
+            contact: { include: { person: true } },
+            hub: { select: { name: true } },
+          },
+        },
+      },
+    });
+
+    const studentMap = new Map<
+      number,
+      {
+        name: string;
+        courseName: string;
+        hubName: string;
+        scores: number[];
+        submissionCount: number;
+      }
+    >();
+
+    for (const sub of gradedSubs) {
+      const sid = sub.studentId;
+      const maxScore = (sub.assignment?.maxScore as number) ?? 100;
+      const pct = maxScore > 0 ? (sub.score! / maxScore) * 100 : 0;
+      if (!studentMap.has(sid)) {
+        const p = sub.student?.contact?.person;
+        studentMap.set(sid, {
+          name:
+            [p?.firstName, p?.lastName].filter(Boolean).join(' ') || 'Unknown',
+          courseName: (sub.assignment as any)?.course?.title ?? '',
+          hubName: (sub.student as any)?.hub?.name ?? '',
+          scores: [],
+          submissionCount: 0,
+        });
+      }
+      const entry = studentMap.get(sid)!;
+      entry.scores.push(pct);
+      entry.submissionCount++;
+    }
+
+    const students = Array.from(studentMap.values())
+      .map(({ name, courseName, hubName, scores, submissionCount }) => ({
+        name,
+        courseName,
+        hubName,
+        avgGrade: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
+        submissionCount,
+      }))
+      .sort((a, b) => b.avgGrade - a.avgGrade)
+      .slice(0, limit);
+
+    return { students };
   }
 
   async getSummary(_user: any) {
@@ -184,7 +327,7 @@ export class DashboardService {
           enrollments: { include: { course: true }, take: 1 },
         },
         orderBy: { enrolledAt: 'desc' },
-        take: 8,
+        take: 5,
       }),
       // Courses that hub students are actually enrolled in (not just courses tagged to this hub)
       this.prisma.enrollment.groupBy({
