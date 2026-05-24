@@ -205,7 +205,7 @@ model study_resource {
 model assignment {
   id          Int          @id @default(autoincrement())
   title       String       @db.VarChar(200)
-  description String       @db.VarChar(1000)
+  description String       @db.Text
   dueDate     DateTime?
   maxScore    Int?         @default(100)
   weekNumber  Int?
