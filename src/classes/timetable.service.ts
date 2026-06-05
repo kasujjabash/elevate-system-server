@@ -124,7 +124,7 @@ export class TimetableService {
       return sessions.map((s) => this.toResponse(s));
     }
 
-    // Student — enrolled courses AND (hub matches OR hubId is null)
+    // Student — enrolled courses AND (their hub OR global/no-hub sessions)
     if (isStudent) {
       const contactId = Number(jwtUser.contactId ?? jwtUser.id);
       const student = await this.prisma.student.findFirst({
