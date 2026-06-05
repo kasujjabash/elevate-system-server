@@ -512,3 +512,17 @@ enum workshop_type_enum {
   Workshop
   Podcast
 }
+
+model notification {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  title       String   @db.VarChar(200)
+  message     String   @db.Text
+  type        String   @default("info") @db.VarChar(50)
+  isRead      Boolean  @default(false)
+  relatedId   Int?
+  relatedType String?  @db.VarChar(50)
+  createdAt   DateTime @default(now())
+
+  @@index([userId, isRead])
+}

@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../shared/prisma.service';
 
 @Injectable()
@@ -15,7 +19,7 @@ export class AssignmentsService {
     isMilestone?: boolean;
     weekNumber?: number;
   }) {
-    return this.prisma.assignment.create({
+    const assignment = await this.prisma.assignment.create({
       data: {
         courseId: dto.courseId,
         title: dto.title,
@@ -27,6 +31,36 @@ export class AssignmentsService {
       },
       include: { course: true },
     });
+
+    // Notify all students enrolled in this course
+    const enrollments = await this.prisma.enrollment.findMany({
+      where: {
+        courseId: dto.courseId,
+        status: { in: ['Enrolled', 'InProgress'] },
+      },
+      include: {
+        student: { include: { contact: { include: { user: true } } } },
+      },
+    });
+    const userIds = enrollments
+      .map((e) => e.student?.contact?.user?.id)
+      .filter((id): id is number => !!id);
+    if (userIds.length) {
+      await this.prisma.notification.createMany({
+        data: userIds.map((userId) => ({
+          userId,
+          title: 'New Assignment',
+          message: `A new assignment "${dto.title}" has been posted${
+            assignment.course ? ` in ${assignment.course.title}` : ''
+          }.`,
+          type: 'assignment',
+          relatedId: assignment.id,
+          relatedType: 'assignment',
+        })),
+      });
+    }
+
+    return assignment;
   }
 
   // ── Format a raw assignment row into the shape the client expects ──────────
@@ -256,6 +290,10 @@ export class AssignmentsService {
       where: { id: assignmentId },
     });
     if (!assignment) throw new NotFoundException('Assignment not found');
+
+    if (assignment.dueDate && new Date() > new Date(assignment.dueDate)) {
+      throw new ForbiddenException('Submission deadline has passed');
+    }
 
     // Store link in filePath; text/answer in content
     const data: any = {

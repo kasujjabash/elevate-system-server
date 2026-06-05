@@ -103,10 +103,45 @@ export class AttendanceService {
     });
     if (!session) throw new NotFoundException('Session not found');
 
-    return this.prisma.attendance_session.update({
+    const closed = await this.prisma.attendance_session.update({
       where: { id },
       data: { isActive: false },
     });
+
+    // Auto-record absent students
+    if (session.courseId) {
+      const enrollmentWhere: any = {
+        courseId: session.courseId,
+        status: { in: ['Enrolled', 'InProgress'] },
+      };
+      if (session.hubId) enrollmentWhere.student = { hubId: session.hubId };
+
+      const enrollments = await this.prisma.enrollment.findMany({
+        where: enrollmentWhere,
+        select: { studentId: true },
+      });
+      const enrolledIds = enrollments.map((e) => e.studentId);
+
+      const checkedIn = await this.prisma.attendance_record.findMany({
+        where: { sessionId: id },
+        select: { studentId: true },
+      });
+      const presentSet = new Set(checkedIn.map((r) => r.studentId));
+
+      const absentIds = enrolledIds.filter((sid) => !presentSet.has(sid));
+      if (absentIds.length) {
+        await this.prisma.attendance_record.createMany({
+          data: absentIds.map((studentId) => ({
+            sessionId: id,
+            studentId,
+            method: 'Absent',
+          })),
+          skipDuplicates: true,
+        });
+      }
+    }
+
+    return closed;
   }
 
   async checkIn(token: string, contactId: number) {
@@ -327,35 +362,57 @@ export class AttendanceService {
   }
 
   async getStats(hubId?: number, courseId?: number) {
-    const where: any = {};
-    if (hubId) where.hubId = hubId;
-    if (courseId) where.courseId = courseId;
-
-    // Count enrolled (non-graduated) students
-    const studentWhere: any = {};
-    if (hubId) studentWhere.hubId = hubId;
+    const sessionWhere: any = {};
+    if (hubId) sessionWhere.hubId = hubId;
+    if (courseId) sessionWhere.courseId = courseId;
 
     const enrollmentWhere: any = { status: { not: 'Dropped' } };
     if (courseId) enrollmentWhere.courseId = courseId;
     if (hubId) enrollmentWhere.student = { hubId };
 
-    const [enrolled, inactive] = await Promise.all([
-      courseId
-        ? this.prisma.enrollment.count({ where: enrollmentWhere })
-        : this.prisma.student.count({ where: studentWhere }),
-      this.prisma.student.count({
-        where: { ...studentWhere, status: 'Inactive' },
-      }),
-    ]);
+    const enrolled = await (courseId
+      ? this.prisma.enrollment.count({ where: enrollmentWhere })
+      : hubId
+      ? this.prisma.student.count({ where: { hubId } })
+      : this.prisma.student.count());
 
-    // Find most recent session for this hub/course
+    // Find most recent closed session for present count
     const lastSession = await this.prisma.attendance_session.findFirst({
-      where,
+      where: { ...sessionWhere, isActive: false },
       orderBy: { createdAt: 'desc' },
-      include: { _count: { select: { records: true } } },
     });
 
-    const presentLastSession = lastSession?._count.records ?? 0;
+    const presentLastSession = lastSession
+      ? await this.prisma.attendance_record.count({
+          where: { sessionId: lastSession.id, method: { not: 'Absent' } },
+        })
+      : 0;
+
+    // Inactive = enrolled students with no present attendance in last 14 days
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 14);
+
+    const allEnrollments = await this.prisma.enrollment.findMany({
+      where: enrollmentWhere,
+      select: { studentId: true },
+    });
+    const enrolledStudentIds = [
+      ...new Set(allEnrollments.map((e) => e.studentId)),
+    ];
+
+    const recentlyActive = await this.prisma.attendance_record.findMany({
+      where: {
+        studentId: { in: enrolledStudentIds },
+        method: { not: 'Absent' },
+        checkedInAt: { gte: cutoff },
+      },
+      select: { studentId: true },
+      distinct: ['studentId'],
+    });
+    const activeSet = new Set(recentlyActive.map((r) => r.studentId));
+    const inactive = enrolledStudentIds.filter(
+      (id) => !activeSet.has(id),
+    ).length;
 
     return {
       enrolled,

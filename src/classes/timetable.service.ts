@@ -73,6 +73,90 @@ export class TimetableService {
     return sessions.map((s) => this.toResponse(s));
   }
 
+  async findAllScoped(
+    filters: { hubId?: string; courseId?: string },
+    jwtUser: any,
+  ) {
+    if (!jwtUser) return this.findAll(filters);
+
+    const roles: string[] = Array.isArray(jwtUser.roles)
+      ? jwtUser.roles
+      : (jwtUser.roles ?? '')
+          .split(',')
+          .map((r: string) => r.trim())
+          .filter(Boolean);
+
+    const isAdmin = roles.some((r) => ['ADMIN', 'SUPER_ADMIN'].includes(r));
+    const isHubManager = roles.includes('HUB_MANAGER');
+    const isTrainer = roles.includes('TRAINER');
+    const isStudent = roles.includes('STUDENT');
+
+    // Admin — return everything, respecting any explicit filters
+    if (isAdmin) return this.findAll(filters);
+
+    // Hub Manager — scope to their hub
+    if (isHubManager) {
+      const hubId = String(jwtUser.hubId ?? filters.hubId ?? '');
+      return this.findAll({ ...filters, hubId: hubId || undefined });
+    }
+
+    // Trainer — return sessions for their courses, no hub filter
+    if (isTrainer) {
+      const contactId = Number(jwtUser.contactId ?? jwtUser.id);
+      const instructor = await this.prisma.instructor.findFirst({
+        where: { contactId },
+        select: { id: true },
+      });
+      if (!instructor) return [];
+      const courses = await this.prisma.course.findMany({
+        where: { instructorId: instructor.id },
+        select: { id: true },
+      });
+      const courseIds = courses.map((c) => c.id);
+      if (!courseIds.length) return [];
+      const where: any = { courseId: { in: courseIds } };
+      if (filters.courseId) where.courseId = parseInt(filters.courseId, 10);
+      const sessions = await this.prisma.timetable_session.findMany({
+        where,
+        include: this.include,
+        orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
+      });
+      return sessions.map((s) => this.toResponse(s));
+    }
+
+    // Student — enrolled courses AND (hub matches OR hubId is null)
+    if (isStudent) {
+      const contactId = Number(jwtUser.contactId ?? jwtUser.id);
+      const student = await this.prisma.student.findFirst({
+        where: { contactId },
+        select: { id: true, hubId: true },
+      });
+      if (!student) return [];
+      const enrollments = await this.prisma.enrollment.findMany({
+        where: {
+          studentId: student.id,
+          status: { in: ['Enrolled', 'InProgress'] },
+        },
+        select: { courseId: true },
+      });
+      const courseIds = enrollments.map((e) => e.courseId);
+      if (!courseIds.length) return [];
+      const where: any = {
+        courseId: { in: courseIds },
+        OR: [{ hubId: student.hubId }, { hubId: null }],
+      };
+      if (filters.courseId) where.courseId = parseInt(filters.courseId, 10);
+      const sessions = await this.prisma.timetable_session.findMany({
+        where,
+        include: this.include,
+        orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
+      });
+      return sessions.map((s) => this.toResponse(s));
+    }
+
+    return this.findAll(filters);
+  }
+
   /** Resolve timetable from the JWT payload directly — no query param needed. */
   async findForJwtUser(jwtUser: any) {
     if (!jwtUser) return [];

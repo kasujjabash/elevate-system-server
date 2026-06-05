@@ -58,8 +58,9 @@ export class ChatRoomsService {
 
       const displayTitle =
         room.type === 'direct'
-          ? (otherMember ? nameMap.get(otherMember.userId) ?? null : null) ??
-            room.title
+          ? otherMember
+            ? nameMap.get(otherMember.userId) ?? room.title
+            : room.title
           : room.title;
 
       return {
@@ -286,7 +287,7 @@ export class ChatRoomsService {
         }
       }
     } else {
-      // Trainer/Hub manager sees students in their hub/courses
+      // Trainer/Hub manager sees students in their hub + colleagues
       if (user.hubId) {
         const students = await this.prisma.student.findMany({
           where: { hubId: user.hubId },
@@ -296,12 +297,35 @@ export class ChatRoomsService {
           const uid = s.contact?.user?.id;
           if (uid && uid !== userId) userIds.add(uid);
         });
-        // Also hub colleagues
         const colleagues = await this.prisma.user.findMany({
           where: { hubId: user.hubId, isActive: true, id: { not: userId } },
           select: { id: true },
         });
         colleagues.forEach((c) => userIds.add(c.id));
+      }
+
+      // Trainer also sees students enrolled in their specific courses
+      const instructor = await this.prisma.instructor.findFirst({
+        where: { contactId: user.contactId ?? userId },
+        select: { id: true },
+      });
+      if (instructor) {
+        const trainerCourses = await this.prisma.course.findMany({
+          where: { instructorId: instructor.id },
+          select: { id: true },
+        });
+        if (trainerCourses.length) {
+          const enrollments = await this.prisma.enrollment.findMany({
+            where: { courseId: { in: trainerCourses.map((c) => c.id) } },
+            include: {
+              student: { include: { contact: { include: { user: true } } } },
+            },
+          });
+          enrollments.forEach((e) => {
+            const uid = e.student?.contact?.user?.id;
+            if (uid && uid !== userId) userIds.add(uid);
+          });
+        }
       }
     }
 

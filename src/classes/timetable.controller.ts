@@ -29,11 +29,12 @@ export class TimetableController {
   }
 
   /**
-   * GET /api/timetable                  — admin: all sessions (filter by hubId / courseId)
-   * GET /api/timetable?studentId=X      — student: sessions for their enrolled courses
+   * GET /api/timetable — role-scoped: students see their enrolled courses,
+   * trainers see their courses, hub managers see their hub, admins see all.
    */
   @Get()
   getTimetable(
+    @Request() req: any,
     @Query('studentId') studentId?: string,
     @Query('contactId') contactId?: string,
     @Query('hubId') hubId?: string,
@@ -41,7 +42,7 @@ export class TimetableController {
   ) {
     const sid = studentId || contactId;
     if (sid) return this.timetableService.findForStudent(sid);
-    return this.timetableService.findAll({ hubId, courseId });
+    return this.timetableService.findAllScoped({ hubId, courseId }, req?.user);
   }
 
   /** POST /api/timetable — admin: create a session */

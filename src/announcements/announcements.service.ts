@@ -35,7 +35,7 @@ export class AnnouncementsService {
     },
     createdBy?: number,
   ) {
-    return this.prisma.announcement.create({
+    const announcement = await this.prisma.announcement.create({
       data: {
         title: dto.title,
         body: dto.body,
@@ -45,6 +45,26 @@ export class AnnouncementsService {
         createdBy: createdBy ?? null,
       },
     });
+
+    // Notify all active users
+    const users = await this.prisma.user.findMany({
+      where: { isActive: true },
+      select: { id: true },
+    });
+    if (users.length) {
+      await this.prisma.notification.createMany({
+        data: users.map((u) => ({
+          userId: u.id,
+          title: 'New Announcement',
+          message: dto.title,
+          type: 'announcement',
+          relatedId: announcement.id,
+          relatedType: 'announcement',
+        })),
+      });
+    }
+
+    return announcement;
   }
 
   // ── Admin: toggle active/inactive ────────────────────────────────────────
