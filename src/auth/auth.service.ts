@@ -99,12 +99,24 @@ export class AuthService {
       Logger.warn('Could not fetch hubId for user ' + user.id);
     }
 
+    let tokenVersion = 0;
+    try {
+      const dbUser = await this.prisma.user.findUnique({
+        where: { id: user.id },
+        select: { tokenVersion: true },
+      });
+      tokenVersion = dbUser?.tokenVersion ?? 0;
+    } catch (e) {
+      Logger.warn('Could not fetch tokenVersion for user ' + user.id);
+    }
+
     const payload = {
       ...user,
       sub: user.id,
       aud: tenant,
       permissions: userPermissions,
       hubId,
+      tokenVersion,
     };
     const token = await this.jwtService.signAsync(payload);
     const hierarchy = await this.getUserHierarchy(user.id);

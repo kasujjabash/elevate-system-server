@@ -52,6 +52,9 @@ export class User {
   @Column({ nullable: true, type: 'int' })
   hubId: number;
 
+  @Column({ default: 0, nullable: true, type: 'int' })
+  tokenVersion: number;
+
   @ManyToOne(() => Tenant, (tenant) => tenant.users, { nullable: true })
   tenant: Tenant;
 

@@ -373,6 +373,9 @@ export class UsersService {
       isActive: data.isActive,
     };
 
+    const shouldInvalidateTokens =
+      hasValue(data.password) || data.isActive === false;
+
     if (hasValue(data.password)) {
       const user = new User();
       user.password = data.password;
@@ -425,6 +428,14 @@ export class UsersService {
       .set(update)
       .where('id = :id', { id: data.id })
       .execute();
+
+    // Invalidate all existing tokens when password changes or user is deactivated
+    if (shouldInvalidateTokens) {
+      await this.prisma.user.update({
+        where: { id: data.id },
+        data: { tokenVersion: { increment: 1 } },
+      });
+    }
 
     // Persist hubId via Prisma (TypeORM entity doesn't know about this column)
     if (data.hubId !== undefined) {

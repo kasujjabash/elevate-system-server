@@ -277,15 +277,16 @@ model submission {
 }
 
 model user {
-  id        Int     @id @default(autoincrement())
-  username  String  @unique @db.VarChar(40)
-  password  String  @db.VarChar(100)
-  contactId Int     @unique
-  roles     String?
-  isActive  Boolean
-  hubId     Int?
-  contact   contact @relation(fields: [contactId], references: [id])
-  hub       hub?    @relation(fields: [hubId], references: [id])
+  id           Int     @id @default(autoincrement())
+  username     String  @unique @db.VarChar(40)
+  password     String  @db.VarChar(100)
+  contactId    Int     @unique
+  roles        String?
+  isActive     Boolean
+  hubId        Int?
+  tokenVersion Int     @default(0)
+  contact      contact @relation(fields: [contactId], references: [id])
+  hub          hub?    @relation(fields: [hubId], references: [id])
 }
 
 model announcement {
