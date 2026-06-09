@@ -150,8 +150,8 @@ export class ContactsService {
       return data.map((it) => {
         return ContactsService.toListDto(it);
       });
-    } catch (e) {
-      Logger.error(e.message);
+    } catch (e: any) {
+      Logger.error(e?.message ?? e);
       return [];
     }
   }
@@ -290,8 +290,6 @@ export class ContactsService {
         'identifications',
         'requests',
         'relationships',
-        'groupMemberships',
-        'groupMemberships.group',
       ],
     });
   }
