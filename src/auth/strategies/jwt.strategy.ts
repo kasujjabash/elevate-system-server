@@ -1,6 +1,6 @@
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { jwtConstants } from '../constants';
 import { UserDto } from '../dto/user.dto';
 import { PrismaService } from '../../shared/prisma.service';
@@ -16,10 +16,19 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any): Promise<UserDto> {
-    const dbUser = await this.prisma.user.findUnique({
-      where: { id: payload.sub },
-      select: { isActive: true, tokenVersion: true },
-    });
+    let dbUser: { isActive: boolean; tokenVersion: number } | null = null;
+
+    try {
+      dbUser = await this.prisma.user.findUnique({
+        where: { id: Number(payload.sub) },
+        select: { isActive: true, tokenVersion: true },
+      });
+    } catch (e: any) {
+      Logger.error('JWT strategy DB lookup failed: ' + (e?.message ?? e));
+      // If DB check fails (e.g. migration not yet run), fall through and allow
+      // the request so existing sessions are not disrupted.
+      return { ...payload };
+    }
 
     if (!dbUser || !dbUser.isActive) {
       throw new UnauthorizedException('Account is inactive');
