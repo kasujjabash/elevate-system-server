@@ -383,7 +383,7 @@ export class UsersService {
       update.password = user.password;
     }
 
-    if (data.roles?.length > 0) {
+    if (data.roles?.length > 0 && data.roles.some((r) => r.trim() !== '')) {
       const dbUserRolesStrArr: string[] = [];
       const sentRolesStrArr: string[] = [];
       const getdbUserRoles = await this.userRolesRepository.find({
@@ -430,6 +430,28 @@ export class UsersService {
       .set(update)
       .where('id = :id', { id: data.id })
       .execute();
+
+    // Safety net: if roles were accidentally cleared, restore from userRoles join table
+    const currentUser = await this.prisma.user.findUnique({
+      where: { id: data.id },
+      select: { roles: true },
+    });
+    if (!currentUser?.roles) {
+      const userRoles = await this.userRolesRepository.find({
+        relations: ['roles'],
+        where: { userId: data.id },
+      });
+      const roleStr = userRoles
+        .map((ur) => ur.roles?.role)
+        .filter(Boolean)
+        .join(',');
+      if (roleStr) {
+        await this.prisma.user.update({
+          where: { id: data.id },
+          data: { roles: roleStr },
+        });
+      }
+    }
 
     // Invalidate all existing tokens when password changes or user is deactivated
     if (shouldInvalidateTokens) {
