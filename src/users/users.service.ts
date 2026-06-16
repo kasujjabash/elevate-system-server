@@ -419,7 +419,9 @@ export class UsersService {
       }
 
       // Keep the roles string column in sync so JWT auth reads correct roles
-      update.roles = sentRolesStrArr.join(',');
+      if (sentRolesStrArr.length > 0) {
+        update.roles = sentRolesStrArr.join(',');
+      }
     }
 
     await this.repository
