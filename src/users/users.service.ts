@@ -359,6 +359,9 @@ export class UsersService {
   }
 
   async update(data: UpdateUserDto): Promise<UserListDto> {
+    if (!data.id) {
+      throw new HttpException('User ID is required', 400);
+    }
     const _user = await this.findOne(data.id);
 
     if (data.oldPassword) {
