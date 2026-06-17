@@ -9,7 +9,7 @@
   },
   "scripts": {
     "heroku-postbuild": "npm run build",
-    "prebuild": "rimraf dist",
+    "prebuild": "rimraf dist tsconfig.build.tsbuildinfo",
     "build": "npx prisma generate && ./node_modules/.bin/nest build",
     "postbuild": "npm run seed:elevate && npm run seed:admin || echo 'Seeding completed with warnings (normal if data already exists)'",
     "db:push": "npx prisma db push",
