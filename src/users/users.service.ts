@@ -138,8 +138,9 @@ export class UsersService {
 
     if (!contactId) {
       // Auto-create contact + person + email from the provided name/email
-      const existingUser = await this.prisma.user.findUnique({
-        where: { username },
+      // Use case-insensitive check so Jackie@… and jackie@… are treated as the same account.
+      const existingUser = await this.prisma.user.findFirst({
+        where: { username: { equals: username, mode: 'insensitive' } },
       });
       if (existingUser)
         throw new HttpException('A user with this email already exists', 400);
@@ -543,9 +544,22 @@ export class UsersService {
   }
 
   async findByName(username: string): Promise<User | undefined> {
+    const relations = [
+      'contact',
+      'contact.person',
+      'userRoles',
+      'userRoles.roles',
+    ];
+    // Prefer exact-case match so two accounts that differ only in casing
+    // (e.g. jackie@… vs Jackie@…) always resolve to the intended one.
+    const exact = await this.repository.findOne({
+      where: { username },
+      relations,
+    });
+    if (exact) return exact;
     return this.repository.findOne({
       where: { username: ILike(username) },
-      relations: ['contact', 'contact.person', 'userRoles', 'userRoles.roles'],
+      relations,
     });
   }
 
