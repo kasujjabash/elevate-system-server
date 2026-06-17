@@ -193,6 +193,12 @@ export class UsersService {
           'A user account already exists for this contact',
           400,
         );
+
+      const duplicateUsername = await this.prisma.user.findFirst({
+        where: { username: { equals: username, mode: 'insensitive' } },
+      });
+      if (duplicateUsername)
+        throw new HttpException('A user with this email already exists', 400);
     }
 
     const rolesStr = Array.isArray(data.roles)
@@ -331,6 +337,12 @@ export class UsersService {
     roles,
     ...rest
   }: RegisterUserDto): Promise<User> {
+    const duplicateUsername = await this.prisma.user.findFirst({
+      where: { username: { equals: email, mode: 'insensitive' } },
+    });
+    if (duplicateUsername)
+      throw new HttpException('A user with this email already exists', 400);
+
     const contact = await this.contactsService.createPerson({ ...rest, email });
     const user = new User();
     user.username = email;
