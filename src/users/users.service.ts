@@ -143,7 +143,10 @@ export class UsersService {
         where: { username: { equals: username, mode: 'insensitive' } },
       });
       if (existingUser)
-        throw new HttpException('A user with this email already exists', 400);
+        throw new HttpException(
+          'This email address is already registered. Please use a different email.',
+          400,
+        );
 
       const contact = await this.prisma.contact.create({
         data: { category: 'Person' },
@@ -198,7 +201,10 @@ export class UsersService {
         where: { username: { equals: username, mode: 'insensitive' } },
       });
       if (duplicateUsername)
-        throw new HttpException('A user with this email already exists', 400);
+        throw new HttpException(
+          'This email address is already registered. Please use a different email.',
+          400,
+        );
     }
 
     const rolesStr = Array.isArray(data.roles)
@@ -341,7 +347,10 @@ export class UsersService {
       where: { username: { equals: email, mode: 'insensitive' } },
     });
     if (duplicateUsername)
-      throw new HttpException('A user with this email already exists', 400);
+      throw new HttpException(
+        'This email address is already registered. Please use a different email.',
+        400,
+      );
 
     const contact = await this.contactsService.createPerson({ ...rest, email });
     const user = new User();

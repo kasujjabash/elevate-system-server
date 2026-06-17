@@ -63,11 +63,18 @@ function handleQueryFailedError(
   let status = HttpStatus.INTERNAL_SERVER_ERROR;
   let message = 'Internal server error';
   if (exception['code'] === 'ER_DUP_ENTRY') {
-    message = 'Duplicate entry, please check input';
+    message =
+      'This email address is already registered. Please use a different email.';
+    status = HttpStatus.BAD_REQUEST;
+  }
+  if (exception['code'] === '23505') {
+    // pg unique_violation — catches duplicate username/email at DB level
+    message =
+      'This email address is already registered. Please use a different email.';
     status = HttpStatus.BAD_REQUEST;
   }
   if (exception['code'] === '23503') {
-    // pg only
+    // pg foreign_key_violation
     message = 'Data integrity error, please check input';
     status = HttpStatus.BAD_REQUEST;
   }
