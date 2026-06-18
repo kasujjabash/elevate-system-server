@@ -1,12 +1,3 @@
-/**
- * Elevate Academy — TypeORM Admin User Seed
- * Creates the admin and instructor TypeORM users needed for login.
- * Run AFTER prisma/seed.ts and AFTER the server has started at least once
- * (so TypeORM synchronize creates the tables).
- *
- * Usage: npx ts-node -r tsconfig-paths/register prisma/seed-admin.ts
- */
-
 import { DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import * as path from 'path';
@@ -24,7 +15,6 @@ async function main() {
     process.env.DATABASE_URL ? 'present' : 'not set',
   );
 
-  // Support both DATABASE_URL (Render/Railway) and individual DB_* vars (local)
   const databaseUrl = process.env.DATABASE_URL;
   const isProduction = process.env.NODE_ENV === 'production';
 
@@ -75,8 +65,9 @@ async function main() {
       console.log('  ✓ Tenant: elevate');
     }
 
-    // Create RoleAdmin role
+    // Roles
     const rolesRepo = connection.getRepository('Roles');
+
     let adminRole = await rolesRepo.findOne({ where: { role: 'ADMIN' } });
     if (!adminRole) {
       adminRole = rolesRepo.create({
@@ -105,13 +96,10 @@ async function main() {
         tenant,
       });
       adminRole = await rolesRepo.save(adminRole);
-      console.log('  ✓ Role: RoleAdmin');
+      console.log('  ✓ Role: ADMIN');
     }
 
-    // Create RoleTrainer role
-    let trainerRole = await rolesRepo.findOne({
-      where: { role: 'TRAINER' },
-    });
+    let trainerRole = await rolesRepo.findOne({ where: { role: 'TRAINER' } });
     if (!trainerRole) {
       trainerRole = rolesRepo.create({
         role: 'TRAINER',
@@ -131,10 +119,9 @@ async function main() {
         tenant,
       });
       trainerRole = await rolesRepo.save(trainerRole);
-      console.log('  ✓ Role: RoleTrainer');
+      console.log('  ✓ Role: TRAINER');
     }
 
-    // Create HUB_MANAGER role
     let hubManagerRole = await rolesRepo.findOne({
       where: { role: 'HUB_MANAGER' },
     });
@@ -163,138 +150,76 @@ async function main() {
         tenant,
       });
       hubManagerRole = await rolesRepo.save(hubManagerRole);
-      console.log('  ✓ Role: RoleHubManager');
+      console.log('  ✓ Role: HUB_MANAGER');
     }
 
-    const users = [
-      {
-        firstName: 'Elevate',
-        lastName: 'Admin',
-        email: 'admin@era92elevate.org',
-        password: 'elevate2024',
-        role: adminRole,
-      },
-      {
-        firstName: 'John',
-        lastName: 'Mukasa',
-        email: 'instructor@era92elevate.org',
-        password: 'elevate2024',
-        role: adminRole,
-      },
-      {
-        firstName: 'Alice',
-        lastName: 'Trainer',
-        email: 'trainer@era92elevate.org',
-        password: 'elevate2024',
-        role: trainerRole,
-      },
-      // Hub Managers
-      {
-        firstName: 'Robert',
-        lastName: 'Kizza',
-        email: 'robert.kizza@hub.elevate.org',
-        password: 'hubmanager2024',
-        role: hubManagerRole,
-      },
-      {
-        firstName: 'Annet',
-        lastName: 'Nabukenya',
-        email: 'annet.nabukenya@hub.elevate.org',
-        password: 'hubmanager2024',
-        role: hubManagerRole,
-      },
-      {
-        firstName: 'Isaac',
-        lastName: 'Opio',
-        email: 'isaac.opio@hub.elevate.org',
-        password: 'hubmanager2024',
-        role: hubManagerRole,
-      },
-    ];
-
+    // Admin account
     const contactRepo = connection.getRepository('Contact');
     const personRepo = connection.getRepository('Person');
     const emailRepo = connection.getRepository('Email');
     const userRepo = connection.getRepository('User');
     const userRolesRepo = connection.getRepository('UserRoles');
 
-    for (const u of users) {
-      let user = await userRepo.findOne({
-        where: { username: u.email },
-        relations: ['userRoles', 'userRoles.roles'],
-      });
+    const adminUser = await userRepo.findOne({
+      where: { username: 'admin@era92elevate.org' },
+      relations: ['userRoles', 'userRoles.roles'],
+    });
 
-      if (user) {
-        // User exists - check if they have the correct role
-        const hasRole = user.userRoles?.some(
-          (ur) => ur.roles?.role === u.role.role,
-        );
-        if (hasRole) {
-          console.log(`  ✓ User exists with role: ${u.email} (${u.role.role})`);
-          continue;
-        } else {
-          // User exists but doesn't have the role - assign it
-          const userRole = userRolesRepo.create({ user: user, roles: u.role });
-          await userRolesRepo.save(userRole);
-          console.log(
-            `  ✓ Role assigned to existing user: ${u.email} (${u.role.role})`,
-          );
-          continue;
-        }
+    if (adminUser) {
+      const hasRole = adminUser.userRoles?.some(
+        (ur) => ur.roles?.role === 'ADMIN',
+      );
+      if (!hasRole) {
+        const userRole = userRolesRepo.create({
+          user: adminUser,
+          roles: adminRole,
+        });
+        await userRolesRepo.save(userRole);
       }
-
-      // User doesn't exist - create them
+      console.log('  ✓ Admin: admin@era92elevate.org (exists)');
+    } else {
       const contact = contactRepo.create({ category: 'Person', tenant });
       const savedContact = await contactRepo.save(contact);
 
-      const person = personRepo.create({
-        firstName: u.firstName,
-        lastName: u.lastName,
-        gender: 'Male',
-        contactId: savedContact.id,
-      });
-      await personRepo.save(person);
+      await personRepo.save(
+        personRepo.create({
+          firstName: 'Elevate',
+          lastName: 'Admin',
+          gender: 'Male',
+          contactId: savedContact.id,
+        }),
+      );
 
-      const email = emailRepo.create({
-        value: u.email,
-        category: 'Work',
-        isPrimary: true,
-        contact: savedContact,
-      });
-      await emailRepo.save(email);
+      await emailRepo.save(
+        emailRepo.create({
+          value: 'admin@era92elevate.org',
+          category: 'Work',
+          isPrimary: true,
+          contact: savedContact,
+        }),
+      );
 
-      const hashedPassword = bcrypt.hashSync(u.password, HASH_ROUNDS);
-      user = userRepo.create({
-        username: u.email,
-        password: hashedPassword,
-        contactId: savedContact.id,
-        isActive: true,
-        roles: u.role.role,
-        tenant,
-      });
-      const savedUser = await userRepo.save(user);
+      const hashedPassword = bcrypt.hashSync('elevate2024', HASH_ROUNDS);
+      const savedUser = await userRepo.save(
+        userRepo.create({
+          username: 'admin@era92elevate.org',
+          password: hashedPassword,
+          contactId: savedContact.id,
+          isActive: true,
+          roles: 'ADMIN',
+          tenant,
+        }),
+      );
 
-      const userRole = userRolesRepo.create({ user: savedUser, roles: u.role });
-      await userRolesRepo.save(userRole);
-
-      console.log(`  ✓ User: ${u.email} / ${u.password} (${u.role.role})`);
+      await userRolesRepo.save(
+        userRolesRepo.create({ user: savedUser, roles: adminRole }),
+      );
+      console.log('  ✓ Admin: admin@era92elevate.org / elevate2024');
     }
 
     console.log('\n✅ Admin seed complete!');
     console.log('\n🔑 LOGIN CREDENTIALS:');
-    console.log('   admin@era92elevate.org      / elevate2024  (RoleAdmin)');
-    console.log('   instructor@era92elevate.org / elevate2024  (RoleAdmin)');
-    console.log('   trainer@era92elevate.org    / elevate2024  (RoleTrainer)');
-    console.log('\n🏢 HUB MANAGER CREDENTIALS:');
-    console.log(
-      '   robert.kizza@hub.elevate.org     / hubmanager2024 (RoleHubManager)',
-    );
-    console.log(
-      '   annet.nabukenya@hub.elevate.org  / hubmanager2024 (RoleHubManager)',
-    );
-    console.log(
-      '   isaac.opio@hub.elevate.org       / hubmanager2024 (RoleHubManager)',
-    );
+    console.log('   admin@era92elevate.org / elevate2024  (ADMIN)');
   } finally {
     await connection.destroy();
   }
