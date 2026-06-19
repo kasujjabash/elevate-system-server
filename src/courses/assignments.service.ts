@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../shared/prisma.service';
 
 @Injectable()
@@ -291,15 +287,14 @@ export class AssignmentsService {
     });
     if (!assignment) throw new NotFoundException('Assignment not found');
 
-    if (assignment.dueDate && new Date() > new Date(assignment.dueDate)) {
-      throw new ForbiddenException('Submission deadline has passed');
-    }
+    const isLate =
+      !!assignment.dueDate && new Date() > new Date(assignment.dueDate);
 
     // Store link in filePath; text/answer in content
     const data: any = {
       assignmentId,
       studentId: student.id,
-      status: 'Submitted',
+      status: isLate ? 'Late' : 'Submitted',
       submittedAt: new Date(),
     };
     if (body.type === 'text') data.content = body.content;

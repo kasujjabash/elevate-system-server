@@ -262,13 +262,12 @@ let AssignmentsService = class AssignmentsService {
     });
     if (!assignment)
       throw new common_1.NotFoundException('Assignment not found');
-    if (assignment.dueDate && new Date() > new Date(assignment.dueDate)) {
-      throw new common_1.ForbiddenException('Submission deadline has passed');
-    }
+    const isLate =
+      !!assignment.dueDate && new Date() > new Date(assignment.dueDate);
     const data = {
       assignmentId,
       studentId: student.id,
-      status: 'Submitted',
+      status: isLate ? 'Late' : 'Submitted',
       submittedAt: new Date(),
     };
     if (body.type === 'text') data.content = body.content;
