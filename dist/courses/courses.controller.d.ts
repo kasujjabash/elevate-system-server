@@ -659,6 +659,7 @@ export declare class CoursesController {
       dueDate: Date;
       maxScore: number;
       isMilestone: boolean;
+      isCoursePlayer: boolean;
     }[];
     modules: ({
       contents: {

@@ -149,6 +149,9 @@ let AssignmentsController = class AssignmentsController {
   likeSubmission(id) {
     return this.assignmentsService.likeSubmission(id);
   }
+  approveSubmission(id) {
+    return this.assignmentsService.approveSubmission(id);
+  }
   findOne(id) {
     return this.assignmentsService.findOne(id);
   }
@@ -330,6 +333,19 @@ __decorate(
   ],
   AssignmentsController.prototype,
   'likeSubmission',
+  null,
+);
+__decorate(
+  [
+    (0, common_1.Post)('submissions/:id/approve'),
+    openapi.ApiResponse({ status: 201, type: Object }),
+    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __metadata('design:type', Function),
+    __metadata('design:paramtypes', [Number]),
+    __metadata('design:returntype', void 0),
+  ],
+  AssignmentsController.prototype,
+  'approveSubmission',
   null,
 );
 __decorate(

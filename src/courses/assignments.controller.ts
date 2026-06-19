@@ -227,6 +227,12 @@ export class AssignmentsController {
     return this.assignmentsService.likeSubmission(id);
   }
 
+  // POST /api/assignments/submissions/:id/approve  — trainer approves a course-player submission
+  @Post('submissions/:id/approve')
+  approveSubmission(@Param('id', ParseIntPipe) id: number) {
+    return this.assignmentsService.approveSubmission(id);
+  }
+
   // ── GET single assignment ─────────────────────────────────────────────────
   // GET /api/assignments/:id
   @Get(':id')

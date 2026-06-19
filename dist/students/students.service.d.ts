@@ -305,6 +305,7 @@ export declare class StudentsService {
         dueDate: Date;
         maxScore: number;
         isMilestone: boolean;
+        isCoursePlayer: boolean;
       };
     } & {
       id: number;
@@ -375,6 +376,7 @@ export declare class StudentsService {
           dueDate: Date;
           maxScore: number;
           isMilestone: boolean;
+          isCoursePlayer: boolean;
         }[];
       } & {
         id: number;

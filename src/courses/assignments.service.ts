@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../shared/prisma.service';
 
 @Injectable()
@@ -13,6 +17,7 @@ export class AssignmentsService {
     dueDate?: string;
     maxScore?: number;
     isMilestone?: boolean;
+    isCoursePlayer?: boolean;
     weekNumber?: number;
   }) {
     const assignment = await this.prisma.assignment.create({
@@ -23,6 +28,7 @@ export class AssignmentsService {
         dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
         maxScore: dto.maxScore ?? 100,
         isMilestone: dto.isMilestone ?? false,
+        isCoursePlayer: dto.isCoursePlayer ?? false,
         weekNumber: dto.weekNumber ?? null,
       },
       include: { course: true },
@@ -287,14 +293,20 @@ export class AssignmentsService {
     });
     if (!assignment) throw new NotFoundException('Assignment not found');
 
-    const isLate =
-      !!assignment.dueDate && new Date() > new Date(assignment.dueDate);
+    // Course-player assignments are always open; regular assignments enforce the due date
+    if (
+      !assignment.isCoursePlayer &&
+      assignment.dueDate &&
+      new Date() > new Date(assignment.dueDate)
+    ) {
+      throw new ForbiddenException('Submission deadline has passed');
+    }
 
     // Store link in filePath; text/answer in content
     const data: any = {
       assignmentId,
       studentId: student.id,
-      status: isLate ? 'Late' : 'Submitted',
+      status: 'Submitted',
       submittedAt: new Date(),
     };
     if (body.type === 'text') data.content = body.content;
@@ -347,6 +359,25 @@ export class AssignmentsService {
       data: { status: 'Graded', gradedAt: sub.gradedAt ?? new Date() },
     });
     return { liked: true, submissionId, status: updated.status };
+  }
+
+  // ── Trainer: approve a course-player submission ──────────────────────────
+  async approveSubmission(submissionId: number) {
+    const sub = await this.prisma.submission.findUnique({
+      where: { id: submissionId },
+      include: { assignment: { select: { isCoursePlayer: true } } },
+    });
+    if (!sub) throw new NotFoundException('Submission not found');
+
+    const updated = await this.prisma.submission.update({
+      where: { id: submissionId },
+      data: { status: 'Approved', gradedAt: new Date() },
+      include: {
+        student: { include: { contact: { include: { person: true } } } },
+        assignment: true,
+      },
+    });
+    return updated;
   }
 
   // ── Admin/Trainer: grade via POST body ───────────────────────────────────

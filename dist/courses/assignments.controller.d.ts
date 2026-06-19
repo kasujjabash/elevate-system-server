@@ -31,6 +31,7 @@ export declare class AssignmentsController {
       dueDate: Date;
       maxScore: number;
       isMilestone: boolean;
+      isCoursePlayer: boolean;
     }
   >;
   findAll(req: any, contactId?: string, courseId?: string): Promise<any[]>;
@@ -179,6 +180,7 @@ export declare class AssignmentsController {
         dueDate: Date;
         maxScore: number;
         isMilestone: boolean;
+        isCoursePlayer: boolean;
       };
     } & {
       id: number;
@@ -244,6 +246,7 @@ export declare class AssignmentsController {
         dueDate: Date;
         maxScore: number;
         isMilestone: boolean;
+        isCoursePlayer: boolean;
       };
     } & {
       id: number;
@@ -304,6 +307,7 @@ export declare class AssignmentsController {
         dueDate: Date;
         maxScore: number;
         isMilestone: boolean;
+        isCoursePlayer: boolean;
       };
     } & {
       id: number;
@@ -323,6 +327,61 @@ export declare class AssignmentsController {
     submissionId: number;
     status: import('.prisma/client').$Enums.submission_status_enum;
   }>;
+  approveSubmission(id: number): Promise<
+    {
+      student: {
+        contact: {
+          person: {
+            id: number;
+            firstName: string;
+            lastName: string;
+            middleName: string;
+            gender: import('.prisma/client').$Enums.person_gender_enum;
+            avatar: string;
+            dateOfBirth: Date;
+            contactId: number;
+          };
+        } & {
+          id: number;
+          category: 'Person';
+        };
+      } & {
+        id: number;
+        contactId: number;
+        status: import('.prisma/client').$Enums.student_status_enum;
+        hubId: number;
+        createdAt: Date;
+        updatedAt: Date;
+        studentId: string;
+        enrolledAt: Date;
+      };
+      assignment: {
+        id: number;
+        title: string;
+        description: string;
+        isActive: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+        courseId: number;
+        weekNumber: number;
+        dueDate: Date;
+        maxScore: number;
+        isMilestone: boolean;
+        isCoursePlayer: boolean;
+      };
+    } & {
+      id: number;
+      submittedAt: Date;
+      status: import('.prisma/client').$Enums.submission_status_enum;
+      studentId: number;
+      content: string;
+      assignmentId: number;
+      filePath: string;
+      score: number;
+      feedback: string;
+      gradedAt: Date;
+    }
+  >;
   findOne(id: number): Promise<
     {
       course: {
@@ -390,6 +449,7 @@ export declare class AssignmentsController {
       dueDate: Date;
       maxScore: number;
       isMilestone: boolean;
+      isCoursePlayer: boolean;
     }
   >;
 }

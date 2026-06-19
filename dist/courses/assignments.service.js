@@ -41,6 +41,7 @@ let AssignmentsService = class AssignmentsService {
         dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
         maxScore: dto.maxScore ?? 100,
         isMilestone: dto.isMilestone ?? false,
+        isCoursePlayer: dto.isCoursePlayer ?? false,
         weekNumber: dto.weekNumber ?? null,
       },
       include: { course: true },
@@ -262,12 +263,17 @@ let AssignmentsService = class AssignmentsService {
     });
     if (!assignment)
       throw new common_1.NotFoundException('Assignment not found');
-    const isLate =
-      !!assignment.dueDate && new Date() > new Date(assignment.dueDate);
+    if (
+      !assignment.isCoursePlayer &&
+      assignment.dueDate &&
+      new Date() > new Date(assignment.dueDate)
+    ) {
+      throw new common_1.ForbiddenException('Submission deadline has passed');
+    }
     const data = {
       assignmentId,
       studentId: student.id,
-      status: isLate ? 'Late' : 'Submitted',
+      status: 'Submitted',
       submittedAt: new Date(),
     };
     if (body.type === 'text') data.content = body.content;
@@ -310,6 +316,22 @@ let AssignmentsService = class AssignmentsService {
       data: { status: 'Graded', gradedAt: sub.gradedAt ?? new Date() },
     });
     return { liked: true, submissionId, status: updated.status };
+  }
+  async approveSubmission(submissionId) {
+    const sub = await this.prisma.submission.findUnique({
+      where: { id: submissionId },
+      include: { assignment: { select: { isCoursePlayer: true } } },
+    });
+    if (!sub) throw new common_1.NotFoundException('Submission not found');
+    const updated = await this.prisma.submission.update({
+      where: { id: submissionId },
+      data: { status: 'Approved', gradedAt: new Date() },
+      include: {
+        student: { include: { contact: { include: { person: true } } } },
+        assignment: true,
+      },
+    });
+    return updated;
   }
   async gradeByBody(dto) {
     return this.gradeSubmission(dto.submissionId, {

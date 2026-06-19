@@ -203,19 +203,20 @@ model study_resource {
 }
 
 model assignment {
-  id          Int          @id @default(autoincrement())
-  title       String       @db.VarChar(200)
-  description String       @db.Text
-  dueDate     DateTime?
-  maxScore    Int?         @default(100)
-  weekNumber  Int?
-  isMilestone Boolean      @default(false)
-  courseId    Int
-  isActive    Boolean      @default(true)
-  course      course       @relation(fields: [courseId], references: [id])
-  submissions submission[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id             Int          @id @default(autoincrement())
+  title          String       @db.VarChar(200)
+  description    String       @db.Text
+  dueDate        DateTime?
+  maxScore       Int?         @default(100)
+  weekNumber     Int?
+  isMilestone    Boolean      @default(false)
+  isCoursePlayer Boolean      @default(false)
+  courseId       Int
+  isActive       Boolean      @default(true)
+  course         course       @relation(fields: [courseId], references: [id])
+  submissions    submission[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 }
 
 model course_module {
@@ -406,6 +407,8 @@ enum study_resource_type_enum {
 
 enum submission_status_enum {
   Submitted
+  Late
+  Approved
   Graded
   Returned
 }
