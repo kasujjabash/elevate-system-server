@@ -288,10 +288,36 @@ export class AssignmentsService {
     });
     if (!student) throw new NotFoundException('Student record not found');
 
-    const assignment = await this.prisma.assignment.findUnique({
+    let assignment = await this.prisma.assignment.findUnique({
       where: { id: assignmentId },
     });
-    if (!assignment) throw new NotFoundException('Assignment not found');
+
+    if (!assignment) {
+      // Course player submits with module_content.id — resolve it to a real assignment
+      const content = await this.prisma.module_content.findUnique({
+        where: { id: assignmentId },
+        include: { module: { select: { courseId: true } } },
+      });
+      if (!content) throw new NotFoundException('Assignment not found');
+
+      const existing = await this.prisma.assignment.findFirst({
+        where: {
+          courseId: content.module.courseId,
+          title: content.title,
+          isCoursePlayer: true,
+        },
+      });
+      assignment =
+        existing ??
+        (await this.prisma.assignment.create({
+          data: {
+            courseId: content.module.courseId,
+            title: content.title,
+            description: content.body || '',
+            isCoursePlayer: true,
+          },
+        }));
+    }
 
     // Course-player assignments are always open; regular assignments enforce the due date
     if (

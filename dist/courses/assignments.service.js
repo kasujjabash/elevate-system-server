@@ -258,11 +258,34 @@ let AssignmentsService = class AssignmentsService {
     });
     if (!student)
       throw new common_1.NotFoundException('Student record not found');
-    const assignment = await this.prisma.assignment.findUnique({
+    let assignment = await this.prisma.assignment.findUnique({
       where: { id: assignmentId },
     });
-    if (!assignment)
-      throw new common_1.NotFoundException('Assignment not found');
+    if (!assignment) {
+      const content = await this.prisma.module_content.findUnique({
+        where: { id: assignmentId },
+        include: { module: { select: { courseId: true } } },
+      });
+      if (!content)
+        throw new common_1.NotFoundException('Assignment not found');
+      const existing = await this.prisma.assignment.findFirst({
+        where: {
+          courseId: content.module.courseId,
+          title: content.title,
+          isCoursePlayer: true,
+        },
+      });
+      assignment =
+        existing ??
+        (await this.prisma.assignment.create({
+          data: {
+            courseId: content.module.courseId,
+            title: content.title,
+            description: content.body || '',
+            isCoursePlayer: true,
+          },
+        }));
+    }
     if (
       !assignment.isCoursePlayer &&
       assignment.dueDate &&
