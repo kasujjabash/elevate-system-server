@@ -275,12 +275,19 @@ export class UsersService {
         where: { contactId },
       });
       if (!studentRecord) {
-        const count = await this.prisma.student.count();
+        const lastStudent = await this.prisma.student.findFirst({
+          orderBy: { studentId: 'desc' },
+          select: { studentId: true },
+        });
+        const lastNum = lastStudent
+          ? parseInt(lastStudent.studentId.replace('EA', ''), 10)
+          : 0;
+        const studentId = `EA${String(lastNum + 1).padStart(6, '0')}`;
         studentRecord = await this.prisma.student.create({
           data: {
             contactId,
             hubId: data.hubId,
-            studentId: `EA${String(count + 1).padStart(6, '0')}`,
+            studentId,
             status: 'Active',
           },
         });
@@ -297,8 +304,10 @@ export class UsersService {
             .create({
               data: { studentId: studentDbId, courseId, status: 'Enrolled' },
             })
-            .catch(() => {
-              /* skip duplicate */
+            .catch((err) => {
+              Logger.warn(
+                `Enrollment skipped for student ${studentDbId} course ${courseId}: ${err?.message}`,
+              );
             });
         }
       } else if (isTrainer) {
