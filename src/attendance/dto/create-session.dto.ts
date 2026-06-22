@@ -1,11 +1,5 @@
-import {
-  IsString,
-  IsOptional,
-  IsInt,
-  Min,
-  IsDateString,
-} from 'class-validator';
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsString, IsOptional, IsInt, Min } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateSessionDto {
   @ApiPropertyOptional({
@@ -21,11 +15,12 @@ export class CreateSessionDto {
   @IsOptional()
   courseId?: number;
 
-  @ApiPropertyOptional({ description: 'Hub ID to associate with session' })
+  @ApiProperty({
+    description: 'Hub ID — required for every attendance session',
+  })
   @IsInt()
   @Min(1)
-  @IsOptional()
-  hubId?: number;
+  hubId: number;
 
   @ApiPropertyOptional({
     description: 'Minutes until token expires (default: 30)',
