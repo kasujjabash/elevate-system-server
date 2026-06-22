@@ -59,7 +59,11 @@ export class AttendanceService {
         include: {
           course: { select: { id: true, title: true } },
           hub: { select: { id: true, name: true } },
-          _count: { select: { records: true } },
+          _count: {
+            select: {
+              records: { where: { method: { not: 'Absent' } } },
+            },
+          },
         },
       }),
       this.prisma.attendance_session.count(),
@@ -269,7 +273,11 @@ export class AttendanceService {
       include: {
         course: { select: { id: true, title: true } },
         hub: { select: { id: true, name: true } },
-        _count: { select: { records: true } },
+        _count: {
+          select: {
+            records: { where: { method: { not: 'Absent' } } },
+          },
+        },
       },
     });
 

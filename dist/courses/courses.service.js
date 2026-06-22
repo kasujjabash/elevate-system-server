@@ -731,12 +731,17 @@ let CoursesService = class CoursesService {
       this.prisma.timetable_session.count({
         where: { courseId, dayOfWeek: todayDow },
       }),
-      this.prisma.attendance_record.count({
-        where: {
-          session: { courseId },
-          checkedInAt: { gte: startOfToday, lt: startOfTomorrow },
-        },
-      }),
+      this.prisma.attendance_record
+        .findMany({
+          where: {
+            session: { courseId },
+            checkedInAt: { gte: startOfToday, lt: startOfTomorrow },
+            method: { not: 'Absent' },
+          },
+          select: { studentId: true },
+          distinct: ['studentId'],
+        })
+        .then((r) => r.length),
       this.prisma.submission.findMany({
         where: { assignment: { courseId }, status: 'Submitted' },
         select: { id: true },
@@ -833,12 +838,17 @@ let CoursesService = class CoursesService {
       this.prisma.timetable_session.count({
         where: { courseId: { in: courseIds }, dayOfWeek: todayDow },
       }),
-      this.prisma.attendance_record.count({
-        where: {
-          session: { courseId: { in: courseIds } },
-          checkedInAt: { gte: startOfToday, lt: startOfTomorrow },
-        },
-      }),
+      this.prisma.attendance_record
+        .findMany({
+          where: {
+            session: { courseId: { in: courseIds } },
+            checkedInAt: { gte: startOfToday, lt: startOfTomorrow },
+            method: { not: 'Absent' },
+          },
+          select: { studentId: true },
+          distinct: ['studentId'],
+        })
+        .then((r) => r.length),
       this.prisma.submission.count({
         where: {
           assignment: { courseId: { in: courseIds } },

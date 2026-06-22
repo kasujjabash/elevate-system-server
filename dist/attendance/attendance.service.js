@@ -75,7 +75,11 @@ let AttendanceService = class AttendanceService {
         include: {
           course: { select: { id: true, title: true } },
           hub: { select: { id: true, name: true } },
-          _count: { select: { records: true } },
+          _count: {
+            select: {
+              records: { where: { method: { not: 'Absent' } } },
+            },
+          },
         },
       }),
       this.prisma.attendance_session.count(),
@@ -89,6 +93,7 @@ let AttendanceService = class AttendanceService {
         course: { select: { id: true, title: true } },
         hub: { select: { id: true, name: true } },
         records: {
+          where: { method: { not: 'Absent' } },
           orderBy: { checkedInAt: 'asc' },
           include: {
             student: {
@@ -271,7 +276,11 @@ let AttendanceService = class AttendanceService {
       include: {
         course: { select: { id: true, title: true } },
         hub: { select: { id: true, name: true } },
-        _count: { select: { records: true } },
+        _count: {
+          select: {
+            records: { where: { method: { not: 'Absent' } } },
+          },
+        },
       },
     });
     if (!session) throw new common_1.NotFoundException('Invalid QR code');

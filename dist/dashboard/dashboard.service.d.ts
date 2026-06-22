@@ -10,6 +10,7 @@ export declare class DashboardService {
     totalCourses: number;
     activeEnrollments: number;
     todayAttendance: number;
+    activeStudents: number;
   }>;
   getHubStats(): Promise<
     {

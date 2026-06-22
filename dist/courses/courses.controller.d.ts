@@ -28,13 +28,13 @@ export declare class CoursesController {
         contact: {
           person: {
             id: number;
+            contactId: number;
             firstName: string;
             lastName: string;
             middleName: string;
             gender: import('.prisma/client').$Enums.person_gender_enum;
             avatar: string;
             dateOfBirth: Date;
-            contactId: number;
           };
         } & {
           id: number;
@@ -42,30 +42,30 @@ export declare class CoursesController {
         };
       } & {
         id: number;
-        contactId: number;
         isActive: boolean;
         hubId: number;
-        employeeId: string;
-        specialization: string;
         createdAt: Date;
         updatedAt: Date;
+        employeeId: string;
+        contactId: number;
+        specialization: string;
       };
       _count: {
         enrollments: number;
       };
     } & {
-      id: number;
       title: string;
       description: string;
-      isActive: boolean;
-      hubId: number;
-      createdAt: Date;
-      updatedAt: Date;
+      maxStudents: number;
       duration: string;
       isEnrollable: boolean;
-      maxStudents: number;
       instructorId: number;
+      id: number;
+      isActive: boolean;
+      hubId: number;
       skillCategoryId: string;
+      createdAt: Date;
+      updatedAt: Date;
     }
   >;
   findAll(
@@ -94,13 +94,13 @@ export declare class CoursesController {
         contact: {
           person: {
             id: number;
+            contactId: number;
             firstName: string;
             lastName: string;
             middleName: string;
             gender: import('.prisma/client').$Enums.person_gender_enum;
             avatar: string;
             dateOfBirth: Date;
-            contactId: number;
           };
         } & {
           id: number;
@@ -108,30 +108,30 @@ export declare class CoursesController {
         };
       } & {
         id: number;
-        contactId: number;
         isActive: boolean;
         hubId: number;
-        employeeId: string;
-        specialization: string;
         createdAt: Date;
         updatedAt: Date;
+        employeeId: string;
+        contactId: number;
+        specialization: string;
       };
       _count: {
         enrollments: number;
       };
     } & {
-      id: number;
       title: string;
       description: string;
-      isActive: boolean;
-      hubId: number;
-      createdAt: Date;
-      updatedAt: Date;
+      maxStudents: number;
       duration: string;
       isEnrollable: boolean;
-      maxStudents: number;
       instructorId: number;
+      id: number;
+      isActive: boolean;
+      hubId: number;
       skillCategoryId: string;
+      createdAt: Date;
+      updatedAt: Date;
     }
   >;
   update(
@@ -143,13 +143,13 @@ export declare class CoursesController {
         contact: {
           person: {
             id: number;
+            contactId: number;
             firstName: string;
             lastName: string;
             middleName: string;
             gender: import('.prisma/client').$Enums.person_gender_enum;
             avatar: string;
             dateOfBirth: Date;
-            contactId: number;
           };
         } & {
           id: number;
@@ -157,30 +157,30 @@ export declare class CoursesController {
         };
       } & {
         id: number;
-        contactId: number;
         isActive: boolean;
         hubId: number;
-        employeeId: string;
-        specialization: string;
         createdAt: Date;
         updatedAt: Date;
+        employeeId: string;
+        contactId: number;
+        specialization: string;
       };
       _count: {
         enrollments: number;
       };
     } & {
-      id: number;
       title: string;
       description: string;
-      isActive: boolean;
-      hubId: number;
-      createdAt: Date;
-      updatedAt: Date;
+      maxStudents: number;
       duration: string;
       isEnrollable: boolean;
-      maxStudents: number;
       instructorId: number;
+      id: number;
+      isActive: boolean;
+      hubId: number;
       skillCategoryId: string;
+      createdAt: Date;
+      updatedAt: Date;
     }
   >;
   getEnrollments(
@@ -215,13 +215,13 @@ export declare class CoursesController {
         contact: {
           person: {
             id: number;
+            contactId: number;
             firstName: string;
             lastName: string;
             middleName: string;
             gender: import('.prisma/client').$Enums.person_gender_enum;
             avatar: string;
             dateOfBirth: Date;
-            contactId: number;
           };
           email: any;
           phone: any;
@@ -234,8 +234,8 @@ export declare class CoursesController {
     body: any,
   ): Promise<{
     id: number;
-    status: import('.prisma/client').$Enums.enrollment_status_enum;
     studentId: number;
+    status: import('.prisma/client').$Enums.enrollment_status_enum;
     enrolledAt: Date;
     courseId: number;
     completedAt: Date;
@@ -250,8 +250,8 @@ export declare class CoursesController {
     },
   ): Promise<{
     id: number;
-    status: import('.prisma/client').$Enums.enrollment_status_enum;
     studentId: number;
+    status: import('.prisma/client').$Enums.enrollment_status_enum;
     enrolledAt: Date;
     courseId: number;
     completedAt: Date;
@@ -266,8 +266,8 @@ export declare class CoursesController {
     },
   ): Promise<{
     id: number;
-    status: import('.prisma/client').$Enums.enrollment_status_enum;
     studentId: number;
+    status: import('.prisma/client').$Enums.enrollment_status_enum;
     enrolledAt: Date;
     courseId: number;
     completedAt: Date;
@@ -285,8 +285,8 @@ export declare class CoursesController {
   >;
   approveEnrollment(id: number): Promise<{
     id: number;
-    status: import('.prisma/client').$Enums.enrollment_status_enum;
     studentId: number;
+    status: import('.prisma/client').$Enums.enrollment_status_enum;
     enrolledAt: Date;
     courseId: number;
     completedAt: Date;
@@ -294,8 +294,8 @@ export declare class CoursesController {
   }>;
   rejectEnrollment(id: number): Promise<{
     id: number;
-    status: import('.prisma/client').$Enums.enrollment_status_enum;
     studentId: number;
+    status: import('.prisma/client').$Enums.enrollment_status_enum;
     enrolledAt: Date;
     courseId: number;
     completedAt: Date;
@@ -387,9 +387,9 @@ export declare class CoursesController {
     moduleId: number,
     dto: any,
   ): Promise<{
-    id: number;
     title: string;
     description: string;
+    id: number;
     createdAt: Date;
     updatedAt: Date;
     courseId: number;
@@ -401,12 +401,12 @@ export declare class CoursesController {
     moduleId: number,
     dto: any,
   ): Promise<{
-    id: number;
-    type: import('.prisma/client').$Enums.module_content_type_enum;
     title: string;
+    id: number;
     createdAt: Date;
     updatedAt: Date;
     order: number;
+    type: import('.prisma/client').$Enums.module_content_type_enum;
     isPublished: boolean;
     body: string;
     videoUrl: string;
@@ -417,12 +417,12 @@ export declare class CoursesController {
     contentId: number,
     dto: any,
   ): Promise<{
-    id: number;
-    type: import('.prisma/client').$Enums.module_content_type_enum;
     title: string;
+    id: number;
     createdAt: Date;
     updatedAt: Date;
     order: number;
+    type: import('.prisma/client').$Enums.module_content_type_enum;
     isPublished: boolean;
     body: string;
     videoUrl: string;
@@ -430,12 +430,12 @@ export declare class CoursesController {
     moduleId: number;
   }>;
   deleteContent(contentId: number): Promise<{
-    id: number;
-    type: import('.prisma/client').$Enums.module_content_type_enum;
     title: string;
+    id: number;
     createdAt: Date;
     updatedAt: Date;
     order: number;
+    type: import('.prisma/client').$Enums.module_content_type_enum;
     isPublished: boolean;
     body: string;
     videoUrl: string;
@@ -478,9 +478,9 @@ export declare class CoursesController {
     id: number,
     dto: any,
   ): Promise<{
-    id: number;
     title: string;
     description: string;
+    id: number;
     createdAt: Date;
     updatedAt: Date;
     courseId: number;
@@ -490,32 +490,32 @@ export declare class CoursesController {
   }>;
   getCourseResources(id: number): Promise<
     {
-      isPublic: boolean;
-      id: number;
-      type: import('.prisma/client').$Enums.study_resource_type_enum;
       title: string;
-      url: string;
       description: string;
+      id: number;
       createdAt: Date;
       updatedAt: Date;
       courseId: number;
       filePath: string;
+      type: import('.prisma/client').$Enums.study_resource_type_enum;
+      url: string;
+      isPublic: boolean;
     }[]
   >;
   addCourseResource(
     id: number,
     dto: any,
   ): Promise<{
-    isPublic: boolean;
-    id: number;
-    type: import('.prisma/client').$Enums.study_resource_type_enum;
     title: string;
-    url: string;
     description: string;
+    id: number;
     createdAt: Date;
     updatedAt: Date;
     courseId: number;
     filePath: string;
+    type: import('.prisma/client').$Enums.study_resource_type_enum;
+    url: string;
+    isPublic: boolean;
   }>;
   removeCourseResource(
     id: number,
@@ -539,51 +539,51 @@ export declare class CoursesController {
       instructorId: number;
     },
   ): Promise<{
-    id: number;
     title: string;
     description: string;
-    isActive: boolean;
-    hubId: number;
-    createdAt: Date;
-    updatedAt: Date;
+    maxStudents: number;
     duration: string;
     isEnrollable: boolean;
-    maxStudents: number;
     instructorId: number;
+    id: number;
+    isActive: boolean;
+    hubId: number;
     skillCategoryId: string;
+    createdAt: Date;
+    updatedAt: Date;
   }>;
   findOne(id: number): Promise<{
     name: string;
     enrolledCount: number;
     hub: {
-      address: string;
-      id: number;
-      name: string;
       description: string;
+      id: number;
       isActive: boolean;
-      location: string;
       createdAt: Date;
       updatedAt: Date;
+      name: string;
+      address: string;
+      capacity: number;
       code: string;
+      location: string;
       managerName: string;
       managerPhone: string;
       managerEmail: string;
       computers: number;
       projectors: number;
-      capacity: number;
       notes: string;
     };
     instructor: {
       contact: {
         person: {
           id: number;
+          contactId: number;
           firstName: string;
           lastName: string;
           middleName: string;
           gender: import('.prisma/client').$Enums.person_gender_enum;
           avatar: string;
           dateOfBirth: Date;
-          contactId: number;
         };
       } & {
         id: number;
@@ -591,26 +591,26 @@ export declare class CoursesController {
       };
     } & {
       id: number;
-      contactId: number;
       isActive: boolean;
       hubId: number;
-      employeeId: string;
-      specialization: string;
       createdAt: Date;
       updatedAt: Date;
+      employeeId: string;
+      contactId: number;
+      specialization: string;
     };
     enrollments: ({
       student: {
         contact: {
           person: {
             id: number;
+            contactId: number;
             firstName: string;
             lastName: string;
             middleName: string;
             gender: import('.prisma/client').$Enums.person_gender_enum;
             avatar: string;
             dateOfBirth: Date;
-            contactId: number;
           };
         } & {
           id: number;
@@ -618,57 +618,57 @@ export declare class CoursesController {
         };
       } & {
         id: number;
-        contactId: number;
-        status: import('.prisma/client').$Enums.student_status_enum;
         hubId: number;
         createdAt: Date;
         updatedAt: Date;
+        contactId: number;
         studentId: string;
+        status: import('.prisma/client').$Enums.student_status_enum;
         enrolledAt: Date;
       };
     } & {
       id: number;
-      status: import('.prisma/client').$Enums.enrollment_status_enum;
       studentId: number;
+      status: import('.prisma/client').$Enums.enrollment_status_enum;
       enrolledAt: Date;
       courseId: number;
       completedAt: Date;
       progress: number;
     })[];
     study_resources: {
-      isPublic: boolean;
-      id: number;
-      type: import('.prisma/client').$Enums.study_resource_type_enum;
       title: string;
-      url: string;
       description: string;
+      id: number;
       createdAt: Date;
       updatedAt: Date;
       courseId: number;
       filePath: string;
+      type: import('.prisma/client').$Enums.study_resource_type_enum;
+      url: string;
+      isPublic: boolean;
     }[];
     assignments: {
-      id: number;
       title: string;
       description: string;
+      id: number;
       isActive: boolean;
       createdAt: Date;
       updatedAt: Date;
       courseId: number;
-      weekNumber: number;
       dueDate: Date;
       maxScore: number;
+      weekNumber: number;
       isMilestone: boolean;
       isCoursePlayer: boolean;
     }[];
     modules: ({
       contents: {
-        id: number;
-        type: import('.prisma/client').$Enums.module_content_type_enum;
         title: string;
+        id: number;
         createdAt: Date;
         updatedAt: Date;
         order: number;
+        type: import('.prisma/client').$Enums.module_content_type_enum;
         isPublished: boolean;
         body: string;
         videoUrl: string;
@@ -676,9 +676,9 @@ export declare class CoursesController {
         moduleId: number;
       }[];
     } & {
-      id: number;
       title: string;
       description: string;
+      id: number;
       createdAt: Date;
       updatedAt: Date;
       courseId: number;
@@ -686,17 +686,17 @@ export declare class CoursesController {
       order: number;
       isPublished: boolean;
     })[];
-    id: number;
     title: string;
     description: string;
-    isActive: boolean;
-    hubId: number;
-    createdAt: Date;
-    updatedAt: Date;
+    maxStudents: number;
     duration: string;
     isEnrollable: boolean;
-    maxStudents: number;
     instructorId: number;
+    id: number;
+    isActive: boolean;
+    hubId: number;
     skillCategoryId: string;
+    createdAt: Date;
+    updatedAt: Date;
   }>;
 }

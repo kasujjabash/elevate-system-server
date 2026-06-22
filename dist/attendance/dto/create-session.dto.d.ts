@@ -1,6 +1,6 @@
 export declare class CreateSessionDto {
   label?: string;
   courseId?: number;
-  hubId?: number;
+  hubId: number;
   durationMinutes?: number;
 }

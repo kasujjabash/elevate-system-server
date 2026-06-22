@@ -34,7 +34,7 @@ class CreateSessionDto {
     return {
       label: { required: false, type: () => String },
       courseId: { required: false, type: () => Number, minimum: 1 },
-      hubId: { required: false, type: () => Number, minimum: 1 },
+      hubId: { required: true, type: () => Number, minimum: 1 },
       durationMinutes: { required: false, type: () => Number, minimum: 1 },
     };
   }
@@ -69,12 +69,11 @@ __decorate(
 );
 __decorate(
   [
-    (0, swagger_1.ApiPropertyOptional)({
-      description: 'Hub ID to associate with session',
+    (0, swagger_1.ApiProperty)({
+      description: 'Hub ID — required for every attendance session',
     }),
     (0, class_validator_1.IsInt)(),
     (0, class_validator_1.Min)(1),
-    (0, class_validator_1.IsOptional)(),
     __metadata('design:type', Number),
   ],
   CreateSessionDto.prototype,

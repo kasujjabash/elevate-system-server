@@ -40,12 +40,16 @@ export class DashboardService {
       }),
       this.prisma.course.count({ where: { isActive: true } }),
       this.prisma.enrollment.count({ where: { status: 'Enrolled' } }),
-      this.prisma.attendance_record.count({
-        where: {
-          checkedInAt: { gte: startOfToday, lt: startOfTomorrow },
-          method: { not: 'Absent' },
-        },
-      }),
+      this.prisma.attendance_record
+        .findMany({
+          where: {
+            checkedInAt: { gte: startOfToday, lt: startOfTomorrow },
+            method: { not: 'Absent' },
+          },
+          select: { studentId: true },
+          distinct: ['studentId'],
+        })
+        .then((r) => r.length),
       this.prisma.timetable_session.count({ where: { dayOfWeek: todayDow } }),
       this.prisma.attendance_record.groupBy({
         by: ['studentId'],
@@ -363,13 +367,17 @@ export class DashboardService {
       this.prisma.timetable_session.count({
         where: { hubId, dayOfWeek: todayDow },
       }),
-      this.prisma.attendance_record.count({
-        where: {
-          session: { hubId },
-          checkedInAt: { gte: startOfToday, lt: startOfTomorrow },
-          method: { not: 'Absent' },
-        },
-      }),
+      this.prisma.attendance_record
+        .findMany({
+          where: {
+            session: { hubId },
+            checkedInAt: { gte: startOfToday, lt: startOfTomorrow },
+            method: { not: 'Absent' },
+          },
+          select: { studentId: true },
+          distinct: ['studentId'],
+        })
+        .then((r) => r.length),
       this.prisma.student.findMany({
         where: { hubId },
         include: {
