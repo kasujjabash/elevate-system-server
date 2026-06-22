@@ -75,6 +75,7 @@ export class AttendanceService {
         course: { select: { id: true, title: true } },
         hub: { select: { id: true, name: true } },
         records: {
+          where: { method: { not: 'Absent' } },
           orderBy: { checkedInAt: 'asc' },
           include: {
             student: {

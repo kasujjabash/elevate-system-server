@@ -23,6 +23,8 @@ export class DashboardService {
     );
     const todayDow = now.getDay();
 
+    const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+
     const [
       totalStudents,
       newThisWeek,
@@ -30,6 +32,7 @@ export class DashboardService {
       activeEnrollments,
       todayAttendance,
       todayClasses,
+      activeStudentGroups,
     ] = await Promise.all([
       this.prisma.student.count(),
       this.prisma.student.count({
@@ -38,9 +41,21 @@ export class DashboardService {
       this.prisma.course.count({ where: { isActive: true } }),
       this.prisma.enrollment.count({ where: { status: 'Enrolled' } }),
       this.prisma.attendance_record.count({
-        where: { checkedInAt: { gte: startOfToday, lt: startOfTomorrow } },
+        where: {
+          checkedInAt: { gte: startOfToday, lt: startOfTomorrow },
+          method: { not: 'Absent' },
+        },
       }),
       this.prisma.timetable_session.count({ where: { dayOfWeek: todayDow } }),
+      this.prisma.attendance_record.groupBy({
+        by: ['studentId'],
+        where: {
+          checkedInAt: { gte: fourteenDaysAgo },
+          method: { not: 'Absent' },
+        },
+        _count: { studentId: true },
+        having: { studentId: { _count: { gte: 2 } } },
+      }),
     ]);
 
     return {
@@ -51,6 +66,7 @@ export class DashboardService {
       totalCourses,
       activeEnrollments,
       todayAttendance,
+      activeStudents: activeStudentGroups.length,
     };
   }
 
@@ -73,7 +89,10 @@ export class DashboardService {
         _count: { id: true },
       }),
       this.prisma.attendance_record.findMany({
-        where: { checkedInAt: { gte: startOfToday, lt: startOfTomorrow } },
+        where: {
+          checkedInAt: { gte: startOfToday, lt: startOfTomorrow },
+          method: { not: 'Absent' },
+        },
         include: { session: { select: { hubId: true } } },
         distinct: ['studentId'],
       }),
@@ -305,11 +324,17 @@ export class DashboardService {
       now.getDate(),
     );
     const startOfTomorrow = new Date(startOfToday.getTime() + 86400000);
+    const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+
+    // Fetch hub student IDs for the attendance-based active count
+    const hubStudentIds = await this.prisma.student
+      .findMany({ where: { hubId }, select: { id: true } })
+      .then((rows) => rows.map((r) => r.id));
 
     const [
       hub,
       totalStudents,
-      activeStudents,
+      activeStudentGroups,
       totalCourses,
       classesToday,
       todayAttendance,
@@ -318,7 +343,16 @@ export class DashboardService {
     ] = await Promise.all([
       this.prisma.hub.findUnique({ where: { id: hubId } }),
       this.prisma.student.count({ where: { hubId } }),
-      this.prisma.student.count({ where: { hubId, status: 'Active' } }),
+      this.prisma.attendance_record.groupBy({
+        by: ['studentId'],
+        where: {
+          studentId: { in: hubStudentIds },
+          checkedInAt: { gte: fourteenDaysAgo },
+          method: { not: 'Absent' },
+        },
+        _count: { studentId: true },
+        having: { studentId: { _count: { gte: 2 } } },
+      }),
       this.prisma.enrollment
         .findMany({
           where: { student: { hubId }, status: { not: 'Dropped' } },
@@ -333,6 +367,7 @@ export class DashboardService {
         where: {
           session: { hubId },
           checkedInAt: { gte: startOfToday, lt: startOfTomorrow },
+          method: { not: 'Absent' },
         },
       }),
       this.prisma.student.findMany({
@@ -363,6 +398,7 @@ export class DashboardService {
       : [];
     const courseTitleMap = new Map(courseDetails.map((c) => [c.id, c.title]));
 
+    const activeStudents = activeStudentGroups.length;
     return {
       hubId,
       hubName: hub?.name ?? 'Your Hub',
