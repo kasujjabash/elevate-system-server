@@ -9,28 +9,28 @@ export declare class AttendanceService {
     createdBy: number,
   ): Promise<
     {
-      hub: {
-        id: number;
-        name: string;
-      };
       course: {
         id: number;
         title: string;
+      };
+      hub: {
+        id: number;
+        name: string;
       };
       _count: {
         records: number;
       };
     } & {
       id: number;
-      isActive: boolean;
-      label: string;
-      hubId: number;
-      createdAt: Date;
-      courseId: number;
       token: string;
       shortCode: string;
+      courseId: number;
+      hubId: number;
+      label: string;
       expiresAt: Date;
+      isActive: boolean;
       createdBy: number;
+      createdAt: Date;
     }
   >;
   getSessions(
@@ -38,28 +38,28 @@ export declare class AttendanceService {
     limit?: number,
   ): Promise<{
     sessions: ({
-      hub: {
-        id: number;
-        name: string;
-      };
       course: {
         id: number;
         title: string;
+      };
+      hub: {
+        id: number;
+        name: string;
       };
       _count: {
         records: number;
       };
     } & {
       id: number;
-      isActive: boolean;
-      label: string;
-      hubId: number;
-      createdAt: Date;
-      courseId: number;
       token: string;
       shortCode: string;
+      courseId: number;
+      hubId: number;
+      label: string;
       expiresAt: Date;
+      isActive: boolean;
       createdBy: number;
+      createdAt: Date;
     })[];
     total: number;
     page: number;
@@ -67,56 +67,56 @@ export declare class AttendanceService {
   }>;
   getSession(id: number): Promise<
     {
-      hub: {
-        id: number;
-        name: string;
-      };
-      course: {
-        id: number;
-        title: string;
-      };
       records: ({
         student: {
+          id: number;
+          studentId: string;
           contact: {
             person: {
               firstName: string;
               lastName: string;
             };
           };
-          id: number;
-          studentId: string;
         };
       } & {
         id: number;
-        studentId: number;
         checkedInAt: Date;
         sessionId: number;
+        studentId: number;
         method: string;
       })[];
+      course: {
+        id: number;
+        title: string;
+      };
+      hub: {
+        id: number;
+        name: string;
+      };
     } & {
       id: number;
-      isActive: boolean;
-      label: string;
-      hubId: number;
-      createdAt: Date;
-      courseId: number;
       token: string;
       shortCode: string;
+      courseId: number;
+      hubId: number;
+      label: string;
       expiresAt: Date;
+      isActive: boolean;
       createdBy: number;
+      createdAt: Date;
     }
   >;
   closeSession(id: number): Promise<{
     id: number;
-    isActive: boolean;
-    label: string;
-    hubId: number;
-    createdAt: Date;
-    courseId: number;
     token: string;
     shortCode: string;
+    courseId: number;
+    hubId: number;
+    label: string;
     expiresAt: Date;
+    isActive: boolean;
     createdBy: number;
+    createdAt: Date;
   }>;
   checkIn(
     token: string,
@@ -126,19 +126,19 @@ export declare class AttendanceService {
     message: string;
     record: {
       student: {
+        studentId: string;
         contact: {
           person: {
             firstName: string;
             lastName: string;
           };
         };
-        studentId: string;
       };
     } & {
       id: number;
-      studentId: number;
       checkedInAt: Date;
       sessionId: number;
+      studentId: number;
       method: string;
     };
     session: {
@@ -154,19 +154,19 @@ export declare class AttendanceService {
     message: string;
     record: {
       student: {
+        studentId: string;
         contact: {
           person: {
             firstName: string;
             lastName: string;
           };
         };
-        studentId: string;
       };
     } & {
       id: number;
-      studentId: number;
       checkedInAt: Date;
       sessionId: number;
+      studentId: number;
       method: string;
     };
     session: {
@@ -176,28 +176,28 @@ export declare class AttendanceService {
   }>;
   getSessionByToken(token: string): Promise<
     {
-      hub: {
-        id: number;
-        name: string;
-      };
       course: {
         id: number;
         title: string;
+      };
+      hub: {
+        id: number;
+        name: string;
       };
       _count: {
         records: number;
       };
     } & {
       id: number;
-      isActive: boolean;
-      label: string;
-      hubId: number;
-      createdAt: Date;
-      courseId: number;
       token: string;
       shortCode: string;
+      courseId: number;
+      hubId: number;
+      label: string;
       expiresAt: Date;
+      isActive: boolean;
       createdBy: number;
+      createdAt: Date;
     }
   >;
   addManual(
@@ -205,9 +205,9 @@ export declare class AttendanceService {
     studentDbId: number,
   ): Promise<{
     id: number;
-    studentId: number;
     checkedInAt: Date;
     sessionId: number;
+    studentId: number;
     method: string;
   }>;
   getStudentSummary(
@@ -239,6 +239,9 @@ export declare class AttendanceService {
     presentLastSession: number;
     absentLastSession: number;
     inactive: number;
+    lastSessionDate: string;
+    daysAgo: number;
+    isToday: boolean;
   }>;
   getHubAttendanceStats(): Promise<{
     presentMap: Map<number, number>;

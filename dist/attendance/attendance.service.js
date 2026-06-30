@@ -353,6 +353,12 @@ let AttendanceService = class AttendanceService {
     }));
   }
   async getStats(hubId, courseId) {
+    const now = new Date();
+    const startOfToday = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+    );
     const sessionWhere = {};
     if (hubId) sessionWhere.hubId = hubId;
     if (courseId) sessionWhere.courseId = courseId;
@@ -367,12 +373,31 @@ let AttendanceService = class AttendanceService {
     const lastSession = await this.prisma.attendance_session.findFirst({
       where: { ...sessionWhere, isActive: false },
       orderBy: { createdAt: 'desc' },
+      select: { id: true, createdAt: true },
     });
     const presentLastSession = lastSession
       ? await this.prisma.attendance_record.count({
           where: { sessionId: lastSession.id, method: { not: 'Absent' } },
         })
       : 0;
+    const sessionDate = lastSession?.createdAt
+      ? new Date(lastSession.createdAt)
+      : null;
+    const sessionDayStart = sessionDate
+      ? new Date(
+          sessionDate.getFullYear(),
+          sessionDate.getMonth(),
+          sessionDate.getDate(),
+        )
+      : null;
+    const isToday = sessionDayStart
+      ? sessionDayStart.getTime() === startOfToday.getTime()
+      : false;
+    const daysAgo = sessionDayStart
+      ? Math.round(
+          (startOfToday.getTime() - sessionDayStart.getTime()) / 86400000,
+        )
+      : null;
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - 14);
     const allEnrollments = await this.prisma.enrollment.findMany({
@@ -400,6 +425,9 @@ let AttendanceService = class AttendanceService {
       presentLastSession,
       absentLastSession: Math.max(0, enrolled - presentLastSession),
       inactive,
+      lastSessionDate: lastSession?.createdAt?.toISOString() ?? null,
+      daysAgo,
+      isToday,
     };
   }
   async getHubAttendanceStats() {

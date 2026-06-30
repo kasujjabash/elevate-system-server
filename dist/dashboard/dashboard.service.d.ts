@@ -10,6 +10,12 @@ export declare class DashboardService {
     totalCourses: number;
     activeEnrollments: number;
     todayAttendance: number;
+    attendanceInfo: {
+      presentCount: number;
+      date: string;
+      daysAgo: number;
+      isToday: boolean;
+    };
     activeStudents: number;
   }>;
   getHubStats(): Promise<
@@ -21,6 +27,12 @@ export declare class DashboardService {
       inactive: number;
       presentToday: number;
       absentToday: number;
+      attendanceInfo: {
+        presentCount: number;
+        date: string;
+        daysAgo: number;
+        isToday: boolean;
+      };
     }[]
   >;
   getTopPerformers(
@@ -79,6 +91,12 @@ export declare class DashboardService {
     totalCourses: number;
     classesToday: number;
     todayAttendance: number;
+    attendanceInfo: {
+      presentCount: number;
+      date: string;
+      daysAgo: number;
+      isToday: boolean;
+    };
     courses: {
       id: any;
       name: string;

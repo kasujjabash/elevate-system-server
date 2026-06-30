@@ -371,6 +371,13 @@ export class AttendanceService {
   }
 
   async getStats(hubId?: number, courseId?: number) {
+    const now = new Date();
+    const startOfToday = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+    );
+
     const sessionWhere: any = {};
     if (hubId) sessionWhere.hubId = hubId;
     if (courseId) sessionWhere.courseId = courseId;
@@ -389,6 +396,7 @@ export class AttendanceService {
     const lastSession = await this.prisma.attendance_session.findFirst({
       where: { ...sessionWhere, isActive: false },
       orderBy: { createdAt: 'desc' },
+      select: { id: true, createdAt: true },
     });
 
     const presentLastSession = lastSession
@@ -396,6 +404,26 @@ export class AttendanceService {
           where: { sessionId: lastSession.id, method: { not: 'Absent' } },
         })
       : 0;
+
+    // Compute date context for the last session
+    const sessionDate = lastSession?.createdAt
+      ? new Date(lastSession.createdAt)
+      : null;
+    const sessionDayStart = sessionDate
+      ? new Date(
+          sessionDate.getFullYear(),
+          sessionDate.getMonth(),
+          sessionDate.getDate(),
+        )
+      : null;
+    const isToday = sessionDayStart
+      ? sessionDayStart.getTime() === startOfToday.getTime()
+      : false;
+    const daysAgo = sessionDayStart
+      ? Math.round(
+          (startOfToday.getTime() - sessionDayStart.getTime()) / 86400000,
+        )
+      : null;
 
     // Inactive = enrolled students with no present attendance in last 14 days
     const cutoff = new Date();
@@ -428,6 +456,9 @@ export class AttendanceService {
       presentLastSession,
       absentLastSession: Math.max(0, enrolled - presentLastSession),
       inactive,
+      lastSessionDate: lastSession?.createdAt?.toISOString() ?? null,
+      daysAgo,
+      isToday,
     };
   }
 

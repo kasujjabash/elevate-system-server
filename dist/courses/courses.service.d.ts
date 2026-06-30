@@ -4,6 +4,9 @@ export declare class CoursesService {
   constructor(prisma: PrismaService);
   create(dto: any): Promise<
     {
+      _count: {
+        enrollments: number;
+      };
       instructor: {
         contact: {
           person: {
@@ -22,29 +25,26 @@ export declare class CoursesService {
         };
       } & {
         id: number;
-        isActive: boolean;
         hubId: number;
+        isActive: boolean;
         createdAt: Date;
         updatedAt: Date;
-        employeeId: string;
         contactId: number;
+        employeeId: string;
         specialization: string;
       };
-      _count: {
-        enrollments: number;
-      };
     } & {
+      id: number;
+      hubId: number;
+      isActive: boolean;
+      createdAt: Date;
       title: string;
       description: string;
-      maxStudents: number;
       duration: string;
       isEnrollable: boolean;
+      maxStudents: number;
       instructorId: number;
-      id: number;
-      isActive: boolean;
-      hubId: number;
       skillCategoryId: string;
-      createdAt: Date;
       updatedAt: Date;
     }
   >;
@@ -53,6 +53,9 @@ export declare class CoursesService {
     dto: any,
   ): Promise<
     {
+      _count: {
+        enrollments: number;
+      };
       instructor: {
         contact: {
           person: {
@@ -71,29 +74,26 @@ export declare class CoursesService {
         };
       } & {
         id: number;
-        isActive: boolean;
         hubId: number;
+        isActive: boolean;
         createdAt: Date;
         updatedAt: Date;
-        employeeId: string;
         contactId: number;
+        employeeId: string;
         specialization: string;
       };
-      _count: {
-        enrollments: number;
-      };
     } & {
+      id: number;
+      hubId: number;
+      isActive: boolean;
+      createdAt: Date;
       title: string;
       description: string;
-      maxStudents: number;
       duration: string;
       isEnrollable: boolean;
+      maxStudents: number;
       instructorId: number;
-      id: number;
-      isActive: boolean;
-      hubId: number;
       skillCategoryId: string;
-      createdAt: Date;
       updatedAt: Date;
     }
   >;
@@ -108,21 +108,24 @@ export declare class CoursesService {
     courseId: number,
     instructorId: number,
   ): Promise<{
+    id: number;
+    hubId: number;
+    isActive: boolean;
+    createdAt: Date;
     title: string;
     description: string;
-    maxStudents: number;
     duration: string;
     isEnrollable: boolean;
+    maxStudents: number;
     instructorId: number;
-    id: number;
-    isActive: boolean;
-    hubId: number;
     skillCategoryId: string;
-    createdAt: Date;
     updatedAt: Date;
   }>;
   findAll(): Promise<
     ({
+      _count: {
+        enrollments: number;
+      };
       instructor: {
         contact: {
           person: {
@@ -141,29 +144,26 @@ export declare class CoursesService {
         };
       } & {
         id: number;
-        isActive: boolean;
         hubId: number;
+        isActive: boolean;
         createdAt: Date;
         updatedAt: Date;
-        employeeId: string;
         contactId: number;
+        employeeId: string;
         specialization: string;
       };
-      _count: {
-        enrollments: number;
-      };
     } & {
+      id: number;
+      hubId: number;
+      isActive: boolean;
+      createdAt: Date;
       title: string;
       description: string;
-      maxStudents: number;
       duration: string;
       isEnrollable: boolean;
+      maxStudents: number;
       instructorId: number;
-      id: number;
-      isActive: boolean;
-      hubId: number;
       skillCategoryId: string;
-      createdAt: Date;
       updatedAt: Date;
     })[]
   >;
@@ -247,10 +247,10 @@ export declare class CoursesService {
     hubId?: string;
   }): Promise<{
     id: number;
+    courseId: number;
     studentId: number;
     status: import('.prisma/client').$Enums.enrollment_status_enum;
     enrolledAt: Date;
-    courseId: number;
     completedAt: Date;
     progress: number;
   }>;
@@ -262,10 +262,10 @@ export declare class CoursesService {
     },
   ): Promise<{
     id: number;
+    courseId: number;
     studentId: number;
     status: import('.prisma/client').$Enums.enrollment_status_enum;
     enrolledAt: Date;
-    courseId: number;
     completedAt: Date;
     progress: number;
   }>;
@@ -281,19 +281,19 @@ export declare class CoursesService {
   >;
   approveEnrollment(enrollmentId: number): Promise<{
     id: number;
+    courseId: number;
     studentId: number;
     status: import('.prisma/client').$Enums.enrollment_status_enum;
     enrolledAt: Date;
-    courseId: number;
     completedAt: Date;
     progress: number;
   }>;
   rejectEnrollment(enrollmentId: number): Promise<{
     id: number;
+    courseId: number;
     studentId: number;
     status: import('.prisma/client').$Enums.enrollment_status_enum;
     enrolledAt: Date;
-    courseId: number;
     completedAt: Date;
     progress: number;
   }>;
@@ -311,21 +311,21 @@ export declare class CoursesService {
     name: string;
     enrolledCount: number;
     hub: {
-      description: string;
       id: number;
       isActive: boolean;
       createdAt: Date;
+      description: string;
       updatedAt: Date;
       name: string;
-      address: string;
-      capacity: number;
       code: string;
       location: string;
+      address: string;
       managerName: string;
       managerPhone: string;
       managerEmail: string;
       computers: number;
       projectors: number;
+      capacity: number;
       notes: string;
     };
     instructor: {
@@ -346,12 +346,12 @@ export declare class CoursesService {
       };
     } & {
       id: number;
-      isActive: boolean;
       hubId: number;
+      isActive: boolean;
       createdAt: Date;
       updatedAt: Date;
-      employeeId: string;
       contactId: number;
+      employeeId: string;
       specialization: string;
     };
     enrollments: ({
@@ -376,40 +376,40 @@ export declare class CoursesService {
         hubId: number;
         createdAt: Date;
         updatedAt: Date;
-        contactId: number;
         studentId: string;
+        contactId: number;
         status: import('.prisma/client').$Enums.student_status_enum;
         enrolledAt: Date;
       };
     } & {
       id: number;
+      courseId: number;
       studentId: number;
       status: import('.prisma/client').$Enums.enrollment_status_enum;
       enrolledAt: Date;
-      courseId: number;
       completedAt: Date;
       progress: number;
     })[];
     study_resources: {
+      id: number;
+      courseId: number;
+      createdAt: Date;
       title: string;
       description: string;
-      id: number;
-      createdAt: Date;
       updatedAt: Date;
-      courseId: number;
-      filePath: string;
       type: import('.prisma/client').$Enums.study_resource_type_enum;
       url: string;
+      filePath: string;
       isPublic: boolean;
     }[];
     assignments: {
-      title: string;
-      description: string;
       id: number;
+      courseId: number;
       isActive: boolean;
       createdAt: Date;
+      title: string;
+      description: string;
       updatedAt: Date;
-      courseId: number;
       dueDate: Date;
       maxScore: number;
       weekNumber: number;
@@ -418,12 +418,12 @@ export declare class CoursesService {
     }[];
     modules: ({
       contents: {
-        title: string;
         id: number;
         createdAt: Date;
+        title: string;
         updatedAt: Date;
-        order: number;
         type: import('.prisma/client').$Enums.module_content_type_enum;
+        order: number;
         isPublished: boolean;
         body: string;
         videoUrl: string;
@@ -431,27 +431,27 @@ export declare class CoursesService {
         moduleId: number;
       }[];
     } & {
+      id: number;
+      courseId: number;
+      createdAt: Date;
       title: string;
       description: string;
-      id: number;
-      createdAt: Date;
       updatedAt: Date;
-      courseId: number;
       weekNumber: number;
       order: number;
       isPublished: boolean;
     })[];
+    id: number;
+    hubId: number;
+    isActive: boolean;
+    createdAt: Date;
     title: string;
     description: string;
-    maxStudents: number;
     duration: string;
     isEnrollable: boolean;
+    maxStudents: number;
     instructorId: number;
-    id: number;
-    isActive: boolean;
-    hubId: number;
     skillCategoryId: string;
-    createdAt: Date;
     updatedAt: Date;
   }>;
   getStudentCourses(studentId: number): Promise<
@@ -554,12 +554,12 @@ export declare class CoursesService {
     courseId: number,
     dto: any,
   ): Promise<{
+    id: number;
+    courseId: number;
+    createdAt: Date;
     title: string;
     description: string;
-    id: number;
-    createdAt: Date;
     updatedAt: Date;
-    courseId: number;
     weekNumber: number;
     order: number;
     isPublished: boolean;
@@ -571,12 +571,12 @@ export declare class CoursesService {
       description?: string;
     },
   ): Promise<{
+    id: number;
+    courseId: number;
+    createdAt: Date;
     title: string;
     description: string;
-    id: number;
-    createdAt: Date;
     updatedAt: Date;
-    courseId: number;
     weekNumber: number;
     order: number;
     isPublished: boolean;
@@ -585,12 +585,12 @@ export declare class CoursesService {
     moduleId: number,
     dto: any,
   ): Promise<{
-    title: string;
     id: number;
     createdAt: Date;
+    title: string;
     updatedAt: Date;
-    order: number;
     type: import('.prisma/client').$Enums.module_content_type_enum;
+    order: number;
     isPublished: boolean;
     body: string;
     videoUrl: string;
@@ -601,12 +601,12 @@ export declare class CoursesService {
     contentId: number,
     dto: any,
   ): Promise<{
-    title: string;
     id: number;
     createdAt: Date;
+    title: string;
     updatedAt: Date;
-    order: number;
     type: import('.prisma/client').$Enums.module_content_type_enum;
+    order: number;
     isPublished: boolean;
     body: string;
     videoUrl: string;
@@ -614,12 +614,12 @@ export declare class CoursesService {
     moduleId: number;
   }>;
   deleteContent(contentId: number): Promise<{
-    title: string;
     id: number;
     createdAt: Date;
+    title: string;
     updatedAt: Date;
-    order: number;
     type: import('.prisma/client').$Enums.module_content_type_enum;
+    order: number;
     isPublished: boolean;
     body: string;
     videoUrl: string;
@@ -646,40 +646,40 @@ export declare class CoursesService {
         };
       } & {
         id: number;
-        isActive: boolean;
         hubId: number;
+        isActive: boolean;
         createdAt: Date;
         updatedAt: Date;
-        employeeId: string;
         contactId: number;
+        employeeId: string;
         specialization: string;
       };
     } & {
+      id: number;
+      hubId: number;
+      isActive: boolean;
+      createdAt: Date;
       title: string;
       description: string;
-      maxStudents: number;
       duration: string;
       isEnrollable: boolean;
+      maxStudents: number;
       instructorId: number;
-      id: number;
-      isActive: boolean;
-      hubId: number;
       skillCategoryId: string;
-      createdAt: Date;
       updatedAt: Date;
     })[]
   >;
   getCourseResources(courseId: number): Promise<
     {
+      id: number;
+      courseId: number;
+      createdAt: Date;
       title: string;
       description: string;
-      id: number;
-      createdAt: Date;
       updatedAt: Date;
-      courseId: number;
-      filePath: string;
       type: import('.prisma/client').$Enums.study_resource_type_enum;
       url: string;
+      filePath: string;
       isPublic: boolean;
     }[]
   >;
@@ -687,15 +687,15 @@ export declare class CoursesService {
     courseId: number,
     dto: any,
   ): Promise<{
+    id: number;
+    courseId: number;
+    createdAt: Date;
     title: string;
     description: string;
-    id: number;
-    createdAt: Date;
     updatedAt: Date;
-    courseId: number;
-    filePath: string;
     type: import('.prisma/client').$Enums.study_resource_type_enum;
     url: string;
+    filePath: string;
     isPublic: boolean;
   }>;
   removeCourseResource(

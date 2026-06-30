@@ -83,6 +83,52 @@ let DashboardService = class DashboardService {
         having: { studentId: { _count: { gte: 2 } } },
       }),
     ]);
+    let attendanceInfo;
+    if (todayAttendance > 0) {
+      attendanceInfo = {
+        presentCount: todayAttendance,
+        date: startOfToday.toISOString().split('T')[0],
+        daysAgo: 0,
+        isToday: true,
+      };
+    } else {
+      const lastRecord = await this.prisma.attendance_record.findFirst({
+        where: { method: { not: 'Absent' } },
+        orderBy: { checkedInAt: 'desc' },
+        select: { checkedInAt: true },
+      });
+      if (lastRecord) {
+        const ld = new Date(lastRecord.checkedInAt);
+        const ldStart = new Date(ld.getFullYear(), ld.getMonth(), ld.getDate());
+        const ldEnd = new Date(ldStart.getTime() + 86400000);
+        const daysAgo = Math.round(
+          (startOfToday.getTime() - ldStart.getTime()) / 86400000,
+        );
+        const lastDayCount = await this.prisma.attendance_record
+          .findMany({
+            where: {
+              checkedInAt: { gte: ldStart, lt: ldEnd },
+              method: { not: 'Absent' },
+            },
+            select: { studentId: true },
+            distinct: ['studentId'],
+          })
+          .then((r) => r.length);
+        attendanceInfo = {
+          presentCount: lastDayCount,
+          date: ldStart.toISOString().split('T')[0],
+          daysAgo,
+          isToday: daysAgo === 0,
+        };
+      } else {
+        attendanceInfo = {
+          presentCount: 0,
+          date: startOfToday.toISOString().split('T')[0],
+          daysAgo: 0,
+          isToday: true,
+        };
+      }
+    }
     return {
       totalStudents,
       newThisWeek,
@@ -91,6 +137,7 @@ let DashboardService = class DashboardService {
       totalCourses,
       activeEnrollments,
       todayAttendance,
+      attendanceInfo,
       activeStudents: activeStudentGroups.length,
     };
   }
@@ -129,10 +176,64 @@ let DashboardService = class DashboardService {
       const hid = rec.session?.hubId;
       if (hid) presentMap.set(hid, (presentMap.get(hid) ?? 0) + 1);
     }
+    const todayStr = startOfToday.toISOString().split('T')[0];
+    const hubAttendanceInfo = new Map();
+    await Promise.all(
+      hubs.map(async (h) => {
+        const presentToday = presentMap.get(h.id) ?? 0;
+        if (presentToday > 0) {
+          hubAttendanceInfo.set(h.id, {
+            presentCount: presentToday,
+            date: todayStr,
+            daysAgo: 0,
+            isToday: true,
+          });
+        } else {
+          const lastSession = await this.prisma.attendance_session.findFirst({
+            where: { hubId: h.id, isActive: false },
+            orderBy: { createdAt: 'desc' },
+            select: { id: true, createdAt: true },
+          });
+          if (lastSession) {
+            const sd = new Date(lastSession.createdAt);
+            const sdStart = new Date(
+              sd.getFullYear(),
+              sd.getMonth(),
+              sd.getDate(),
+            );
+            const daysAgo = Math.round(
+              (startOfToday.getTime() - sdStart.getTime()) / 86400000,
+            );
+            const count = await this.prisma.attendance_record.count({
+              where: { sessionId: lastSession.id, method: { not: 'Absent' } },
+            });
+            hubAttendanceInfo.set(h.id, {
+              presentCount: count,
+              date: sdStart.toISOString().split('T')[0],
+              daysAgo,
+              isToday: daysAgo === 0,
+            });
+          } else {
+            hubAttendanceInfo.set(h.id, {
+              presentCount: 0,
+              date: todayStr,
+              daysAgo: 0,
+              isToday: true,
+            });
+          }
+        }
+      }),
+    );
     return hubs.map((h) => {
       const total = h._count.students;
       const inactive = inactiveMap.get(h.id) ?? 0;
       const presentToday = presentMap.get(h.id) ?? 0;
+      const attendanceInfo = hubAttendanceInfo.get(h.id) ?? {
+        presentCount: 0,
+        date: todayStr,
+        daysAgo: 0,
+        isToday: true,
+      };
       return {
         hub: h.name,
         hubCode: h.code,
@@ -141,6 +242,7 @@ let DashboardService = class DashboardService {
         inactive,
         presentToday,
         absentToday: Math.max(0, total - presentToday),
+        attendanceInfo,
       };
     });
   }
@@ -381,6 +483,44 @@ let DashboardService = class DashboardService {
         })
       : [];
     const courseTitleMap = new Map(courseDetails.map((c) => [c.id, c.title]));
+    let hubAttendanceInfo;
+    if (todayAttendance > 0) {
+      hubAttendanceInfo = {
+        presentCount: todayAttendance,
+        date: startOfToday.toISOString().split('T')[0],
+        daysAgo: 0,
+        isToday: true,
+      };
+    } else {
+      const lastSession = await this.prisma.attendance_session.findFirst({
+        where: { hubId, isActive: false },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, createdAt: true },
+      });
+      if (lastSession) {
+        const sd = new Date(lastSession.createdAt);
+        const sdStart = new Date(sd.getFullYear(), sd.getMonth(), sd.getDate());
+        const daysAgo = Math.round(
+          (startOfToday.getTime() - sdStart.getTime()) / 86400000,
+        );
+        const count = await this.prisma.attendance_record.count({
+          where: { sessionId: lastSession.id, method: { not: 'Absent' } },
+        });
+        hubAttendanceInfo = {
+          presentCount: count,
+          date: sdStart.toISOString().split('T')[0],
+          daysAgo,
+          isToday: daysAgo === 0,
+        };
+      } else {
+        hubAttendanceInfo = {
+          presentCount: 0,
+          date: startOfToday.toISOString().split('T')[0],
+          daysAgo: 0,
+          isToday: true,
+        };
+      }
+    }
     const activeStudents = activeStudentGroups.length;
     return {
       hubId,
@@ -391,6 +531,7 @@ let DashboardService = class DashboardService {
       totalCourses,
       classesToday,
       todayAttendance,
+      attendanceInfo: hubAttendanceInfo,
       courses: courses.map((e) => ({
         id: e.courseId,
         name: courseTitleMap.get(e.courseId) ?? 'Unknown',
