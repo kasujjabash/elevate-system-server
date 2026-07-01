@@ -19,6 +19,7 @@ export class AssignmentsService {
     isMilestone?: boolean;
     isCoursePlayer?: boolean;
     weekNumber?: number;
+    hubId?: number;
   }) {
     const assignment = await this.prisma.assignment.create({
       data: {
@@ -30,15 +31,20 @@ export class AssignmentsService {
         isMilestone: dto.isMilestone ?? false,
         isCoursePlayer: dto.isCoursePlayer ?? false,
         weekNumber: dto.weekNumber ?? null,
+        hubId: dto.hubId ?? null,
       },
       include: { course: true },
     });
 
-    // Notify all students enrolled in this course
+    // Hub-scoped assignments only notify students in that hub
+    const targetHubId = dto.hubId ?? null;
+
+    // Notify all students enrolled in this course (scoped to the hub, if set)
     const enrollments = await this.prisma.enrollment.findMany({
       where: {
         courseId: dto.courseId,
         status: { in: ['Enrolled', 'InProgress'] },
+        ...(targetHubId ? { student: { hubId: targetHubId } } : {}),
       },
       include: {
         student: { include: { contact: { include: { user: true } } } },
@@ -87,6 +93,8 @@ export class AssignmentsService {
       course: a.course?.title ?? null,
       courseId: a.courseId,
       hub: a.course?.hub?.name ?? null,
+      hubId: a.hubId ?? null,
+      hubName: a.hub?.name ?? null,
       courseStartDate: null,
       submissionsCount,
       gradedCount,
@@ -113,6 +121,7 @@ export class AssignmentsService {
             hub: { select: { name: true } },
           },
         },
+        hub: { select: { id: true, name: true } },
         submissions: { select: { id: true, status: true } },
       },
       orderBy: [{ courseId: 'asc' }, { dueDate: 'asc' }],
@@ -180,7 +189,7 @@ export class AssignmentsService {
   async findByContact(contactId: number) {
     const student = await this.prisma.student.findFirst({
       where: { contactId },
-      select: { id: true },
+      select: { id: true, hubId: true },
     });
     if (!student) return [];
 
@@ -195,9 +204,14 @@ export class AssignmentsService {
     const courseIds = enrollments.map((e) => e.courseId);
     if (courseIds.length === 0) return [];
 
-    // Fetch all assignments for those courses
+    // Fetch all assignments for those courses, excluding ones scoped to a
+    // different hub than the student's own
     const assignments = await this.prisma.assignment.findMany({
-      where: { courseId: { in: courseIds }, isActive: true },
+      where: {
+        courseId: { in: courseIds },
+        isActive: true,
+        OR: [{ hubId: null }, { hubId: student.hubId }],
+      },
       include: {
         course: { select: { id: true, title: true } },
       },
@@ -523,6 +537,44 @@ export class AssignmentsService {
       select: { id: true },
     });
     return !!course;
+  }
+
+  // ── Trainer/Admin: update an assignment ────────────────────────────────
+  async update(
+    id: number,
+    dto: {
+      title?: string;
+      description?: string;
+      dueDate?: string | null;
+      maxScore?: number;
+      weekNumber?: number | null;
+    },
+    trainerContactId: number,
+    isAdmin: boolean,
+  ) {
+    if (!isAdmin) {
+      const owns = await this.trainerOwnsAssignment(trainerContactId, id);
+      if (!owns)
+        throw new ForbiddenException(
+          'You do not have permission to edit this assignment',
+        );
+    }
+
+    return this.prisma.assignment.update({
+      where: { id },
+      data: {
+        ...(dto.title !== undefined && { title: dto.title }),
+        ...(dto.description !== undefined && { description: dto.description }),
+        ...(dto.dueDate !== undefined && {
+          dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
+        }),
+        ...(dto.maxScore !== undefined && { maxScore: Number(dto.maxScore) }),
+        ...(dto.weekNumber !== undefined && {
+          weekNumber: dto.weekNumber !== null ? Number(dto.weekNumber) : null,
+        }),
+      },
+      include: { course: true },
+    });
   }
 
   // ── Admin: list all submissions for an assignment ───────────────────────

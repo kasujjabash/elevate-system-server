@@ -103,6 +103,7 @@ model hub {
   timetableSessions  timetable_session[]
   managers           user[]
   workshops          workshop[]
+  assignments        assignment[]
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
 }
@@ -212,8 +213,10 @@ model assignment {
   isMilestone    Boolean      @default(false)
   isCoursePlayer Boolean      @default(false)
   courseId       Int
+  hubId          Int?
   isActive       Boolean      @default(true)
   course         course       @relation(fields: [courseId], references: [id])
+  hub            hub?         @relation(fields: [hubId], references: [id])
   submissions    submission[]
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
