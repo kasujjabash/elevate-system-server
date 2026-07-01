@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../shared/prisma.service';
 import { CreateSessionDto } from './dto/create-session.dto';
@@ -23,7 +24,65 @@ export class AttendanceService {
     return code;
   }
 
-  async createSession(dto: CreateSessionDto, createdBy: number) {
+  // Trainers/hub managers may only create sessions for their own
+  // hub/courses; admins are unrestricted. Fails closed for any other role.
+  private async assertCanCreateSession(
+    dto: CreateSessionDto,
+    createdBy: number,
+    requester: { roles: string[]; contactId?: number },
+  ) {
+    const roles = requester.roles || [];
+    if (roles.some((r) => ['ADMIN', 'SUPER_ADMIN'].includes(r))) return;
+
+    const isTrainer = roles.some((r) => ['TRAINER', 'INSTRUCTOR'].includes(r));
+    const isHubManager = roles.includes('HUB_MANAGER');
+
+    if (isTrainer) {
+      const instructor = await this.prisma.instructor.findUnique({
+        where: { contactId: requester.contactId },
+      });
+      if (!instructor || instructor.hubId !== dto.hubId) {
+        throw new ForbiddenException(
+          'You can only create attendance sessions for your own hub',
+        );
+      }
+      if (dto.courseId) {
+        const course = await this.prisma.course.findUnique({
+          where: { id: dto.courseId },
+        });
+        if (!course || course.instructorId !== instructor.id) {
+          throw new ForbiddenException(
+            'You can only create attendance sessions for courses you teach',
+          );
+        }
+      }
+      return;
+    }
+
+    if (isHubManager) {
+      const manager = await this.prisma.user.findUnique({
+        where: { id: createdBy },
+      });
+      if (!manager?.hubId || manager.hubId !== dto.hubId) {
+        throw new ForbiddenException(
+          'You can only create attendance sessions for your own hub',
+        );
+      }
+      return;
+    }
+
+    throw new ForbiddenException(
+      'You are not authorized to create attendance sessions',
+    );
+  }
+
+  async createSession(
+    dto: CreateSessionDto,
+    createdBy: number,
+    requester: { roles: string[]; contactId?: number },
+  ) {
+    await this.assertCanCreateSession(dto, createdBy, requester);
+
     const token = randomBytes(24).toString('hex');
     const shortCode = this.generateShortCode();
     const durationMinutes = dto.durationMinutes ?? 30;

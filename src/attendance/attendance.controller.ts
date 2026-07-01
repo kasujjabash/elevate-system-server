@@ -22,11 +22,20 @@ import { CreateSessionDto } from './dto/create-session.dto';
 export class AttendanceController {
   constructor(private readonly attendanceService: AttendanceService) {}
 
-  /** Admin: create a new QR session */
+  /** Admin/Hub Manager/Trainer: create a new QR session (scoped to own hub/courses) */
   @Post('sessions')
   async createSession(@Body() dto: CreateSessionDto, @Request() req: any) {
     const userId = req.user?.id ?? req.user?.userId ?? null;
-    return this.attendanceService.createSession(dto, userId);
+    const roles: string[] = Array.isArray(req.user?.roles)
+      ? req.user.roles
+      : (req.user?.roles || '')
+          .split(',')
+          .map((r: string) => r.trim())
+          .filter(Boolean);
+    return this.attendanceService.createSession(dto, userId, {
+      roles,
+      contactId: req.user?.contactId,
+    });
   }
 
   /** Admin: list all sessions (paginated) */
