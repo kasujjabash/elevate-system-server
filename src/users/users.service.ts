@@ -85,13 +85,71 @@ export class UsersService {
         where: hasValue(idList) ? { id: In(idList) } : undefined,
       });
 
-      return data.map((it) => {
-        return this.toListModel(it);
-      });
+      return await this.enrichWithHubAndCourses(
+        data.map((it) => this.toListModel(it)),
+      );
     } catch (error: any) {
       Logger.error(error?.message ?? error);
       return [];
     }
+  }
+
+  // Hub and course assignments live outside the User TypeORM entity
+  // (hub via a Prisma-only column, courses via the student/instructor
+  // relations), so they're batched in here rather than joined above.
+  private async enrichWithHubAndCourses(
+    models: UserListDto[],
+  ): Promise<UserListDto[]> {
+    if (!models.length) return models;
+
+    const userIds = models.map((m) => m.id);
+    const contactIds = models.map((m) => m.contactId).filter(Boolean);
+
+    const [hubUsers, students, instructors] = await Promise.all([
+      this.prisma.user.findMany({
+        where: { id: { in: userIds } },
+        select: { id: true, hubId: true, hub: { select: { name: true } } },
+      }),
+      this.prisma.student.findMany({
+        where: { contactId: { in: contactIds } },
+        select: {
+          contactId: true,
+          enrollments: {
+            where: { status: { not: 'Dropped' } },
+            select: { course: { select: { id: true, title: true } } },
+          },
+        },
+      }),
+      this.prisma.instructor.findMany({
+        where: { contactId: { in: contactIds } },
+        select: {
+          contactId: true,
+          courses: { select: { id: true, title: true } },
+        },
+      }),
+    ]);
+
+    const hubByUserId = new Map(hubUsers.map((u) => [u.id, u]));
+    const studentByContactId = new Map(students.map((s) => [s.contactId, s]));
+    const instructorByContactId = new Map(
+      instructors.map((i) => [i.contactId, i]),
+    );
+
+    return models.map((m) => {
+      const hubInfo = hubByUserId.get(m.id);
+      const courseList =
+        studentByContactId.get(m.contactId)?.enrollments.map((e) => e.course) ??
+        instructorByContactId.get(m.contactId)?.courses ??
+        [];
+
+      return {
+        ...m,
+        hubId: hubInfo?.hubId ?? null,
+        hubName: hubInfo?.hub?.name ?? null,
+        courseIds: courseList.map((c) => c.id),
+        courses: courseList.map((c) => ({ id: c.id, name: c.title })),
+      };
+    });
   }
 
   toListModel(user: User): UserListDto {
@@ -386,7 +444,10 @@ export class UsersService {
       throw new Error(`User with ID ${id} not found`);
     }
 
-    return this.toListModel(data);
+    const [enriched] = await this.enrichWithHubAndCourses([
+      this.toListModel(data),
+    ]);
+    return enriched;
   }
 
   async update(data: UpdateUserDto): Promise<UserListDto> {
@@ -547,21 +608,57 @@ export class UsersService {
       }
     }
 
-    // Assign courses to trainer: update course.instructorId for each courseId
-    if (data.courseIds?.length && data.contactId) {
-      const instructor = await this.prisma.instructor.findUnique({
-        where: { contactId: data.contactId },
-      });
-      if (instructor) {
-        for (const courseId of data.courseIds) {
-          await this.prisma.course
-            .update({
-              where: { id: courseId },
-              data: { instructorId: instructor.id },
-            })
-            .catch(() => {
-              /* skip missing course */
-            });
+    // Sync course assignments: students get enrollment rows added/removed to
+    // match the selected set, trainers get course.instructorId reassigned.
+    if (data.courseIds !== undefined && data.contactId) {
+      const isStudentEdit = _user.roles?.includes('STUDENT');
+      if (isStudentEdit) {
+        const student = await this.prisma.student.findUnique({
+          where: { contactId: data.contactId },
+        });
+        if (student) {
+          const current = await this.prisma.enrollment.findMany({
+            where: { studentId: student.id },
+          });
+          const desired = new Set(data.courseIds);
+          const existingCourseIds = new Set(current.map((e) => e.courseId));
+          const toRemove = current.filter(
+            (e) => !desired.has(e.courseId) && e.status !== 'Completed',
+          );
+          const toAdd = data.courseIds.filter(
+            (courseId) => !existingCourseIds.has(courseId),
+          );
+
+          await Promise.all([
+            ...toRemove.map((e) =>
+              this.prisma.enrollment.delete({ where: { id: e.id } }),
+            ),
+            ...toAdd.map((courseId) =>
+              this.prisma.enrollment
+                .create({
+                  data: { studentId: student.id, courseId, status: 'Enrolled' },
+                })
+                .catch(() => {
+                  /* skip invalid course */
+                }),
+            ),
+          ]);
+        }
+      } else if (data.courseIds.length) {
+        const instructor = await this.prisma.instructor.findUnique({
+          where: { contactId: data.contactId },
+        });
+        if (instructor) {
+          for (const courseId of data.courseIds) {
+            await this.prisma.course
+              .update({
+                where: { id: courseId },
+                data: { instructorId: instructor.id },
+              })
+              .catch(() => {
+                /* skip missing course */
+              });
+          }
         }
       }
     }
