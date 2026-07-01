@@ -14,7 +14,7 @@ export class UserListDto extends UserPermissions {
   hubId?: number | null;
   hubName?: string | null;
   courseIds?: number[];
-  courses?: { id: number; name: string }[];
+  courses?: any[];
 }
 
 export class UserDto {
