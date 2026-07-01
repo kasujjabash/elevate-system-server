@@ -15,6 +15,10 @@ export class UserListDto extends UserPermissions {
   hubName?: string | null;
   courseIds?: number[];
   courses?: any[];
+  firstName?: string;
+  lastName?: string;
+  dateOfBirth?: Date | string | null;
+  phone?: string;
 }
 
 export class UserDto {

@@ -105,7 +105,7 @@ export class UsersService {
     const userIds = models.map((m) => m.id);
     const contactIds = models.map((m) => m.contactId).filter(Boolean);
 
-    const [hubUsers, students, instructors] = await Promise.all([
+    const [hubUsers, students, instructors, phones] = await Promise.all([
       this.prisma.user.findMany({
         where: { id: { in: userIds } },
         select: { id: true, hubId: true, hub: { select: { name: true } } },
@@ -127,6 +127,10 @@ export class UsersService {
           courses: { select: { id: true, title: true } },
         },
       }),
+      this.prisma.phone.findMany({
+        where: { contactId: { in: contactIds } },
+        select: { contactId: true, value: true, isPrimary: true },
+      }),
     ]);
 
     const hubByUserId = new Map(hubUsers.map((u) => [u.id, u]));
@@ -134,6 +138,12 @@ export class UsersService {
     const instructorByContactId = new Map(
       instructors.map((i) => [i.contactId, i]),
     );
+    const phoneByContactId = new Map<number, string>();
+    phones.forEach((p) => {
+      if (!phoneByContactId.has(p.contactId) || p.isPrimary) {
+        phoneByContactId.set(p.contactId, p.value);
+      }
+    });
 
     return models.map((m) => {
       const hubInfo = hubByUserId.get(m.id);
@@ -148,6 +158,7 @@ export class UsersService {
         hubName: hubInfo?.hub?.name ?? null,
         courseIds: courseList.map((c) => c.id),
         courses: courseList.map((c) => ({ id: c.id, name: c.title })),
+        phone: phoneByContactId.get(m.contactId) || '',
       };
     });
   }
@@ -179,6 +190,9 @@ export class UsersService {
       username: user.username,
       contactId: user.contactId,
       fullName,
+      firstName: user.contact?.person?.firstName || '',
+      lastName: user.contact?.person?.lastName || '',
+      dateOfBirth: user.contact?.person?.dateOfBirth || null,
     };
   }
 
