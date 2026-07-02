@@ -146,7 +146,7 @@ export class ReportsService {
     const fullName = getUserDisplayName(savedSubmission.user);
     await this.sendMail(
       savedSubmission.user.username,
-      'Project Zoe - Report Submitted',
+      'Elevate Academy - Report Submitted',
       { submissionDate: formattedDate, fullName },
     );
 
@@ -662,7 +662,7 @@ export class ReportsService {
     }
     const mailerData = {
       to: emailAddresses.join(', '),
-      subject: 'Project Zoe | Weekly MC Reports Submitted',
+      subject: 'Elevate Academy | Weekly MC Reports Submitted',
       html: fullHTML,
     };
 
