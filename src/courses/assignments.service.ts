@@ -353,13 +353,21 @@ export class AssignmentsService {
     if (body.type === 'link') data.filePath = body.link;
     if (body.type === 'file') data.filePath = body.filePath ?? body.fileName;
 
-    // Upsert: allow re-submission
+    // Upsert: allow re-submission (only reachable above the due date check).
+    // Editing an already-graded submission's content invalidates that grade,
+    // so clear it rather than leaving a stale score attached to new content.
     return this.prisma.submission.upsert({
       where: {
         studentId_assignmentId: { studentId: student.id, assignmentId },
       },
       create: data,
-      update: { ...data, submittedAt: new Date() },
+      update: {
+        ...data,
+        submittedAt: new Date(),
+        score: null,
+        feedback: null,
+        gradedAt: null,
+      },
     });
   }
 
