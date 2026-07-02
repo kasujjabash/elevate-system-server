@@ -7,7 +7,8 @@ export declare class DashboardController {
     dashboardService: DashboardService,
     coursesService: CoursesService,
   );
-  getStats(): Promise<{
+  private assertStaffAccess;
+  getStats(req: any): Promise<{
     totalStudents: number;
     newThisWeek: number;
     todayClasses: number;
@@ -23,7 +24,7 @@ export declare class DashboardController {
     };
     activeStudents: number;
   }>;
-  getHubStats(): Promise<
+  getHubStats(req: any): Promise<
     {
       hub: string;
       hubCode: string;
@@ -69,7 +70,7 @@ export declare class DashboardController {
       submissionCount: number;
     }[];
   }>;
-  getSummary(): Promise<{
+  getSummary(req: any): Promise<{
     overview: {
       totalStudents: number;
       newThisWeek: number;
@@ -77,7 +78,7 @@ export declare class DashboardController {
       activeEnrollments: number;
     };
   }>;
-  getReportStats(): Promise<{
+  getReportStats(req: any): Promise<{
     studentsByStatus: {
       status: import('.prisma/client').$Enums.student_status_enum;
       count: number;

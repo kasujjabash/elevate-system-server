@@ -104,13 +104,71 @@ let UsersService = class UsersService {
           ? { id: (0, typeorm_1.In)(idList) }
           : undefined,
       });
-      return data.map((it) => {
-        return this.toListModel(it);
-      });
+      return await this.enrichWithHubAndCourses(
+        data.map((it) => this.toListModel(it)),
+      );
     } catch (error) {
       common_1.Logger.error(error?.message ?? error);
       return [];
     }
+  }
+  async enrichWithHubAndCourses(models) {
+    if (!models.length) return models;
+    const userIds = models.map((m) => m.id);
+    const contactIds = models.map((m) => m.contactId).filter(Boolean);
+    const [hubUsers, students, instructors, phones] = await Promise.all([
+      this.prisma.user.findMany({
+        where: { id: { in: userIds } },
+        select: { id: true, hubId: true, hub: { select: { name: true } } },
+      }),
+      this.prisma.student.findMany({
+        where: { contactId: { in: contactIds } },
+        select: {
+          contactId: true,
+          enrollments: {
+            where: { status: { not: 'Dropped' } },
+            select: { course: { select: { id: true, title: true } } },
+          },
+        },
+      }),
+      this.prisma.instructor.findMany({
+        where: { contactId: { in: contactIds } },
+        select: {
+          contactId: true,
+          courses: { select: { id: true, title: true } },
+        },
+      }),
+      this.prisma.phone.findMany({
+        where: { contactId: { in: contactIds } },
+        select: { contactId: true, value: true, isPrimary: true },
+      }),
+    ]);
+    const hubByUserId = new Map(hubUsers.map((u) => [u.id, u]));
+    const studentByContactId = new Map(students.map((s) => [s.contactId, s]));
+    const instructorByContactId = new Map(
+      instructors.map((i) => [i.contactId, i]),
+    );
+    const phoneByContactId = new Map();
+    phones.forEach((p) => {
+      if (!phoneByContactId.has(p.contactId) || p.isPrimary) {
+        phoneByContactId.set(p.contactId, p.value);
+      }
+    });
+    return models.map((m) => {
+      const hubInfo = hubByUserId.get(m.id);
+      const courseList =
+        studentByContactId.get(m.contactId)?.enrollments.map((e) => e.course) ??
+        instructorByContactId.get(m.contactId)?.courses ??
+        [];
+      return {
+        ...m,
+        hubId: hubInfo?.hubId ?? null,
+        hubName: hubInfo?.hub?.name ?? null,
+        courseIds: courseList.map((c) => c.id),
+        courses: courseList.map((c) => ({ id: c.id, name: c.title })),
+        phone: phoneByContactId.get(m.contactId) || '',
+      };
+    });
   }
   toListModel(user) {
     if (!user) {
@@ -138,6 +196,9 @@ let UsersService = class UsersService {
       username: user.username,
       contactId: user.contactId,
       fullName,
+      firstName: user.contact?.person?.firstName || '',
+      lastName: user.contact?.person?.lastName || '',
+      dateOfBirth: user.contact?.person?.dateOfBirth || null,
     };
   }
   async create(data) {
@@ -366,7 +427,10 @@ let UsersService = class UsersService {
     if (!data) {
       throw new Error(`User with ID ${id} not found`);
     }
-    return this.toListModel(data);
+    const [enriched] = await this.enrichWithHubAndCourses([
+      this.toListModel(data),
+    ]);
+    return enriched;
   }
   async update(data) {
     if (!data.id) {
@@ -512,18 +576,50 @@ let UsersService = class UsersService {
         }
       }
     }
-    if (data.courseIds?.length && data.contactId) {
-      const instructor = await this.prisma.instructor.findUnique({
-        where: { contactId: data.contactId },
-      });
-      if (instructor) {
-        for (const courseId of data.courseIds) {
-          await this.prisma.course
-            .update({
-              where: { id: courseId },
-              data: { instructorId: instructor.id },
-            })
-            .catch(() => {});
+    if (data.courseIds !== undefined && data.contactId) {
+      const isStudentEdit = _user.roles?.includes('STUDENT');
+      if (isStudentEdit) {
+        const student = await this.prisma.student.findUnique({
+          where: { contactId: data.contactId },
+        });
+        if (student) {
+          const current = await this.prisma.enrollment.findMany({
+            where: { studentId: student.id },
+          });
+          const desired = new Set(data.courseIds);
+          const existingCourseIds = new Set(current.map((e) => e.courseId));
+          const toRemove = current.filter(
+            (e) => !desired.has(e.courseId) && e.status !== 'Completed',
+          );
+          const toAdd = data.courseIds.filter(
+            (courseId) => !existingCourseIds.has(courseId),
+          );
+          await Promise.all([
+            ...toRemove.map((e) =>
+              this.prisma.enrollment.delete({ where: { id: e.id } }),
+            ),
+            ...toAdd.map((courseId) =>
+              this.prisma.enrollment
+                .create({
+                  data: { studentId: student.id, courseId, status: 'Enrolled' },
+                })
+                .catch(() => {}),
+            ),
+          ]);
+        }
+      } else if (data.courseIds.length) {
+        const instructor = await this.prisma.instructor.findUnique({
+          where: { contactId: data.contactId },
+        });
+        if (instructor) {
+          for (const courseId of data.courseIds) {
+            await this.prisma.course
+              .update({
+                where: { id: courseId },
+                data: { instructorId: instructor.id },
+              })
+              .catch(() => {});
+          }
         }
       }
     }

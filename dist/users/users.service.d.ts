@@ -21,6 +21,7 @@ export declare class UsersService {
     prisma: PrismaService,
   );
   findAll(req: UserSearchDto): Promise<UserListDto[]>;
+  private enrichWithHubAndCourses;
   toListModel(user: User): UserListDto;
   create(data: User): Promise<User>;
   createUser(data: CreateUserDto): Promise<UserListDto>;

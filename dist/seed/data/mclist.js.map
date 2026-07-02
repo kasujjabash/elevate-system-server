@@ -1,1 +1,0 @@
-{"version":3,"file":"mclist.js","sourceRoot":"","sources":["../../../src/seed/data/mclist.ts"],"names":[],"mappings":";;;AAAa,QAAA,MAAM,GAAG;IACpB;QACE,IAAI,EAAE,WAAW;QACjB,OAAO,EAAE,IAAI;QACb,IAAI,EAAE;YACJ;gBACE,IAAI,EAAE,cAAc;gBACpB,OAAO,EAAE,qBAAqB;gBAC9B,KAAK,EAAE,0BAA0B;gBACjC,KAAK,EACH,iEAAiE;gBACnE,OAAO,EAAE,IAAI;aACd;SACF;KACF;CACF,CAAC"}

@@ -53,8 +53,6 @@ export declare class StudyResourcesService {
           description: string;
           isActive: boolean;
           location: string;
-          createdAt: Date;
-          updatedAt: Date;
           code: string;
           managerName: string;
           managerPhone: string;
@@ -63,6 +61,8 @@ export declare class StudyResourcesService {
           projectors: number;
           capacity: number;
           notes: string;
+          createdAt: Date;
+          updatedAt: Date;
         };
         skillCategory: {
           id: string;

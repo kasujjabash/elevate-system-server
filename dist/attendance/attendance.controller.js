@@ -45,7 +45,16 @@ let AttendanceController = class AttendanceController {
   }
   async createSession(dto, req) {
     const userId = req.user?.id ?? req.user?.userId ?? null;
-    return this.attendanceService.createSession(dto, userId);
+    const roles = Array.isArray(req.user?.roles)
+      ? req.user.roles
+      : (req.user?.roles || '')
+          .split(',')
+          .map((r) => r.trim())
+          .filter(Boolean);
+    return this.attendanceService.createSession(dto, userId, {
+      roles,
+      contactId: req.user?.contactId,
+    });
   }
   async getSessions(page = '1', limit = '20') {
     return this.attendanceService.getSessions(+page, +limit);

@@ -42,7 +42,49 @@ let AttendanceService = class AttendanceService {
     }
     return code;
   }
-  async createSession(dto, createdBy) {
+  async assertCanCreateSession(dto, createdBy, requester) {
+    const roles = requester.roles || [];
+    if (roles.some((r) => ['ADMIN', 'SUPER_ADMIN'].includes(r))) return;
+    const isTrainer = roles.some((r) => ['TRAINER', 'INSTRUCTOR'].includes(r));
+    const isHubManager = roles.includes('HUB_MANAGER');
+    if (isTrainer) {
+      const instructor = await this.prisma.instructor.findUnique({
+        where: { contactId: requester.contactId },
+      });
+      if (!instructor || instructor.hubId !== dto.hubId) {
+        throw new common_1.ForbiddenException(
+          'You can only create attendance sessions for your own hub',
+        );
+      }
+      if (dto.courseId) {
+        const course = await this.prisma.course.findUnique({
+          where: { id: dto.courseId },
+        });
+        if (!course || course.instructorId !== instructor.id) {
+          throw new common_1.ForbiddenException(
+            'You can only create attendance sessions for courses you teach',
+          );
+        }
+      }
+      return;
+    }
+    if (isHubManager) {
+      const manager = await this.prisma.user.findUnique({
+        where: { id: createdBy },
+      });
+      if (!manager?.hubId || manager.hubId !== dto.hubId) {
+        throw new common_1.ForbiddenException(
+          'You can only create attendance sessions for your own hub',
+        );
+      }
+      return;
+    }
+    throw new common_1.ForbiddenException(
+      'You are not authorized to create attendance sessions',
+    );
+  }
+  async createSession(dto, createdBy, requester) {
+    await this.assertCanCreateSession(dto, createdBy, requester);
     const token = (0, crypto_1.randomBytes)(24).toString('hex');
     const shortCode = this.generateShortCode();
     const durationMinutes = dto.durationMinutes ?? 30;

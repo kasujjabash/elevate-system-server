@@ -24,6 +24,7 @@ export declare class AssignmentsController {
       title: string;
       description: string;
       isActive: boolean;
+      hubId: number;
       createdAt: Date;
       updatedAt: Date;
       courseId: number;
@@ -173,6 +174,7 @@ export declare class AssignmentsController {
         title: string;
         description: string;
         isActive: boolean;
+        hubId: number;
         createdAt: Date;
         updatedAt: Date;
         courseId: number;
@@ -219,6 +221,10 @@ export declare class AssignmentsController {
           id: number;
           category: 'Person';
         };
+        hub: {
+          id: number;
+          name: string;
+        };
       } & {
         id: number;
         contactId: number;
@@ -239,6 +245,7 @@ export declare class AssignmentsController {
         title: string;
         description: string;
         isActive: boolean;
+        hubId: number;
         createdAt: Date;
         updatedAt: Date;
         courseId: number;
@@ -300,6 +307,7 @@ export declare class AssignmentsController {
         title: string;
         description: string;
         isActive: boolean;
+        hubId: number;
         createdAt: Date;
         updatedAt: Date;
         courseId: number;
@@ -360,6 +368,7 @@ export declare class AssignmentsController {
         title: string;
         description: string;
         isActive: boolean;
+        hubId: number;
         createdAt: Date;
         updatedAt: Date;
         courseId: number;
@@ -380,6 +389,42 @@ export declare class AssignmentsController {
       score: number;
       feedback: string;
       gradedAt: Date;
+    }
+  >;
+  updateAssignment(
+    id: number,
+    dto: any,
+    req: any,
+  ): Promise<
+    {
+      course: {
+        id: number;
+        title: string;
+        description: string;
+        isActive: boolean;
+        hubId: number;
+        createdAt: Date;
+        updatedAt: Date;
+        duration: string;
+        isEnrollable: boolean;
+        maxStudents: number;
+        instructorId: number;
+        skillCategoryId: string;
+      };
+    } & {
+      id: number;
+      title: string;
+      description: string;
+      isActive: boolean;
+      hubId: number;
+      createdAt: Date;
+      updatedAt: Date;
+      courseId: number;
+      weekNumber: number;
+      dueDate: Date;
+      maxScore: number;
+      isMilestone: boolean;
+      isCoursePlayer: boolean;
     }
   >;
   findOne(id: number): Promise<
@@ -442,6 +487,7 @@ export declare class AssignmentsController {
       title: string;
       description: string;
       isActive: boolean;
+      hubId: number;
       createdAt: Date;
       updatedAt: Date;
       courseId: number;

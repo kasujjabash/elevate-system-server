@@ -19,6 +19,14 @@ class UserListDto extends UserPermissions {
       avatar: { required: true, type: () => String },
       roles: { required: true, type: () => [String] },
       isActive: { required: true, type: () => Boolean },
+      hubId: { required: false, type: () => Number, nullable: true },
+      hubName: { required: false, type: () => String, nullable: true },
+      courseIds: { required: false, type: () => [Number] },
+      courses: { required: false, type: () => [Object] },
+      firstName: { required: false, type: () => String },
+      lastName: { required: false, type: () => String },
+      dateOfBirth: { required: false, type: () => Object },
+      phone: { required: false, type: () => String },
     };
   }
 }

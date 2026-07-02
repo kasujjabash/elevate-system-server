@@ -43,13 +43,16 @@ let AssignmentsService = class AssignmentsService {
         isMilestone: dto.isMilestone ?? false,
         isCoursePlayer: dto.isCoursePlayer ?? false,
         weekNumber: dto.weekNumber ?? null,
+        hubId: dto.hubId ?? null,
       },
       include: { course: true },
     });
+    const targetHubId = dto.hubId ?? null;
     const enrollments = await this.prisma.enrollment.findMany({
       where: {
         courseId: dto.courseId,
         status: { in: ['Enrolled', 'InProgress'] },
+        ...(targetHubId ? { student: { hubId: targetHubId } } : {}),
       },
       include: {
         student: { include: { contact: { include: { user: true } } } },
@@ -95,6 +98,8 @@ let AssignmentsService = class AssignmentsService {
       course: a.course?.title ?? null,
       courseId: a.courseId,
       hub: a.course?.hub?.name ?? null,
+      hubId: a.hubId ?? null,
+      hubName: a.hub?.name ?? null,
       courseStartDate: null,
       submissionsCount,
       gradedCount,
@@ -118,6 +123,7 @@ let AssignmentsService = class AssignmentsService {
             hub: { select: { name: true } },
           },
         },
+        hub: { select: { id: true, name: true } },
         submissions: { select: { id: true, status: true } },
       },
       orderBy: [{ courseId: 'asc' }, { dueDate: 'asc' }],
@@ -172,7 +178,7 @@ let AssignmentsService = class AssignmentsService {
   async findByContact(contactId) {
     const student = await this.prisma.student.findFirst({
       where: { contactId },
-      select: { id: true },
+      select: { id: true, hubId: true },
     });
     if (!student) return [];
     const enrollments = await this.prisma.enrollment.findMany({
@@ -185,7 +191,11 @@ let AssignmentsService = class AssignmentsService {
     const courseIds = enrollments.map((e) => e.courseId);
     if (courseIds.length === 0) return [];
     const assignments = await this.prisma.assignment.findMany({
-      where: { courseId: { in: courseIds }, isActive: true },
+      where: {
+        courseId: { in: courseIds },
+        isActive: true,
+        OR: [{ hubId: null }, { hubId: student.hubId }],
+      },
       include: {
         course: { select: { id: true, title: true } },
       },
@@ -292,6 +302,17 @@ let AssignmentsService = class AssignmentsService {
       new Date() > new Date(assignment.dueDate)
     ) {
       throw new common_1.ForbiddenException('Submission deadline has passed');
+    }
+    const existing = await this.prisma.submission.findUnique({
+      where: {
+        studentId_assignmentId: { studentId: student.id, assignmentId },
+      },
+      select: { score: true },
+    });
+    if (existing?.score != null) {
+      throw new common_1.ForbiddenException(
+        'This assignment has already been graded and cannot be edited',
+      );
     }
     const data = {
       assignmentId,
@@ -411,7 +432,12 @@ let AssignmentsService = class AssignmentsService {
         assignment: {
           include: { course: { select: { id: true, title: true } } },
         },
-        student: { include: { contact: { include: { person: true } } } },
+        student: {
+          include: {
+            contact: { include: { person: true } },
+            hub: { select: { id: true, name: true } },
+          },
+        },
       },
       orderBy: { submittedAt: 'desc' },
       take: filters.limit ?? 50,
@@ -447,6 +473,33 @@ let AssignmentsService = class AssignmentsService {
       select: { id: true },
     });
     return !!course;
+  }
+  async update(id, dto, trainerContactId, isAdmin) {
+    if (!isAdmin) {
+      const owns = await this.trainerOwnsAssignment(trainerContactId, id);
+      if (!owns)
+        throw new common_1.ForbiddenException(
+          'You do not have permission to edit this assignment',
+        );
+    }
+    return this.prisma.assignment.update({
+      where: { id },
+      data: {
+        ...(dto.title !== undefined && { title: dto.title }),
+        ...(dto.description !== undefined && { description: dto.description }),
+        ...(dto.dueDate !== undefined && {
+          dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
+        }),
+        ...(dto.maxScore !== undefined && { maxScore: Number(dto.maxScore) }),
+        ...(dto.weekNumber !== undefined && {
+          weekNumber: dto.weekNumber !== null ? Number(dto.weekNumber) : null,
+        }),
+        ...(dto.hubId !== undefined && {
+          hubId: dto.hubId !== null ? Number(dto.hubId) : null,
+        }),
+      },
+      include: { course: true },
+    });
   }
   async getSubmissions(assignmentId) {
     return this.prisma.submission.findMany({

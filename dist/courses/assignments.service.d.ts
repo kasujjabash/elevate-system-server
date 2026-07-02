@@ -11,6 +11,7 @@ export declare class AssignmentsService {
     isMilestone?: boolean;
     isCoursePlayer?: boolean;
     weekNumber?: number;
+    hubId?: number;
   }): Promise<
     {
       course: {
@@ -32,6 +33,7 @@ export declare class AssignmentsService {
       title: string;
       description: string;
       isActive: boolean;
+      hubId: number;
       createdAt: Date;
       updatedAt: Date;
       courseId: number;
@@ -131,6 +133,7 @@ export declare class AssignmentsService {
       title: string;
       description: string;
       isActive: boolean;
+      hubId: number;
       createdAt: Date;
       updatedAt: Date;
       courseId: number;
@@ -201,6 +204,7 @@ export declare class AssignmentsService {
       title: string;
       description: string;
       isActive: boolean;
+      hubId: number;
       createdAt: Date;
       updatedAt: Date;
       courseId: number;
@@ -272,6 +276,7 @@ export declare class AssignmentsService {
         title: string;
         description: string;
         isActive: boolean;
+        hubId: number;
         createdAt: Date;
         updatedAt: Date;
         courseId: number;
@@ -332,6 +337,7 @@ export declare class AssignmentsService {
         title: string;
         description: string;
         isActive: boolean;
+        hubId: number;
         createdAt: Date;
         updatedAt: Date;
         courseId: number;
@@ -391,6 +397,7 @@ export declare class AssignmentsService {
         title: string;
         description: string;
         isActive: boolean;
+        hubId: number;
         createdAt: Date;
         updatedAt: Date;
         courseId: number;
@@ -436,6 +443,10 @@ export declare class AssignmentsService {
           id: number;
           category: 'Person';
         };
+        hub: {
+          id: number;
+          name: string;
+        };
       } & {
         id: number;
         contactId: number;
@@ -456,6 +467,7 @@ export declare class AssignmentsService {
         title: string;
         description: string;
         isActive: boolean;
+        hubId: number;
         createdAt: Date;
         updatedAt: Date;
         courseId: number;
@@ -482,6 +494,50 @@ export declare class AssignmentsService {
     contactId: number,
     assignmentId: number,
   ): Promise<boolean>;
+  update(
+    id: number,
+    dto: {
+      title?: string;
+      description?: string;
+      dueDate?: string | null;
+      maxScore?: number;
+      weekNumber?: number | null;
+      hubId?: number | null;
+    },
+    trainerContactId: number,
+    isAdmin: boolean,
+  ): Promise<
+    {
+      course: {
+        id: number;
+        title: string;
+        description: string;
+        isActive: boolean;
+        hubId: number;
+        createdAt: Date;
+        updatedAt: Date;
+        duration: string;
+        isEnrollable: boolean;
+        maxStudents: number;
+        instructorId: number;
+        skillCategoryId: string;
+      };
+    } & {
+      id: number;
+      title: string;
+      description: string;
+      isActive: boolean;
+      hubId: number;
+      createdAt: Date;
+      updatedAt: Date;
+      courseId: number;
+      weekNumber: number;
+      dueDate: Date;
+      maxScore: number;
+      isMilestone: boolean;
+      isCoursePlayer: boolean;
+    }
+  >;
   getSubmissions(assignmentId: number): Promise<
     ({
       student: {

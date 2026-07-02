@@ -44,10 +44,23 @@ let DashboardController = class DashboardController {
     this.dashboardService = dashboardService;
     this.coursesService = coursesService;
   }
-  async getStats() {
+  assertStaffAccess(req) {
+    const roles = req?.user?.roles ?? [];
+    const isStaff = roles.some((r) =>
+      ['ADMIN', 'SUPER_ADMIN', 'TRAINER', 'INSTRUCTOR', 'HUB_MANAGER'].includes(
+        r,
+      ),
+    );
+    if (!isStaff) {
+      throw new common_1.ForbiddenException('Not authorized to view this data');
+    }
+  }
+  async getStats(req) {
+    this.assertStaffAccess(req);
     return this.dashboardService.getStats();
   }
-  async getHubStats() {
+  async getHubStats(req) {
+    this.assertStaffAccess(req);
     return this.dashboardService.getHubStats();
   }
   async getTopPerformers(hubId, limit) {
@@ -73,10 +86,12 @@ let DashboardController = class DashboardController {
       limit: limit ? Number(limit) : undefined,
     });
   }
-  async getSummary() {
+  async getSummary(req) {
+    this.assertStaffAccess(req);
     return this.dashboardService.getSummary(null);
   }
-  async getReportStats() {
+  async getReportStats(req) {
+    this.assertStaffAccess(req);
     return this.dashboardService.getReportStats();
   }
   async getTrainerStats(req) {
@@ -114,8 +129,9 @@ __decorate(
   [
     (0, common_1.Get)('stats'),
     openapi.ApiResponse({ status: 200 }),
+    __param(0, (0, common_1.Request)()),
     __metadata('design:type', Function),
-    __metadata('design:paramtypes', []),
+    __metadata('design:paramtypes', [Object]),
     __metadata('design:returntype', Promise),
   ],
   DashboardController.prototype,
@@ -126,8 +142,9 @@ __decorate(
   [
     (0, common_1.Get)('hub-stats'),
     openapi.ApiResponse({ status: 200 }),
+    __param(0, (0, common_1.Request)()),
     __metadata('design:type', Function),
-    __metadata('design:paramtypes', []),
+    __metadata('design:paramtypes', [Object]),
     __metadata('design:returntype', Promise),
   ],
   DashboardController.prototype,
@@ -168,8 +185,9 @@ __decorate(
   [
     (0, common_1.Get)('summary'),
     openapi.ApiResponse({ status: 200 }),
+    __param(0, (0, common_1.Request)()),
     __metadata('design:type', Function),
-    __metadata('design:paramtypes', []),
+    __metadata('design:paramtypes', [Object]),
     __metadata('design:returntype', Promise),
   ],
   DashboardController.prototype,
@@ -180,8 +198,9 @@ __decorate(
   [
     (0, common_1.Get)('report-stats'),
     openapi.ApiResponse({ status: 200 }),
+    __param(0, (0, common_1.Request)()),
     __metadata('design:type', Function),
-    __metadata('design:paramtypes', []),
+    __metadata('design:paramtypes', [Object]),
     __metadata('design:returntype', Promise),
   ],
   DashboardController.prototype,

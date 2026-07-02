@@ -11,8 +11,6 @@ export declare class HubsService {
     description: string;
     isActive: boolean;
     location: string;
-    createdAt: Date;
-    updatedAt: Date;
     code: string;
     managerName: string;
     managerPhone: string;
@@ -21,6 +19,8 @@ export declare class HubsService {
     projectors: number;
     capacity: number;
     notes: string;
+    createdAt: Date;
+    updatedAt: Date;
   }>;
   findAll(): Promise<
     ({
@@ -53,10 +53,10 @@ export declare class HubsService {
         contactId: number;
         isActive: boolean;
         hubId: number;
-        employeeId: string;
-        specialization: string;
         createdAt: Date;
         updatedAt: Date;
+        employeeId: string;
+        specialization: string;
       }[];
     } & {
       address: string;
@@ -65,8 +65,6 @@ export declare class HubsService {
       description: string;
       isActive: boolean;
       location: string;
-      createdAt: Date;
-      updatedAt: Date;
       code: string;
       managerName: string;
       managerPhone: string;
@@ -75,6 +73,8 @@ export declare class HubsService {
       projectors: number;
       capacity: number;
       notes: string;
+      createdAt: Date;
+      updatedAt: Date;
     })[]
   >;
   findOne(id: number): Promise<
@@ -101,10 +101,10 @@ export declare class HubsService {
           contactId: number;
           isActive: boolean;
           hubId: number;
-          employeeId: string;
-          specialization: string;
           createdAt: Date;
           updatedAt: Date;
+          employeeId: string;
+          specialization: string;
         };
         skillCategory: {
           id: string;
@@ -172,10 +172,10 @@ export declare class HubsService {
         contactId: number;
         isActive: boolean;
         hubId: number;
-        employeeId: string;
-        specialization: string;
         createdAt: Date;
         updatedAt: Date;
+        employeeId: string;
+        specialization: string;
       })[];
     } & {
       address: string;
@@ -184,8 +184,6 @@ export declare class HubsService {
       description: string;
       isActive: boolean;
       location: string;
-      createdAt: Date;
-      updatedAt: Date;
       code: string;
       managerName: string;
       managerPhone: string;
@@ -194,6 +192,8 @@ export declare class HubsService {
       projectors: number;
       capacity: number;
       notes: string;
+      createdAt: Date;
+      updatedAt: Date;
     }
   >;
   findByCode(code: string): Promise<
@@ -227,10 +227,10 @@ export declare class HubsService {
         contactId: number;
         isActive: boolean;
         hubId: number;
-        employeeId: string;
-        specialization: string;
         createdAt: Date;
         updatedAt: Date;
+        employeeId: string;
+        specialization: string;
       }[];
     } & {
       address: string;
@@ -239,8 +239,6 @@ export declare class HubsService {
       description: string;
       isActive: boolean;
       location: string;
-      createdAt: Date;
-      updatedAt: Date;
       code: string;
       managerName: string;
       managerPhone: string;
@@ -249,6 +247,8 @@ export declare class HubsService {
       projectors: number;
       capacity: number;
       notes: string;
+      createdAt: Date;
+      updatedAt: Date;
     }
   >;
   update(
@@ -261,8 +261,6 @@ export declare class HubsService {
     description: string;
     isActive: boolean;
     location: string;
-    createdAt: Date;
-    updatedAt: Date;
     code: string;
     managerName: string;
     managerPhone: string;
@@ -271,6 +269,8 @@ export declare class HubsService {
     projectors: number;
     capacity: number;
     notes: string;
+    createdAt: Date;
+    updatedAt: Date;
   }>;
   remove(id: number): Promise<{
     address: string;
@@ -279,8 +279,6 @@ export declare class HubsService {
     description: string;
     isActive: boolean;
     location: string;
-    createdAt: Date;
-    updatedAt: Date;
     code: string;
     managerName: string;
     managerPhone: string;
@@ -289,6 +287,8 @@ export declare class HubsService {
     projectors: number;
     capacity: number;
     notes: string;
+    createdAt: Date;
+    updatedAt: Date;
   }>;
   getHubStatistics(id: number): Promise<{
     statistics: {
@@ -307,8 +307,6 @@ export declare class HubsService {
     description: string;
     isActive: boolean;
     location: string;
-    createdAt: Date;
-    updatedAt: Date;
     code: string;
     managerName: string;
     managerPhone: string;
@@ -317,5 +315,7 @@ export declare class HubsService {
     projectors: number;
     capacity: number;
     notes: string;
+    createdAt: Date;
+    updatedAt: Date;
   }>;
 }

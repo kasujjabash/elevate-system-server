@@ -152,6 +152,20 @@ let AssignmentsController = class AssignmentsController {
   approveSubmission(id) {
     return this.assignmentsService.approveSubmission(id);
   }
+  async updateAssignment(id, dto, req) {
+    const roles = Array.isArray(req?.user?.roles)
+      ? req.user.roles
+      : (req?.user?.roles || '')
+          .split(',')
+          .map((r) => r.trim())
+          .filter(Boolean);
+    const isAdmin =
+      roles.includes('ADMIN') ||
+      roles.includes('SUPER_ADMIN') ||
+      roles.includes('HUB_MANAGER');
+    const trainerContactId = req.user.contactId ?? req.user.id ?? null;
+    return this.assignmentsService.update(id, dto, trainerContactId, isAdmin);
+  }
   findOne(id) {
     return this.assignmentsService.findOne(id);
   }
@@ -346,6 +360,21 @@ __decorate(
   ],
   AssignmentsController.prototype,
   'approveSubmission',
+  null,
+);
+__decorate(
+  [
+    (0, common_1.Patch)(':id'),
+    openapi.ApiResponse({ status: 200, type: Object }),
+    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Request)()),
+    __metadata('design:type', Function),
+    __metadata('design:paramtypes', [Number, Object, Object]),
+    __metadata('design:returntype', Promise),
+  ],
+  AssignmentsController.prototype,
+  'updateAssignment',
   null,
 );
 __decorate(

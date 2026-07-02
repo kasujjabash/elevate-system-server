@@ -39,8 +39,6 @@ export declare class SkillCategoriesService {
           description: string;
           isActive: boolean;
           location: string;
-          createdAt: Date;
-          updatedAt: Date;
           code: string;
           managerName: string;
           managerPhone: string;
@@ -49,6 +47,8 @@ export declare class SkillCategoriesService {
           projectors: number;
           capacity: number;
           notes: string;
+          createdAt: Date;
+          updatedAt: Date;
         };
         instructor: {
           contact: {
@@ -71,10 +71,10 @@ export declare class SkillCategoriesService {
           contactId: number;
           isActive: boolean;
           hubId: number;
-          employeeId: string;
-          specialization: string;
           createdAt: Date;
           updatedAt: Date;
+          employeeId: string;
+          specialization: string;
         };
       } & {
         id: number;

@@ -52,8 +52,6 @@ export declare class StudentsService {
         description: string;
         isActive: boolean;
         location: string;
-        createdAt: Date;
-        updatedAt: Date;
         code: string;
         managerName: string;
         managerPhone: string;
@@ -62,6 +60,8 @@ export declare class StudentsService {
         projectors: number;
         capacity: number;
         notes: string;
+        createdAt: Date;
+        updatedAt: Date;
       };
     } & {
       id: number;
@@ -112,8 +112,6 @@ export declare class StudentsService {
         description: string;
         isActive: boolean;
         location: string;
-        createdAt: Date;
-        updatedAt: Date;
         code: string;
         managerName: string;
         managerPhone: string;
@@ -122,6 +120,8 @@ export declare class StudentsService {
         projectors: number;
         capacity: number;
         notes: string;
+        createdAt: Date;
+        updatedAt: Date;
       };
       enrollments: ({
         course: {
@@ -266,8 +266,6 @@ export declare class StudentsService {
       description: string;
       isActive: boolean;
       location: string;
-      createdAt: Date;
-      updatedAt: Date;
       code: string;
       managerName: string;
       managerPhone: string;
@@ -276,6 +274,8 @@ export declare class StudentsService {
       projectors: number;
       capacity: number;
       notes: string;
+      createdAt: Date;
+      updatedAt: Date;
     };
     submissions: ({
       assignment: {
@@ -298,6 +298,7 @@ export declare class StudentsService {
         title: string;
         description: string;
         isActive: boolean;
+        hubId: number;
         createdAt: Date;
         updatedAt: Date;
         courseId: number;
@@ -342,11 +343,26 @@ export declare class StudentsService {
           contactId: number;
           isActive: boolean;
           hubId: number;
-          employeeId: string;
-          specialization: string;
           createdAt: Date;
           updatedAt: Date;
+          employeeId: string;
+          specialization: string;
         };
+        assignments: {
+          id: number;
+          title: string;
+          description: string;
+          isActive: boolean;
+          hubId: number;
+          createdAt: Date;
+          updatedAt: Date;
+          courseId: number;
+          weekNumber: number;
+          dueDate: Date;
+          maxScore: number;
+          isMilestone: boolean;
+          isCoursePlayer: boolean;
+        }[];
         skillCategory: {
           id: string;
           name: string;
@@ -363,20 +379,6 @@ export declare class StudentsService {
           updatedAt: Date;
           courseId: number;
           filePath: string;
-        }[];
-        assignments: {
-          id: number;
-          title: string;
-          description: string;
-          isActive: boolean;
-          createdAt: Date;
-          updatedAt: Date;
-          courseId: number;
-          weekNumber: number;
-          dueDate: Date;
-          maxScore: number;
-          isMilestone: boolean;
-          isCoursePlayer: boolean;
         }[];
       } & {
         id: number;
@@ -450,8 +452,6 @@ export declare class StudentsService {
           description: string;
           isActive: boolean;
           location: string;
-          createdAt: Date;
-          updatedAt: Date;
           code: string;
           managerName: string;
           managerPhone: string;
@@ -460,6 +460,8 @@ export declare class StudentsService {
           projectors: number;
           capacity: number;
           notes: string;
+          createdAt: Date;
+          updatedAt: Date;
         };
         skillCategory: {
           id: string;
