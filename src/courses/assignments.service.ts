@@ -548,6 +548,7 @@ export class AssignmentsService {
       dueDate?: string | null;
       maxScore?: number;
       weekNumber?: number | null;
+      hubId?: number | null;
     },
     trainerContactId: number,
     isAdmin: boolean,
@@ -571,6 +572,9 @@ export class AssignmentsService {
         ...(dto.maxScore !== undefined && { maxScore: Number(dto.maxScore) }),
         ...(dto.weekNumber !== undefined && {
           weekNumber: dto.weekNumber !== null ? Number(dto.weekNumber) : null,
+        }),
+        ...(dto.hubId !== undefined && {
+          hubId: dto.hubId !== null ? Number(dto.hubId) : null,
         }),
       },
       include: { course: true },
