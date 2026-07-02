@@ -1,5 +1,6 @@
 import {
   Controller,
+  ForbiddenException,
   Get,
   Query,
   Request,
@@ -19,13 +20,30 @@ export class DashboardController {
     private readonly coursesService: CoursesService,
   ) {}
 
+  // These endpoints return institution-wide data (all hubs/students/courses),
+  // so students must never receive a response from them — only staff roles
+  // that already have access to the Reports page (ADMIN/TRAINER/HUB_MANAGER).
+  private assertStaffAccess(req: any) {
+    const roles: string[] = req?.user?.roles ?? [];
+    const isStaff = roles.some((r) =>
+      ['ADMIN', 'SUPER_ADMIN', 'TRAINER', 'INSTRUCTOR', 'HUB_MANAGER'].includes(
+        r,
+      ),
+    );
+    if (!isStaff) {
+      throw new ForbiddenException('Not authorized to view this data');
+    }
+  }
+
   @Get('stats')
-  async getStats() {
+  async getStats(@Request() req: any) {
+    this.assertStaffAccess(req);
     return this.dashboardService.getStats();
   }
 
   @Get('hub-stats')
-  async getHubStats() {
+  async getHubStats(@Request() req: any) {
+    this.assertStaffAccess(req);
     return this.dashboardService.getHubStats();
   }
 
@@ -66,12 +84,14 @@ export class DashboardController {
   }
 
   @Get('summary')
-  async getSummary() {
+  async getSummary(@Request() req: any) {
+    this.assertStaffAccess(req);
     return this.dashboardService.getSummary(null);
   }
 
   @Get('report-stats')
-  async getReportStats() {
+  async getReportStats(@Request() req: any) {
+    this.assertStaffAccess(req);
     return this.dashboardService.getReportStats();
   }
 
