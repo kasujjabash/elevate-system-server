@@ -233,6 +233,28 @@ export class AssignmentsController {
     return this.assignmentsService.approveSubmission(id);
   }
 
+  // ── Trainer/Admin: update an assignment ─────────────────────────────────
+  // PATCH /api/assignments/:id
+  @Patch(':id')
+  async updateAssignment(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: any,
+    @Request() req: any,
+  ) {
+    const roles: string[] = Array.isArray(req?.user?.roles)
+      ? req.user.roles
+      : (req?.user?.roles || '')
+          .split(',')
+          .map((r: string) => r.trim())
+          .filter(Boolean);
+    const isAdmin =
+      roles.includes('ADMIN') ||
+      roles.includes('SUPER_ADMIN') ||
+      roles.includes('HUB_MANAGER');
+    const trainerContactId = req.user.contactId ?? req.user.id ?? null;
+    return this.assignmentsService.update(id, dto, trainerContactId, isAdmin);
+  }
+
   // ── GET single assignment ─────────────────────────────────────────────────
   // GET /api/assignments/:id
   @Get(':id')

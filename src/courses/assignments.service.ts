@@ -342,6 +342,20 @@ export class AssignmentsService {
       throw new ForbiddenException('Submission deadline has passed');
     }
 
+    // Once graded, the submission is locked — no further edits/resubmission,
+    // even if the due date hasn't passed.
+    const existing = await this.prisma.submission.findUnique({
+      where: {
+        studentId_assignmentId: { studentId: student.id, assignmentId },
+      },
+      select: { score: true },
+    });
+    if (existing?.score != null) {
+      throw new ForbiddenException(
+        'This assignment has already been graded and cannot be edited',
+      );
+    }
+
     // Store link in filePath; text/answer in content
     const data: any = {
       assignmentId,
@@ -353,21 +367,14 @@ export class AssignmentsService {
     if (body.type === 'link') data.filePath = body.link;
     if (body.type === 'file') data.filePath = body.filePath ?? body.fileName;
 
-    // Upsert: allow re-submission (only reachable above the due date check).
-    // Editing an already-graded submission's content invalidates that grade,
-    // so clear it rather than leaving a stale score attached to new content.
+    // Upsert: allow re-submission (only reachable above the grade/due-date
+    // checks, so any existing row here is guaranteed ungraded).
     return this.prisma.submission.upsert({
       where: {
         studentId_assignmentId: { studentId: student.id, assignmentId },
       },
       create: data,
-      update: {
-        ...data,
-        submittedAt: new Date(),
-        score: null,
-        feedback: null,
-        gradedAt: null,
-      },
+      update: { ...data, submittedAt: new Date() },
     });
   }
 
@@ -502,7 +509,12 @@ export class AssignmentsService {
         assignment: {
           include: { course: { select: { id: true, title: true } } },
         },
-        student: { include: { contact: { include: { person: true } } } },
+        student: {
+          include: {
+            contact: { include: { person: true } },
+            hub: { select: { id: true, name: true } },
+          },
+        },
       },
       orderBy: { submittedAt: 'desc' },
       take: filters.limit ?? 50,
