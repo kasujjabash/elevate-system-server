@@ -363,7 +363,7 @@ model job_placement {
   courseId                Int
   hubId                   Int
   yearCompleted           Int?
-  placementType           String   @db.VarChar(20) // Employed | SelfEmployed | Internship
+  placementType           String   @db.VarChar(20) // Employed | SelfEmployed | Freelance | Internship
   // Employed / Self-Employed
   jobTitle                String?  @db.VarChar(150)
   salaryBeforeProgram     Float?
