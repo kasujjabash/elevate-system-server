@@ -32,6 +32,12 @@ export class HubsController {
     return this.hubsService.findAll();
   }
 
+  @Get('combo')
+  @ApiOperation({ summary: 'Get lightweight {id, name} list of active hubs' })
+  combo() {
+    return this.hubsService.getCombo();
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get hub by ID' })
   @ApiResponse({ status: 200, description: 'Hub details' })

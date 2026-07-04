@@ -104,6 +104,7 @@ model hub {
   managers           user[]
   workshops          workshop[]
   assignments        assignment[]
+  jobPlacements      job_placement[]
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
 }
@@ -137,6 +138,7 @@ model course {
   timetableSessions  timetable_session[]
   chatRooms          chat_room[]
   workshops          workshop[]
+  jobPlacements      job_placement[]
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
 
@@ -348,6 +350,39 @@ model calendar_event {
   createdAt          DateTime             @default(now())
   createdBy          Int?
   attendanceSessions attendance_session[]
+}
+
+// Tracks course graduates' employment/self-employment/internship outcomes.
+// These people are not users or students and never log in — admins and hub
+// managers record their placement details manually for reporting.
+model job_placement {
+  id                      Int      @id @default(autoincrement())
+  fullName                String   @db.VarChar(150)
+  gender                  String?  @db.VarChar(20) // Male | Female | Other
+  phone                   String?  @db.VarChar(30)
+  courseId                Int
+  hubId                   Int
+  yearCompleted           Int?
+  placementType           String   @db.VarChar(20) // Employed | SelfEmployed | Internship
+  // Employed / Self-Employed
+  jobTitle                String?  @db.VarChar(150)
+  salaryBeforeProgram     Float?
+  salaryAfterProgram      Float?
+  // Employed only
+  companyName             String?  @db.VarChar(150)
+  industry                String?  @db.VarChar(20) // Tech | Design | Media | Other
+  employmentType          String?  @db.VarChar(20) // FullTime | PartTime | Freelance | Internship
+  referredBy              String?  @db.VarChar(150)
+  // Internship only
+  internshipOrganization  String?  @db.VarChar(150)
+  internshipRole          String?  @db.VarChar(150)
+  internshipSupervisor    String?  @db.VarChar(150)
+  isActive                Boolean  @default(true)
+  createdBy               Int?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  course                  course   @relation(fields: [courseId], references: [id])
+  hub                     hub      @relation(fields: [hubId], references: [id])
 }
 
 enum address_category_enum {

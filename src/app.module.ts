@@ -14,6 +14,7 @@ import { AnnouncementsModule } from './announcements/announcements.module';
 import { StudentsModule } from './students/students.module';
 import { ClassesModule } from './classes/classes.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { PlacementsModule } from './placements/placements.module';
 // Keeping useful modules
 import config, { appEntities } from './config';
 import { SeedModule } from './seed/seed.module';
@@ -50,6 +51,7 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
     StudentsModule,
     AnnouncementsModule,
     WorkshopsModule,
+    PlacementsModule,
 
     // Supporting modules
     SeedModule,
