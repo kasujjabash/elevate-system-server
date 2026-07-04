@@ -11,8 +11,8 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
-import { PlacementsService } from './placements.service';
-import { CreatePlacementDto } from './dto/create-placement.dto';
+import { JobPlacementsService } from './job-placements.service';
+import { CreateJobPlacementDto } from './dto/create-job-placement.dto';
 
 const ADMIN_ROLES = ['admin', 'super_admin', 'hub_manager'];
 
@@ -31,36 +31,51 @@ function requireAdminOrHubManager(req: any) {
   }
 }
 
-@ApiTags('placements')
+@ApiTags('job-placements')
 @ApiBearerAuth()
 @Controller('api/job-placements')
-export class PlacementsController {
-  constructor(private readonly placementsService: PlacementsService) {}
+export class JobPlacementsController {
+  constructor(private readonly jobPlacementsService: JobPlacementsService) {}
 
   @Get()
   findAll() {
-    return this.placementsService.findAll();
+    return this.jobPlacementsService.findAll();
+  }
+
+  // Must be declared before the `:id` route below, otherwise "stats" would
+  // be parsed as an id.
+  @Get('stats')
+  getStats() {
+    return this.jobPlacementsService.getStats();
+  }
+
+  @Get(':id')
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.jobPlacementsService.findOne(id);
   }
 
   @Post()
-  create(@Body() dto: CreatePlacementDto, @Request() req: any) {
+  create(@Body() dto: CreateJobPlacementDto, @Request() req: any) {
     requireAdminOrHubManager(req);
-    return this.placementsService.create(dto, req.user?.id ?? req.user?.userId);
+    return this.jobPlacementsService.create(
+      dto,
+      req.user?.id ?? req.user?.userId,
+    );
   }
 
   @Put(':id')
   update(
     @Param('id', ParseIntPipe) id: number,
-    @Body() dto: CreatePlacementDto,
+    @Body() dto: CreateJobPlacementDto,
     @Request() req: any,
   ) {
     requireAdminOrHubManager(req);
-    return this.placementsService.update(id, dto);
+    return this.jobPlacementsService.update(id, dto);
   }
 
   @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
     requireAdminOrHubManager(req);
-    return this.placementsService.remove(id);
+    return this.jobPlacementsService.remove(id);
   }
 }

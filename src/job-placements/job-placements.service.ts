@@ -1,14 +1,16 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../shared/prisma.service';
-import { CreatePlacementDto } from './dto/create-placement.dto';
+import { CreateJobPlacementDto } from './dto/create-job-placement.dto';
 
 const INCLUDE = {
   course: { select: { id: true, title: true } },
   hub: { select: { id: true, name: true } },
 };
 
+const PLACEMENT_TYPES = ['Employed', 'SelfEmployed', 'Freelance', 'Internship'];
+
 @Injectable()
-export class PlacementsService {
+export class JobPlacementsService {
   constructor(private prisma: PrismaService) {}
 
   private formatPlacement(placement: any) {
@@ -19,7 +21,7 @@ export class PlacementsService {
     return { ...placement, incomeGrowthPercent };
   }
 
-  async create(dto: CreatePlacementDto, createdBy?: number) {
+  async create(dto: CreateJobPlacementDto, createdBy?: number) {
     const placement = await this.prisma.job_placement.create({
       data: {
         fullName: dto.fullName,
@@ -46,7 +48,7 @@ export class PlacementsService {
     return this.formatPlacement(placement);
   }
 
-  async update(id: number, dto: CreatePlacementDto) {
+  async update(id: number, dto: CreateJobPlacementDto) {
     const existing = await this.prisma.job_placement.findUnique({
       where: { id },
     });
@@ -87,6 +89,15 @@ export class PlacementsService {
     return placements.map((p) => this.formatPlacement(p));
   }
 
+  async findOne(id: number) {
+    const placement = await this.prisma.job_placement.findUnique({
+      where: { id },
+      include: INCLUDE,
+    });
+    if (!placement) throw new NotFoundException('Placement record not found');
+    return this.formatPlacement(placement);
+  }
+
   async remove(id: number) {
     const placement = await this.prisma.job_placement.findUnique({
       where: { id },
@@ -96,5 +107,51 @@ export class PlacementsService {
       where: { id },
       data: { isActive: false },
     });
+  }
+
+  async getStats() {
+    const placements = await this.prisma.job_placement.findMany({
+      where: { isActive: true },
+    });
+
+    const total = placements.length;
+    const byType = PLACEMENT_TYPES.reduce(
+      (acc, type) => {
+        acc[type] = placements.filter((p) => p.placementType === type).length;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
+
+    const withSalaryData = placements.filter(
+      (p) =>
+        p.salaryBeforeProgram != null &&
+        p.salaryAfterProgram != null &&
+        p.salaryBeforeProgram > 0,
+    );
+    const avgSalaryChangeAmount = withSalaryData.length
+      ? withSalaryData.reduce(
+          (sum, p) => sum + (p.salaryAfterProgram - p.salaryBeforeProgram),
+          0,
+        ) / withSalaryData.length
+      : null;
+    const avgSalaryChangePercent = withSalaryData.length
+      ? withSalaryData.reduce(
+          (sum, p) =>
+            sum +
+            ((p.salaryAfterProgram - p.salaryBeforeProgram) /
+              p.salaryBeforeProgram) *
+              100,
+          0,
+        ) / withSalaryData.length
+      : null;
+
+    return {
+      total,
+      byType,
+      avgSalaryChangeAmount,
+      avgSalaryChangePercent,
+      recordsWithSalaryData: withSalaryData.length,
+    };
   }
 }

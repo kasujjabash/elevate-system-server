@@ -11,7 +11,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 const PLACEMENT_TYPES = ['Employed', 'SelfEmployed', 'Freelance', 'Internship'];
 
-export class CreatePlacementDto {
+export class CreateJobPlacementDto {
   @ApiProperty({ description: 'Full name of the placed person' })
   @IsString()
   fullName: string;
@@ -49,7 +49,7 @@ export class CreatePlacementDto {
   @IsIn(PLACEMENT_TYPES)
   placementType: string;
 
-  // ── Employed / Self-Employed ──────────────────────────────────────────
+  // ── Employed / Self-Employed / Freelance ────────────────────────────────
   @ApiPropertyOptional({ description: 'Job title / what they do' })
   @ValidateIf((o) => o.placementType !== 'Internship')
   @IsString()
