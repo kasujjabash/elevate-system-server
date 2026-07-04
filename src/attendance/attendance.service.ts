@@ -95,12 +95,14 @@ export class AttendanceService {
         label: dto.label,
         courseId: dto.courseId,
         hubId: dto.hubId,
+        eventId: dto.eventId,
         expiresAt,
         createdBy,
       },
       include: {
         course: { select: { id: true, title: true } },
         hub: { select: { id: true, name: true } },
+        event: { select: { id: true, title: true } },
         _count: { select: { records: true } },
       },
     });
@@ -118,6 +120,7 @@ export class AttendanceService {
         include: {
           course: { select: { id: true, title: true } },
           hub: { select: { id: true, name: true } },
+          event: { select: { id: true, title: true } },
           _count: {
             select: {
               records: { where: { method: { not: 'Absent' } } },
@@ -137,6 +140,7 @@ export class AttendanceService {
       include: {
         course: { select: { id: true, title: true } },
         hub: { select: { id: true, name: true } },
+        event: { select: { id: true, title: true } },
         records: {
           where: { method: { not: 'Absent' } },
           orderBy: { checkedInAt: 'asc' },

@@ -15,6 +15,12 @@ export class CreateSessionDto {
   @IsOptional()
   courseId?: number;
 
+  @ApiPropertyOptional({ description: 'Event ID to associate with session' })
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  eventId?: number;
+
   @ApiProperty({
     description: 'Hub ID — required for every attendance session',
   })

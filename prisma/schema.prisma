@@ -312,6 +312,7 @@ model attendance_session {
   shortCode String              @unique @db.VarChar(8)
   courseId  Int?
   hubId     Int?
+  eventId   Int?
   label     String?             @db.VarChar(200)
   expiresAt DateTime
   isActive  Boolean             @default(true)
@@ -320,6 +321,7 @@ model attendance_session {
   records   attendance_record[]
   course    course?             @relation(fields: [courseId], references: [id])
   hub       hub?                @relation(fields: [hubId], references: [id])
+  event     calendar_event?     @relation(fields: [eventId], references: [id])
 }
 
 model attendance_record {
@@ -335,16 +337,17 @@ model attendance_record {
 }
 
 model calendar_event {
-  id          Int       @id @default(autoincrement())
-  title       String    @db.VarChar(200)
-  description String?   @db.Text
-  eventDate   DateTime
-  endDate     DateTime?
-  location    String?   @db.VarChar(300)
-  type        String    @default("general") // general | class | holiday | milestone | deadline
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  createdBy   Int?
+  id                 Int                  @id @default(autoincrement())
+  title              String               @db.VarChar(200)
+  description        String?              @db.Text
+  eventDate          DateTime
+  endDate            DateTime?
+  location           String?              @db.VarChar(300)
+  type               String               @default("general") // general | class | holiday | milestone | deadline
+  isActive           Boolean              @default(true)
+  createdAt          DateTime             @default(now())
+  createdBy          Int?
+  attendanceSessions attendance_session[]
 }
 
 enum address_category_enum {
