@@ -104,7 +104,6 @@ model hub {
   managers           user[]
   workshops          workshop[]
   assignments        assignment[]
-  calendarEvents     calendar_event[]
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
 }
@@ -345,11 +344,9 @@ model calendar_event {
   endDate            DateTime?
   location           String?              @db.VarChar(300)
   type               String               @default("general") // general | class | holiday | milestone | deadline
-  hubId              Int?
   isActive           Boolean              @default(true)
   createdAt          DateTime             @default(now())
   createdBy          Int?
-  hub                hub?                 @relation(fields: [hubId], references: [id])
   attendanceSessions attendance_session[]
 }
 

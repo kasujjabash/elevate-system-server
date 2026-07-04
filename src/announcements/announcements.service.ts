@@ -92,31 +92,19 @@ export class AnnouncementsService {
     const now = new Date();
     const until = new Date(now);
     until.setDate(until.getDate() + days);
-    const events = await this.prisma.calendar_event.findMany({
+    return this.prisma.calendar_event.findMany({
       where: {
         isActive: true,
         eventDate: { gte: now, lte: until },
       },
       orderBy: { eventDate: 'asc' },
-      include: { hub: { select: { id: true, name: true } } },
     });
-    return events.map((e) => this.formatEvent(e));
   }
 
   async getAllEvents() {
-    const events = await this.prisma.calendar_event.findMany({
+    return this.prisma.calendar_event.findMany({
       orderBy: { eventDate: 'asc' },
-      include: { hub: { select: { id: true, name: true } } },
     });
-    return events.map((e) => this.formatEvent(e));
-  }
-
-  private formatEvent(event: {
-    hub?: { id: number; name: string } | null;
-    [key: string]: any;
-  }) {
-    const { hub, ...rest } = event;
-    return { ...rest, hubName: hub?.name ?? null };
   }
 
   async createEvent(
@@ -127,11 +115,10 @@ export class AnnouncementsService {
       endDate?: string;
       location?: string;
       type?: string;
-      hubId?: number;
     },
     createdBy?: number,
   ) {
-    const event = await this.prisma.calendar_event.create({
+    return this.prisma.calendar_event.create({
       data: {
         title: dto.title,
         description: dto.description,
@@ -139,12 +126,9 @@ export class AnnouncementsService {
         endDate: dto.endDate ? new Date(dto.endDate) : null,
         location: dto.location,
         type: dto.type || 'general',
-        hubId: dto.hubId ?? null,
         createdBy: createdBy ?? null,
       },
-      include: { hub: { select: { id: true, name: true } } },
     });
-    return this.formatEvent(event);
   }
 
   async removeEvent(id: number) {
