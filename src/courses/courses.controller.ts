@@ -301,6 +301,15 @@ export class CoursesController {
     return this.coursesService.createModule(id, dto);
   }
 
+  // PATCH /api/courses/:id/modules/reorder  — admin: persist drag-and-drop module order
+  @Patch(':id/modules/reorder')
+  reorderModules(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: { moduleIds: number[] },
+  ) {
+    return this.coursesService.reorderModules(id, dto.moduleIds);
+  }
+
   // ── Resources ─────────────────────────────────────────────────────────────
 
   // GET /api/courses/:id/resources

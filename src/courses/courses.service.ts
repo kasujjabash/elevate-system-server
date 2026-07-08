@@ -699,15 +699,51 @@ export class CoursesService {
   // ── Admin: update a module (e.g. rename) ────────────────────────────────
   async updateModule(
     moduleId: number,
-    dto: { title?: string; description?: string },
+    dto: {
+      title?: string;
+      description?: string;
+      weekNumber?: number;
+      order?: number;
+    },
   ) {
     return this.prisma.course_module.update({
       where: { id: moduleId },
       data: {
         ...(dto.title !== undefined && { title: dto.title }),
         ...(dto.description !== undefined && { description: dto.description }),
+        ...(dto.weekNumber !== undefined && { weekNumber: dto.weekNumber }),
+        ...(dto.order !== undefined && { order: dto.order }),
       },
     });
+  }
+
+  // ── Admin: persist a new module order for a course ──────────────────────
+  async reorderModules(courseId: number, moduleIds: number[]) {
+    const existing = await this.prisma.course_module.findMany({
+      where: { courseId },
+      select: { id: true },
+    });
+    const existingIds = new Set(existing.map((m) => m.id));
+    if (
+      !Array.isArray(moduleIds) ||
+      moduleIds.length !== existing.length ||
+      !moduleIds.every((id) => existingIds.has(id))
+    ) {
+      throw new BadRequestException(
+        "moduleIds must include exactly the course's current modules",
+      );
+    }
+
+    await this.prisma.$transaction(
+      moduleIds.map((id, index) =>
+        this.prisma.course_module.update({
+          where: { id },
+          data: { order: index, weekNumber: index + 1 },
+        }),
+      ),
+    );
+
+    return this.getCourseModules(courseId);
   }
 
   // ── Admin: add content to a module ───────────────────────────────────────
