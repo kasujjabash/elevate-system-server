@@ -483,9 +483,10 @@ export class UsersService {
     };
 
     const shouldInvalidateTokens =
-      hasValue(data.password) || data.isActive === false;
+      (data.password && data.password.trim().length > 0) ||
+      data.isActive === false;
 
-    if (hasValue(data.password)) {
+    if (data.password && data.password.trim().length > 0) {
       const user = new User();
       user.password = data.password;
       user.hashPassword();
