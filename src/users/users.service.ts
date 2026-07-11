@@ -193,6 +193,7 @@ export class UsersService {
       firstName: user.contact?.person?.firstName || '',
       lastName: user.contact?.person?.lastName || '',
       dateOfBirth: user.contact?.person?.dateOfBirth || null,
+      gender: user.contact?.person?.gender || '',
     };
   }
 
@@ -227,7 +228,7 @@ export class UsersService {
         data: {
           firstName: data.firstName || '',
           lastName: data.lastName || '',
-          gender: 'Male',
+          gender: (data as any).gender || 'Male',
           contactId: contact.id,
           ...(data.dateOfBirth
             ? { dateOfBirth: new Date(data.dateOfBirth) }
@@ -579,13 +580,14 @@ export class UsersService {
       });
     }
 
-    // Persist phone, dateOfBirth, firstName, lastName via Prisma (contact → person / phone tables)
+    // Persist phone, dateOfBirth, firstName, lastName, gender via Prisma (contact → person / phone tables)
     if (
       data.contactId &&
       (data.phone !== undefined ||
         data.dateOfBirth !== undefined ||
         data.firstName !== undefined ||
-        data.lastName !== undefined)
+        data.lastName !== undefined ||
+        data.gender !== undefined)
     ) {
       const personData: any = {};
       if (data.dateOfBirth !== undefined) {
@@ -595,6 +597,7 @@ export class UsersService {
       }
       if (data.firstName !== undefined) personData.firstName = data.firstName;
       if (data.lastName !== undefined) personData.lastName = data.lastName;
+      if (data.gender !== undefined) personData.gender = data.gender;
       if (Object.keys(personData).length > 0) {
         await this.prisma.person.updateMany({
           where: { contactId: data.contactId },

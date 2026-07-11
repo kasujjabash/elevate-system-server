@@ -19,6 +19,7 @@ export class UserListDto extends UserPermissions {
   lastName?: string;
   dateOfBirth?: Date | string | null;
   phone?: string;
+  gender?: string;
 }
 
 export class UserDto {

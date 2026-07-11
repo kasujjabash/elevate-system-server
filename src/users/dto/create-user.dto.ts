@@ -19,6 +19,10 @@ export class CreateUserDto {
   @IsString()
   lastName?: string;
 
+  @IsOptional()
+  @IsString()
+  gender?: string;
+
   username: string;
 
   @IsNotEmpty()
