@@ -85,7 +85,7 @@ export class AttendanceService {
 
     const token = randomBytes(24).toString('hex');
     const shortCode = this.generateShortCode();
-    const durationMinutes = dto.durationMinutes ?? 30;
+    const durationMinutes = dto.durationMinutes ?? 60;
     const expiresAt = new Date(Date.now() + durationMinutes * 60 * 1000);
 
     const session = await this.prisma.attendance_session.create({

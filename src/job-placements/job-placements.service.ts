@@ -41,6 +41,10 @@ export class JobPlacementsService {
         internshipOrganization: dto.internshipOrganization,
         internshipRole: dto.internshipRole,
         internshipSupervisor: dto.internshipSupervisor,
+        isPaidInternship: dto.isPaidInternship ?? false,
+        internshipStipend: dto.isPaidInternship
+          ? dto.internshipStipend ?? null
+          : null,
         createdBy: createdBy ?? null,
       },
       include: INCLUDE,
@@ -74,6 +78,10 @@ export class JobPlacementsService {
         internshipOrganization: dto.internshipOrganization ?? null,
         internshipRole: dto.internshipRole ?? null,
         internshipSupervisor: dto.internshipSupervisor ?? null,
+        isPaidInternship: dto.isPaidInternship ?? false,
+        internshipStipend: dto.isPaidInternship
+          ? dto.internshipStipend ?? null
+          : null,
       },
       include: INCLUDE,
     });

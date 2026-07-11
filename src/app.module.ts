@@ -15,6 +15,7 @@ import { StudentsModule } from './students/students.module';
 import { ClassesModule } from './classes/classes.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { JobPlacementsModule } from './job-placements/job-placements.module';
+import { CommunityReachModule } from './community-reach/community-reach.module';
 // Keeping useful modules
 import config, { appEntities } from './config';
 import { SeedModule } from './seed/seed.module';
@@ -52,6 +53,7 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
     AnnouncementsModule,
     WorkshopsModule,
     JobPlacementsModule,
+    CommunityReachModule,
 
     // Supporting modules
     SeedModule,

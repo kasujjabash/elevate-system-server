@@ -3,6 +3,7 @@ import {
   IsOptional,
   IsInt,
   IsNumber,
+  IsBoolean,
   Min,
   IsIn,
   ValidateIf,
@@ -117,4 +118,23 @@ export class CreateJobPlacementDto {
   @IsString()
   @IsOptional()
   internshipSupervisor?: string;
+
+  @ApiPropertyOptional({
+    description: 'Whether the internship pays a monthly stipend',
+  })
+  @ValidateIf((o) => o.placementType === 'Internship')
+  @IsBoolean()
+  @IsOptional()
+  isPaidInternship?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Monthly stipend amount — required when isPaidInternship is true',
+  })
+  @ValidateIf(
+    (o) => o.placementType === 'Internship' && o.isPaidInternship === true,
+  )
+  @IsNumber()
+  @Min(0)
+  internshipStipend?: number;
 }

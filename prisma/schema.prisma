@@ -105,6 +105,7 @@ model hub {
   workshops          workshop[]
   assignments        assignment[]
   jobPlacements      job_placement[]
+  communityReach     community_reach[]
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
 }
@@ -350,6 +351,7 @@ model calendar_event {
   createdAt          DateTime             @default(now())
   createdBy          Int?
   attendanceSessions attendance_session[]
+  communityReach     community_reach[]
 }
 
 // Tracks course graduates' employment/self-employment/internship outcomes.
@@ -377,12 +379,32 @@ model job_placement {
   internshipOrganization  String?  @db.VarChar(150)
   internshipRole          String?  @db.VarChar(150)
   internshipSupervisor    String?  @db.VarChar(150)
+  isPaidInternship        Boolean  @default(false)
+  internshipStipend       Float?
   isActive                Boolean  @default(true)
   createdBy               Int?
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
   course                  course   @relation(fields: [courseId], references: [id])
   hub                     hub      @relation(fields: [hubId], references: [id])
+}
+
+// Tracks people the program has reached (events, referrals, walk-ins, social
+// media, etc.) before they're enrolled students. Admins and hub managers log
+// these manually.
+model community_reach {
+  id          Int             @id @default(autoincrement())
+  fullName    String          @db.VarChar(150)
+  phone       String?         @db.VarChar(30)
+  hubId       Int
+  reachMethod String          @db.VarChar(20) // Walk-in | Event | Referral | Social Media | Other
+  eventId     Int? // relevant when reachMethod = Event — picked from real calendar events
+  isActive    Boolean         @default(true)
+  createdBy   Int?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  hub         hub             @relation(fields: [hubId], references: [id])
+  event       calendar_event? @relation(fields: [eventId], references: [id])
 }
 
 enum address_category_enum {
