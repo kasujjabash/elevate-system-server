@@ -1,5 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../shared/prisma.service';
+
+export const STUDENT_STATUSES = [
+  'Active',
+  'Completed',
+  'Graduated',
+  'OnBreak',
+  'Dropped',
+];
 
 @Injectable()
 export class StudentsService {
@@ -232,6 +240,7 @@ export class StudentsService {
     hub?: string;
     hubId?: number;
     course?: string;
+    status?: string;
     dateFrom?: string;
     dateTo?: string;
     limit?: number;
@@ -240,6 +249,12 @@ export class StudentsService {
     const where: any = {};
     if (filters.hubId) where.hubId = filters.hubId;
     else if (filters.hub) where.hub = { code: filters.hub };
+    if (filters.status) {
+      const match = STUDENT_STATUSES.find(
+        (s) => s.toLowerCase() === filters.status.toLowerCase(),
+      );
+      if (match) where.status = match;
+    }
     if (filters.dateFrom || filters.dateTo) {
       where.enrolledAt = {};
       if (filters.dateFrom) where.enrolledAt.gte = new Date(filters.dateFrom);
@@ -401,6 +416,20 @@ export class StudentsService {
     return this.prisma.student.update({
       where: { id },
       data: dto,
+    });
+  }
+
+  // Dedicated status update — informational only, never touches the user
+  // account's isActive (login access stays fully independent of this).
+  async updateStatus(id: number, status: string) {
+    if (!STUDENT_STATUSES.includes(status)) {
+      throw new BadRequestException(
+        `Status must be one of: ${STUDENT_STATUSES.join(', ')}`,
+      );
+    }
+    return this.prisma.student.update({
+      where: { id },
+      data: { status: status as any },
     });
   }
 

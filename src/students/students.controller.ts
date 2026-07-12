@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Patch,
   Body,
   Param,
   Query,
@@ -33,6 +34,7 @@ export class StudentsController {
     @Query('hub') hub?: string,
     @Query('hubId') hubId?: string,
     @Query('course') course?: string,
+    @Query('status') status?: string,
     @Query('dateFrom') dateFrom?: string,
     @Query('dateTo') dateTo?: string,
     @Query('limit') limit?: string,
@@ -52,6 +54,7 @@ export class StudentsController {
       hub,
       hubId: resolvedHubId,
       course,
+      status,
       dateFrom,
       dateTo,
       limit: limit ? parseInt(limit, 10) : 50,
@@ -178,6 +181,17 @@ export class StudentsController {
   @ApiOperation({ summary: 'Update student' })
   update(@Param('id', ParseIntPipe) id: number, @Body() body: any) {
     return this.studentsService.update(id, body);
+  }
+
+  // PATCH /api/students/:id/status – update the student's lifecycle status.
+  // Informational only — never touches the user account's isActive/login access.
+  @Patch(':id/status')
+  @ApiOperation({ summary: 'Update student status' })
+  updateStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('status') status: string,
+  ) {
+    return this.studentsService.updateStatus(id, status);
   }
 
   @Get(':id/progress')

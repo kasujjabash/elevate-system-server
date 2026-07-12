@@ -446,9 +446,10 @@ enum person_gender_enum {
 
 enum student_status_enum {
   Active
-  Inactive
+  Completed
   Graduated
-  Suspended
+  OnBreak
+  Dropped
 }
 
 enum enrollment_status_enum {

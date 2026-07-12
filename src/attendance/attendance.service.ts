@@ -542,7 +542,7 @@ export class AttendanceService {
       }),
       this.prisma.student.groupBy({
         by: ['hubId'],
-        where: { status: 'Inactive' },
+        where: { status: { in: ['OnBreak', 'Dropped'] } },
         _count: { id: true },
       }),
     ]);
