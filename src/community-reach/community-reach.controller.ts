@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   ParseIntPipe,
   Request,
   ForbiddenException,
@@ -38,8 +39,14 @@ export class CommunityReachController {
   constructor(private readonly communityReachService: CommunityReachService) {}
 
   @Get()
-  findAll() {
-    return this.communityReachService.findAll();
+  findAll(
+    @Query('hubId') hubId?: string,
+    @Query('reachMethod') reachMethod?: string,
+  ) {
+    return this.communityReachService.findAll({
+      hubId: hubId ? parseInt(hubId, 10) : undefined,
+      reachMethod,
+    });
   }
 
   // Must be declared before the `:id` route below, otherwise "stats" would

@@ -46,9 +46,13 @@ export class CommunityReachService {
     });
   }
 
-  async findAll() {
+  async findAll(filters?: { hubId?: number; reachMethod?: string }) {
     return this.prisma.community_reach.findMany({
-      where: { isActive: true },
+      where: {
+        isActive: true,
+        ...(filters?.hubId ? { hubId: filters.hubId } : {}),
+        ...(filters?.reachMethod ? { reachMethod: filters.reachMethod } : {}),
+      },
       include: INCLUDE,
       orderBy: { createdAt: 'desc' },
     });
@@ -77,6 +81,7 @@ export class CommunityReachService {
   async getStats() {
     const contacts = await this.prisma.community_reach.findMany({
       where: { isActive: true },
+      include: { hub: { select: { id: true, name: true } } },
     });
 
     const total = contacts.length;
@@ -88,6 +93,12 @@ export class CommunityReachService {
       {} as Record<string, number>,
     );
 
-    return { total, byReachMethod };
+    const byHub: Record<string, number> = {};
+    contacts.forEach((c) => {
+      const hubName = c.hub?.name ?? `Hub ${c.hubId}`;
+      byHub[hubName] = (byHub[hubName] ?? 0) + 1;
+    });
+
+    return { total, byReachMethod, byHub };
   }
 }
