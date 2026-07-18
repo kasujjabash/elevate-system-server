@@ -263,6 +263,7 @@ export class DashboardService {
           assignment: {
             select: {
               maxScore: true,
+              courseId: true,
               course: { select: { title: true } },
             },
           },
@@ -292,10 +293,19 @@ export class DashboardService {
       : [];
     const titleMap = new Map(courseDetails.map((c) => [c.id, c.title]));
 
-    // Aggregate per-student avg grade
+    // Aggregate per-student total score and the courses they've been graded
+    // in — the average is divided by assignments *assigned* in those
+    // courses, not just the ones the student actually submitted, so a
+    // student who skips assignments can't outrank one who did more work.
     const gradeMap = new Map<
       number,
-      { name: string; courseName: string; scores: number[] }
+      {
+        name: string;
+        courseName: string;
+        totalScore: number;
+        submissionCount: number;
+        courseIds: Set<number>;
+      }
     >();
     for (const sub of gradedSubs) {
       const sid = sub.studentId;
@@ -307,20 +317,55 @@ export class DashboardService {
           name:
             [p?.firstName, p?.lastName].filter(Boolean).join(' ') || 'Unknown',
           courseName: (sub.assignment as any)?.course?.title ?? '',
-          scores: [],
+          totalScore: 0,
+          submissionCount: 0,
+          courseIds: new Set(),
         });
       }
-      gradeMap.get(sid)!.scores.push(pct);
+      const entry = gradeMap.get(sid)!;
+      entry.totalScore += pct;
+      entry.submissionCount += 1;
+      if (sub.assignment?.courseId)
+        entry.courseIds.add(sub.assignment.courseId);
     }
 
+    // Total active assignments per course, for every course any student here
+    // has been graded in.
+    const allCourseIds = new Set<number>();
+    gradeMap.forEach((v) => v.courseIds.forEach((id) => allCourseIds.add(id)));
+    const assignmentCounts = allCourseIds.size
+      ? await this.prisma.assignment.groupBy({
+          by: ['courseId'],
+          where: { courseId: { in: [...allCourseIds] }, isActive: true },
+          _count: { _all: true },
+        })
+      : [];
+    const assignmentCountMap = new Map(
+      assignmentCounts.map((a) => [a.courseId, a._count._all]),
+    );
+
     const topStudents = Array.from(gradeMap.values())
-      .map(({ name, courseName, scores }) => ({
-        name,
-        courseName,
-        avgGrade: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
-        submissionCount: scores.length,
-      }))
-      .sort((a, b) => b.avgGrade - a.avgGrade)
+      .map(({ name, courseName, totalScore, submissionCount, courseIds }) => {
+        const totalAssigned = [...courseIds].reduce(
+          (sum, cid) => sum + (assignmentCountMap.get(cid) ?? 0),
+          0,
+        );
+        // Fall back to submissionCount if the assignment count somehow comes
+        // back lower (e.g. an assignment was deactivated after grading).
+        const divisor = Math.max(totalAssigned, submissionCount, 1);
+        return {
+          name,
+          courseName,
+          avgGrade: Math.round(totalScore / divisor),
+          submissionCount,
+        };
+      })
+      // Higher average wins; a tied average goes to whoever submitted more —
+      // one graded assignment shouldn't outrank three at the same average.
+      .sort(
+        (a, b) =>
+          b.avgGrade - a.avgGrade || b.submissionCount - a.submissionCount,
+      )
       .slice(0, limit);
 
     return {
@@ -372,6 +417,7 @@ export class DashboardService {
         assignment: {
           select: {
             maxScore: true,
+            courseId: true,
             course: { select: { title: true } },
           },
         },
@@ -390,8 +436,9 @@ export class DashboardService {
         name: string;
         courseName: string;
         hubName: string;
-        scores: number[];
+        totalScore: number;
         submissionCount: number;
+        courseIds: Set<number>;
       }
     >();
 
@@ -406,24 +453,64 @@ export class DashboardService {
             [p?.firstName, p?.lastName].filter(Boolean).join(' ') || 'Unknown',
           courseName: (sub.assignment as any)?.course?.title ?? '',
           hubName: (sub.student as any)?.hub?.name ?? '',
-          scores: [],
+          totalScore: 0,
           submissionCount: 0,
+          courseIds: new Set(),
         });
       }
       const entry = studentMap.get(sid)!;
-      entry.scores.push(pct);
+      entry.totalScore += pct;
       entry.submissionCount++;
+      if (sub.assignment?.courseId)
+        entry.courseIds.add(sub.assignment.courseId);
     }
 
+    // Total active assignments per course, for every course any student here
+    // has been graded in — the average divides by assignments assigned, not
+    // just the ones actually submitted.
+    const allCourseIds = new Set<number>();
+    studentMap.forEach((v) =>
+      v.courseIds.forEach((id) => allCourseIds.add(id)),
+    );
+    const assignmentCounts = allCourseIds.size
+      ? await this.prisma.assignment.groupBy({
+          by: ['courseId'],
+          where: { courseId: { in: [...allCourseIds] }, isActive: true },
+          _count: { _all: true },
+        })
+      : [];
+    const assignmentCountMap = new Map(
+      assignmentCounts.map((a) => [a.courseId, a._count._all]),
+    );
+
     const students = Array.from(studentMap.values())
-      .map(({ name, courseName, hubName, scores, submissionCount }) => ({
-        name,
-        courseName,
-        hubName,
-        avgGrade: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
-        submissionCount,
-      }))
-      .sort((a, b) => b.avgGrade - a.avgGrade)
+      .map(
+        ({
+          name,
+          courseName,
+          hubName,
+          totalScore,
+          submissionCount,
+          courseIds,
+        }) => {
+          const totalAssigned = [...courseIds].reduce(
+            (sum, cid) => sum + (assignmentCountMap.get(cid) ?? 0),
+            0,
+          );
+          const divisor = Math.max(totalAssigned, submissionCount, 1);
+          return {
+            name,
+            courseName,
+            hubName,
+            avgGrade: Math.round(totalScore / divisor),
+            submissionCount,
+          };
+        },
+      )
+      .sort(
+        (a, b) =>
+          b.avgGrade - a.avgGrade || b.submissionCount - a.submissionCount,
+      )
       .slice(0, limit);
 
     return { students };
