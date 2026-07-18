@@ -839,6 +839,7 @@ export class CoursesService {
       todayAttendance,
       submissions,
       enrollments,
+      assignedCount,
     ] = await Promise.all([
       this.prisma.enrollment.count({
         where: { courseId, status: { in: ['Enrolled', 'InProgress'] } },
@@ -873,30 +874,44 @@ export class CoursesService {
           student: { include: { contact: { include: { person: true } } } },
         },
       }),
+      this.prisma.assignment.count({ where: { courseId, isActive: true } }),
     ]);
 
-    // Aggregate per-student avg grade from graded submissions
-    const gradeMap = new Map<number, { name: string; scores: number[] }>();
+    // Aggregate per-student avg grade from graded submissions. The average
+    // divides by assignments *assigned* in this course, not just the ones the
+    // student submitted, so an assignment never turned in counts as 0 — a
+    // student who submitted 1 of 3 assignments shouldn't outrank one who
+    // submitted all 3.
+    const gradeMap = new Map<
+      number,
+      { name: string; totalScore: number; submissionCount: number }
+    >();
     for (const sub of enrollments as any[]) {
       const sid: number = sub.studentId;
       const maxScore: number = sub.assignment?.maxScore ?? 100;
-      const pct = maxScore > 0 ? Math.round((sub.score! / maxScore) * 100) : 0;
+      const pct = maxScore > 0 ? (sub.score! / maxScore) * 100 : 0;
       if (!gradeMap.has(sid)) {
         const p = sub.student?.contact?.person;
         gradeMap.set(sid, {
           name:
             [p?.firstName, p?.lastName].filter(Boolean).join(' ') || 'Unknown',
-          scores: [],
+          totalScore: 0,
+          submissionCount: 0,
         });
       }
-      gradeMap.get(sid)!.scores.push(pct);
+      const entry = gradeMap.get(sid)!;
+      entry.totalScore += pct;
+      entry.submissionCount += 1;
     }
 
     const topStudents = Array.from(gradeMap.values())
-      .map(({ name, scores }) => ({
-        name,
-        avgGrade: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
-      }))
+      .map(({ name, totalScore, submissionCount }) => {
+        const divisor = Math.max(assignedCount, submissionCount, 1);
+        return {
+          name,
+          avgGrade: Math.round(totalScore / divisor),
+        };
+      })
       .sort((a, b) => b.avgGrade - a.avgGrade)
       .slice(0, 5);
 
@@ -1010,7 +1025,11 @@ export class CoursesService {
         isLive: true,
       }));
 
-    // Top performers across all trainer's courses
+    // Top performers across all trainer's courses. The average divides by
+    // assignments *assigned* in the student's courses, not just the ones they
+    // submitted, so an assignment never turned in counts as 0 — a student who
+    // submitted 1 of several assignments shouldn't outrank one who submitted
+    // them all.
     const gradedSubs = await this.prisma.submission.findMany({
       where: {
         assignment: { courseId: { in: courseIds } },
@@ -1021,6 +1040,7 @@ export class CoursesService {
         assignment: {
           select: {
             maxScore: true,
+            courseId: true,
             course: { select: { title: true } },
           },
         },
@@ -1029,30 +1049,71 @@ export class CoursesService {
     });
     const tpMap = new Map<
       number,
-      { name: string; courseName: string; scores: number[] }
+      {
+        name: string;
+        courseName: string;
+        totalScore: number;
+        submissionCount: number;
+        courseIds: Set<number>;
+      }
     >();
     for (const sub of gradedSubs) {
       const sid = sub.studentId;
       const max = (sub.assignment?.maxScore as number) ?? 100;
-      const pct = max > 0 ? Math.round((sub.score! / max) * 100) : 0;
+      const pct = max > 0 ? (sub.score! / max) * 100 : 0;
       if (!tpMap.has(sid)) {
         const p = sub.student?.contact?.person;
         tpMap.set(sid, {
           name:
             [p?.firstName, p?.lastName].filter(Boolean).join(' ') || 'Unknown',
           courseName: (sub.assignment as any)?.course?.title ?? '',
-          scores: [],
+          totalScore: 0,
+          submissionCount: 0,
+          courseIds: new Set(),
         });
       }
-      tpMap.get(sid)!.scores.push(pct);
+      const entry = tpMap.get(sid)!;
+      entry.totalScore += pct;
+      entry.submissionCount += 1;
+      if (sub.assignment?.courseId)
+        entry.courseIds.add(sub.assignment.courseId);
     }
+
+    const tpCourseIds = new Set<number>();
+    tpMap.forEach((v) => v.courseIds.forEach((id) => tpCourseIds.add(id)));
+    const tpAssignmentCounts = tpCourseIds.size
+      ? await this.prisma.assignment.groupBy({
+          by: ['courseId'],
+          where: { courseId: { in: [...tpCourseIds] }, isActive: true },
+          _count: { _all: true },
+        })
+      : [];
+    const tpAssignmentCountMap = new Map(
+      tpAssignmentCounts.map((a) => [a.courseId, a._count._all]),
+    );
+
     const topStudents = Array.from(tpMap.values())
-      .map(({ name, courseName, scores }) => ({
-        name,
-        courseName,
-        avgGrade: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
-        submissionCount: scores.length,
-      }))
+      .map(
+        ({
+          name,
+          courseName,
+          totalScore,
+          submissionCount,
+          courseIds: cids,
+        }) => {
+          const totalAssigned = [...cids].reduce(
+            (sum, cid) => sum + (tpAssignmentCountMap.get(cid) ?? 0),
+            0,
+          );
+          const divisor = Math.max(totalAssigned, submissionCount, 1);
+          return {
+            name,
+            courseName,
+            avgGrade: Math.round(totalScore / divisor),
+            submissionCount,
+          };
+        },
+      )
       .sort((a, b) => b.avgGrade - a.avgGrade)
       .slice(0, 10);
 

@@ -751,6 +751,7 @@ let CoursesService = class CoursesService {
       todayAttendance,
       submissions,
       enrollments,
+      assignedCount,
     ] = await Promise.all([
       this.prisma.enrollment.count({
         where: { courseId, status: { in: ['Enrolled', 'InProgress'] } },
@@ -784,27 +785,34 @@ let CoursesService = class CoursesService {
           student: { include: { contact: { include: { person: true } } } },
         },
       }),
+      this.prisma.assignment.count({ where: { courseId, isActive: true } }),
     ]);
     const gradeMap = new Map();
     for (const sub of enrollments) {
       const sid = sub.studentId;
       const maxScore = sub.assignment?.maxScore ?? 100;
-      const pct = maxScore > 0 ? Math.round((sub.score / maxScore) * 100) : 0;
+      const pct = maxScore > 0 ? (sub.score / maxScore) * 100 : 0;
       if (!gradeMap.has(sid)) {
         const p = sub.student?.contact?.person;
         gradeMap.set(sid, {
           name:
             [p?.firstName, p?.lastName].filter(Boolean).join(' ') || 'Unknown',
-          scores: [],
+          totalScore: 0,
+          submissionCount: 0,
         });
       }
-      gradeMap.get(sid).scores.push(pct);
+      const entry = gradeMap.get(sid);
+      entry.totalScore += pct;
+      entry.submissionCount += 1;
     }
     const topStudents = Array.from(gradeMap.values())
-      .map(({ name, scores }) => ({
-        name,
-        avgGrade: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
-      }))
+      .map(({ name, totalScore, submissionCount }) => {
+        const divisor = Math.max(assignedCount, submissionCount, 1);
+        return {
+          name,
+          avgGrade: Math.round(totalScore / divisor),
+        };
+      })
       .sort((a, b) => b.avgGrade - a.avgGrade)
       .slice(0, 5);
     return {
@@ -919,6 +927,7 @@ let CoursesService = class CoursesService {
         assignment: {
           select: {
             maxScore: true,
+            courseId: true,
             course: { select: { title: true } },
           },
         },
@@ -929,25 +938,58 @@ let CoursesService = class CoursesService {
     for (const sub of gradedSubs) {
       const sid = sub.studentId;
       const max = sub.assignment?.maxScore ?? 100;
-      const pct = max > 0 ? Math.round((sub.score / max) * 100) : 0;
+      const pct = max > 0 ? (sub.score / max) * 100 : 0;
       if (!tpMap.has(sid)) {
         const p = sub.student?.contact?.person;
         tpMap.set(sid, {
           name:
             [p?.firstName, p?.lastName].filter(Boolean).join(' ') || 'Unknown',
           courseName: sub.assignment?.course?.title ?? '',
-          scores: [],
+          totalScore: 0,
+          submissionCount: 0,
+          courseIds: new Set(),
         });
       }
-      tpMap.get(sid).scores.push(pct);
+      const entry = tpMap.get(sid);
+      entry.totalScore += pct;
+      entry.submissionCount += 1;
+      if (sub.assignment?.courseId)
+        entry.courseIds.add(sub.assignment.courseId);
     }
+    const tpCourseIds = new Set();
+    tpMap.forEach((v) => v.courseIds.forEach((id) => tpCourseIds.add(id)));
+    const tpAssignmentCounts = tpCourseIds.size
+      ? await this.prisma.assignment.groupBy({
+          by: ['courseId'],
+          where: { courseId: { in: [...tpCourseIds] }, isActive: true },
+          _count: { _all: true },
+        })
+      : [];
+    const tpAssignmentCountMap = new Map(
+      tpAssignmentCounts.map((a) => [a.courseId, a._count._all]),
+    );
     const topStudents = Array.from(tpMap.values())
-      .map(({ name, courseName, scores }) => ({
-        name,
-        courseName,
-        avgGrade: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
-        submissionCount: scores.length,
-      }))
+      .map(
+        ({
+          name,
+          courseName,
+          totalScore,
+          submissionCount,
+          courseIds: cids,
+        }) => {
+          const totalAssigned = [...cids].reduce(
+            (sum, cid) => sum + (tpAssignmentCountMap.get(cid) ?? 0),
+            0,
+          );
+          const divisor = Math.max(totalAssigned, submissionCount, 1);
+          return {
+            name,
+            courseName,
+            avgGrade: Math.round(totalScore / divisor),
+            submissionCount,
+          };
+        },
+      )
       .sort((a, b) => b.avgGrade - a.avgGrade)
       .slice(0, 10);
     return {
