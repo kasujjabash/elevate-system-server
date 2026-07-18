@@ -294,9 +294,8 @@ export class DashboardService {
     const titleMap = new Map(courseDetails.map((c) => [c.id, c.title]));
 
     // Aggregate per-student total score and the courses they've been graded
-    // in — the average is divided by assignments *assigned* in those
-    // courses, not just the ones the student actually submitted, so a
-    // student who skips assignments can't outrank one who did more work.
+    // in, plus a running total across everyone — used below to compute a
+    // class-wide average as a shrinkage prior.
     const gradeMap = new Map<
       number,
       {
@@ -307,6 +306,8 @@ export class DashboardService {
         courseIds: Set<number>;
       }
     >();
+    let classTotalScore = 0;
+    let classTotalSubs = 0;
     for (const sub of gradedSubs) {
       const sid = sub.studentId;
       const maxScore = (sub.assignment?.maxScore as number) ?? 100;
@@ -327,10 +328,15 @@ export class DashboardService {
       entry.submissionCount += 1;
       if (sub.assignment?.courseId)
         entry.courseIds.add(sub.assignment.courseId);
+      classTotalScore += pct;
+      classTotalSubs += 1;
     }
+    const classAverage =
+      classTotalSubs > 0 ? classTotalScore / classTotalSubs : 0;
 
     // Total active assignments per course, for every course any student here
-    // has been graded in.
+    // has been graded in — used to catch assignments the student never
+    // submitted at all (those count against them, as 0, like a missed test).
     const allCourseIds = new Set<number>();
     gradeMap.forEach((v) => v.courseIds.forEach((id) => allCourseIds.add(id)));
     const assignmentCounts = allCourseIds.size
@@ -344,29 +350,39 @@ export class DashboardService {
       assignmentCounts.map((a) => [a.courseId, a._count._all]),
     );
 
+    // A handful of graded assignments is weak evidence — one lucky 94% isn't
+    // proof of being a top performer the way a strong average across many
+    // assignments is. We rank by a confidence-weighted score that blends
+    // each student's average with the class average, trusting the student's
+    // own number more as they submit more (the classic "Bayesian average"
+    // used for review/ratings sites so a handful of 5-star reviews can't
+    // outrank thousands averaging 4.8). CONFIDENCE_SUBMISSIONS is roughly
+    // "how many graded assignments before we mostly trust your own average."
+    // The plain avgGrade shown to users is still their honest, true average.
+    const CONFIDENCE_SUBMISSIONS = 5;
+
     const topStudents = Array.from(gradeMap.values())
       .map(({ name, courseName, totalScore, submissionCount, courseIds }) => {
         const totalAssigned = [...courseIds].reduce(
           (sum, cid) => sum + (assignmentCountMap.get(cid) ?? 0),
           0,
         );
-        // Fall back to submissionCount if the assignment count somehow comes
-        // back lower (e.g. an assignment was deactivated after grading).
-        const divisor = Math.max(totalAssigned, submissionCount, 1);
+        // Missed assignments (assigned but never submitted) count as 0.
+        const effectiveCount = Math.max(totalAssigned, submissionCount);
+        const rankScore =
+          (totalScore + CONFIDENCE_SUBMISSIONS * classAverage) /
+          (effectiveCount + CONFIDENCE_SUBMISSIONS);
         return {
           name,
           courseName,
-          avgGrade: Math.round(totalScore / divisor),
+          avgGrade: Math.round(totalScore / submissionCount),
           submissionCount,
+          rankScore,
         };
       })
-      // Higher average wins; a tied average goes to whoever submitted more —
-      // one graded assignment shouldn't outrank three at the same average.
-      .sort(
-        (a, b) =>
-          b.avgGrade - a.avgGrade || b.submissionCount - a.submissionCount,
-      )
-      .slice(0, limit);
+      .sort((a, b) => b.rankScore - a.rankScore)
+      .slice(0, limit)
+      .map(({ rankScore, ...rest }) => rest);
 
     return {
       topStudents,
@@ -442,6 +458,8 @@ export class DashboardService {
       }
     >();
 
+    let classTotalScore = 0;
+    let classTotalSubs = 0;
     for (const sub of gradedSubs) {
       const sid = sub.studentId;
       const maxScore = (sub.assignment?.maxScore as number) ?? 100;
@@ -463,11 +481,15 @@ export class DashboardService {
       entry.submissionCount++;
       if (sub.assignment?.courseId)
         entry.courseIds.add(sub.assignment.courseId);
+      classTotalScore += pct;
+      classTotalSubs += 1;
     }
+    const classAverage =
+      classTotalSubs > 0 ? classTotalScore / classTotalSubs : 0;
 
     // Total active assignments per course, for every course any student here
-    // has been graded in — the average divides by assignments assigned, not
-    // just the ones actually submitted.
+    // has been graded in — assignments assigned but never submitted count
+    // against the student, as 0.
     const allCourseIds = new Set<number>();
     studentMap.forEach((v) =>
       v.courseIds.forEach((id) => allCourseIds.add(id)),
@@ -483,6 +505,12 @@ export class DashboardService {
       assignmentCounts.map((a) => [a.courseId, a._count._all]),
     );
 
+    // Rank by a confidence-weighted score (shrinks toward the class average
+    // when a student has few graded assignments) so a single lucky grade
+    // can't outrank a consistently strong record built on more submissions.
+    // avgGrade shown to users stays their honest, true average.
+    const CONFIDENCE_SUBMISSIONS = 5;
+
     const students = Array.from(studentMap.values())
       .map(
         ({
@@ -497,21 +525,23 @@ export class DashboardService {
             (sum, cid) => sum + (assignmentCountMap.get(cid) ?? 0),
             0,
           );
-          const divisor = Math.max(totalAssigned, submissionCount, 1);
+          const effectiveCount = Math.max(totalAssigned, submissionCount);
+          const rankScore =
+            (totalScore + CONFIDENCE_SUBMISSIONS * classAverage) /
+            (effectiveCount + CONFIDENCE_SUBMISSIONS);
           return {
             name,
             courseName,
             hubName,
-            avgGrade: Math.round(totalScore / divisor),
+            avgGrade: Math.round(totalScore / submissionCount),
             submissionCount,
+            rankScore,
           };
         },
       )
-      .sort(
-        (a, b) =>
-          b.avgGrade - a.avgGrade || b.submissionCount - a.submissionCount,
-      )
-      .slice(0, limit);
+      .sort((a, b) => b.rankScore - a.rankScore)
+      .slice(0, limit)
+      .map(({ rankScore, ...rest }) => rest);
 
     return { students };
   }
