@@ -184,6 +184,9 @@ let CoursesController = class CoursesController {
   createModule(id, dto) {
     return this.coursesService.createModule(id, dto);
   }
+  reorderModules(id, dto) {
+    return this.coursesService.reorderModules(id, dto.moduleIds);
+  }
   getCourseResources(id) {
     return this.coursesService.getCourseResources(id);
   }
@@ -592,6 +595,20 @@ __decorate(
   ],
   CoursesController.prototype,
   'createModule',
+  null,
+);
+__decorate(
+  [
+    (0, common_1.Patch)(':id/modules/reorder'),
+    openapi.ApiResponse({ status: 200 }),
+    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Body)()),
+    __metadata('design:type', Function),
+    __metadata('design:paramtypes', [Number, Object]),
+    __metadata('design:returntype', void 0),
+  ],
+  CoursesController.prototype,
+  'reorderModules',
   null,
 );
 __decorate(

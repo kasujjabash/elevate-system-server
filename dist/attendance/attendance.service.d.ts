@@ -14,6 +14,10 @@ export declare class AttendanceService {
     },
   ): Promise<
     {
+      event: {
+        id: number;
+        title: string;
+      };
       hub: {
         id: number;
         name: string;
@@ -33,6 +37,7 @@ export declare class AttendanceService {
       createdAt: Date;
       courseId: number;
       token: string;
+      eventId: number;
       shortCode: string;
       expiresAt: Date;
       createdBy: number;
@@ -43,6 +48,10 @@ export declare class AttendanceService {
     limit?: number,
   ): Promise<{
     sessions: ({
+      event: {
+        id: number;
+        title: string;
+      };
       hub: {
         id: number;
         name: string;
@@ -62,6 +71,7 @@ export declare class AttendanceService {
       createdAt: Date;
       courseId: number;
       token: string;
+      eventId: number;
       shortCode: string;
       expiresAt: Date;
       createdBy: number;
@@ -72,6 +82,10 @@ export declare class AttendanceService {
   }>;
   getSession(id: number): Promise<
     {
+      event: {
+        id: number;
+        title: string;
+      };
       hub: {
         id: number;
         name: string;
@@ -106,6 +120,7 @@ export declare class AttendanceService {
       createdAt: Date;
       courseId: number;
       token: string;
+      eventId: number;
       shortCode: string;
       expiresAt: Date;
       createdBy: number;
@@ -119,6 +134,7 @@ export declare class AttendanceService {
     createdAt: Date;
     courseId: number;
     token: string;
+    eventId: number;
     shortCode: string;
     expiresAt: Date;
     createdBy: number;
@@ -200,6 +216,7 @@ export declare class AttendanceService {
       createdAt: Date;
       courseId: number;
       token: string;
+      eventId: number;
       shortCode: string;
       expiresAt: Date;
       createdBy: number;

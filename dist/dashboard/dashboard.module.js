@@ -25,6 +25,9 @@ const prisma_service_1 = require('../shared/prisma.service');
 const dashboard_controller_1 = require('./dashboard.controller');
 const dashboard_service_1 = require('./dashboard.service');
 const courses_service_1 = require('../courses/courses.service');
+const community_reach_service_1 = require('../community-reach/community-reach.service');
+const job_placements_service_1 = require('../job-placements/job-placements.service');
+const attendance_service_1 = require('../attendance/attendance.service');
 let DashboardModule = class DashboardModule {};
 exports.DashboardModule = DashboardModule;
 exports.DashboardModule = DashboardModule = __decorate(
@@ -35,6 +38,9 @@ exports.DashboardModule = DashboardModule = __decorate(
       providers: [
         dashboard_service_1.DashboardService,
         courses_service_1.CoursesService,
+        community_reach_service_1.CommunityReachService,
+        job_placements_service_1.JobPlacementsService,
+        attendance_service_1.AttendanceService,
         prisma_service_1.PrismaService,
       ],
       exports: [dashboard_service_1.DashboardService],

@@ -25,9 +25,16 @@ var __metadata =
       return Reflect.metadata(k, v);
   };
 Object.defineProperty(exports, '__esModule', { value: true });
-exports.StudentsService = void 0;
+exports.StudentsService = exports.STUDENT_STATUSES = void 0;
 const common_1 = require('@nestjs/common');
 const prisma_service_1 = require('../shared/prisma.service');
+exports.STUDENT_STATUSES = [
+  'Active',
+  'Completed',
+  'Graduated',
+  'OnBreak',
+  'Dropped',
+];
 let StudentsService = class StudentsService {
   constructor(prisma) {
     this.prisma = prisma;
@@ -235,6 +242,12 @@ let StudentsService = class StudentsService {
     const where = {};
     if (filters.hubId) where.hubId = filters.hubId;
     else if (filters.hub) where.hub = { code: filters.hub };
+    if (filters.status) {
+      const match = exports.STUDENT_STATUSES.find(
+        (s) => s.toLowerCase() === filters.status.toLowerCase(),
+      );
+      if (match) where.status = match;
+    }
     if (filters.dateFrom || filters.dateTo) {
       where.enrolledAt = {};
       if (filters.dateFrom) where.enrolledAt.gte = new Date(filters.dateFrom);
@@ -381,6 +394,17 @@ let StudentsService = class StudentsService {
     return this.prisma.student.update({
       where: { id },
       data: dto,
+    });
+  }
+  async updateStatus(id, status) {
+    if (!exports.STUDENT_STATUSES.includes(status)) {
+      throw new common_1.BadRequestException(
+        `Status must be one of: ${exports.STUDENT_STATUSES.join(', ')}`,
+      );
+    }
+    return this.prisma.student.update({
+      where: { id },
+      data: { status: status },
     });
   }
   async getStudentSchedule(userId, from, to) {

@@ -488,6 +488,30 @@ export declare class CoursesController {
     order: number;
     isPublished: boolean;
   }>;
+  reorderModules(
+    id: number,
+    dto: {
+      moduleIds: number[];
+    },
+  ): Promise<
+    {
+      id: number;
+      title: string;
+      description: string;
+      weekNumber: number;
+      order: number;
+      contentCount: number;
+      completedCount: number;
+      contents: {
+        id: any;
+        title: any;
+        type: any;
+        order: any;
+        durationMin: any;
+        completed: boolean;
+      }[];
+    }[]
+  >;
   getCourseResources(id: number): Promise<
     {
       isPublic: boolean;

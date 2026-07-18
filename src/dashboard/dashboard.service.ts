@@ -1,9 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../shared/prisma.service';
+import { CommunityReachService } from '../community-reach/community-reach.service';
+import { JobPlacementsService } from '../job-placements/job-placements.service';
+import { AttendanceService } from '../attendance/attendance.service';
 
 @Injectable()
 export class DashboardService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private communityReachService: CommunityReachService,
+    private jobPlacementsService: JobPlacementsService,
+    private attendanceService: AttendanceService,
+  ) {}
 
   async getStats() {
     const now = new Date();
@@ -639,6 +647,431 @@ export class DashboardService {
         hub: h.name,
         count: h._count.students,
       })),
+    };
+  }
+
+  private async getTotalContacts(): Promise<number> {
+    return this.prisma.contact.count();
+  }
+
+  // Scoped to students only (org-wide or one hub) — never counts staff contacts.
+  private async getGenderBreakdown(hubId?: number) {
+    const rows = await this.prisma.person.groupBy({
+      by: ['gender'],
+      _count: { id: true },
+      where: {
+        contact: {
+          student: hubId ? { hubId } : { isNot: null },
+        },
+      },
+    });
+    return rows.map((r) => ({ gender: r.gender, count: r._count.id }));
+  }
+
+  private async getCompletionByStatus(hubId?: number) {
+    const rows = await this.prisma.student.groupBy({
+      by: ['status'],
+      _count: { id: true },
+      where: hubId ? { hubId } : undefined,
+    });
+    return rows.map((r) => ({ status: r.status, count: r._count.id }));
+  }
+
+  // Per-course completion rate + average online-course progress
+  private async getCourseCompletion(hubId?: number, courseId?: number) {
+    const rows = await this.prisma.enrollment.groupBy({
+      by: ['courseId', 'status'],
+      _count: { id: true },
+      _avg: { progress: true },
+      where: {
+        ...(courseId ? { courseId } : {}),
+        ...(hubId ? { student: { hubId } } : {}),
+      },
+    });
+
+    const courseIds = [...new Set(rows.map((r) => r.courseId))];
+    const courses = courseIds.length
+      ? await this.prisma.course.findMany({
+          where: { id: { in: courseIds } },
+          select: { id: true, title: true },
+        })
+      : [];
+    const titleMap = new Map(courses.map((c) => [c.id, c.title]));
+
+    const byCourse = new Map<
+      number,
+      {
+        courseName: string;
+        total: number;
+        completed: number;
+        progressSum: number;
+        progressCount: number;
+      }
+    >();
+    for (const r of rows) {
+      if (!byCourse.has(r.courseId)) {
+        byCourse.set(r.courseId, {
+          courseName: titleMap.get(r.courseId) ?? 'Unknown',
+          total: 0,
+          completed: 0,
+          progressSum: 0,
+          progressCount: 0,
+        });
+      }
+      const entry = byCourse.get(r.courseId)!;
+      entry.total += r._count.id;
+      if (r.status === 'Completed') entry.completed += r._count.id;
+      if (r._avg.progress != null) {
+        entry.progressSum += r._avg.progress * r._count.id;
+        entry.progressCount += r._count.id;
+      }
+    }
+
+    return Array.from(byCourse.entries()).map(([id, v]) => ({
+      courseId: id,
+      courseName: v.courseName,
+      totalEnrolled: v.total,
+      completedCount: v.completed,
+      completionRate: v.total ? Math.round((v.completed / v.total) * 100) : 0,
+      avgProgress: v.progressCount
+        ? Math.round(v.progressSum / v.progressCount)
+        : 0,
+    }));
+  }
+
+  // Per-course average grade rollup (org/hub/course-scoped)
+  private async getGradeRollup(hubId?: number, courseId?: number) {
+    const gradedSubs = await this.prisma.submission.findMany({
+      where: {
+        status: { in: ['Graded', 'Returned'] },
+        score: { not: null },
+        ...(hubId ? { student: { hubId } } : {}),
+        ...(courseId ? { assignment: { courseId } } : {}),
+      },
+      select: {
+        score: true,
+        assignment: {
+          select: {
+            maxScore: true,
+            courseId: true,
+            course: { select: { title: true } },
+          },
+        },
+      },
+    });
+
+    const byCourse = new Map<
+      number,
+      { courseName: string; scores: number[] }
+    >();
+    for (const sub of gradedSubs) {
+      const cid = sub.assignment?.courseId;
+      if (!cid) continue;
+      const maxScore = sub.assignment?.maxScore ?? 100;
+      const pct = maxScore > 0 ? (sub.score! / maxScore) * 100 : 0;
+      if (!byCourse.has(cid)) {
+        byCourse.set(cid, {
+          courseName: sub.assignment?.course?.title ?? 'Unknown',
+          scores: [],
+        });
+      }
+      byCourse.get(cid)!.scores.push(pct);
+    }
+
+    return Array.from(byCourse.entries())
+      .map(([id, v]) => ({
+        courseId: id,
+        courseName: v.courseName,
+        avgGrade: Math.round(
+          v.scores.reduce((a, b) => a + b, 0) / v.scores.length,
+        ),
+        submissionCount: v.scores.length,
+      }))
+      .sort((a, b) => b.avgGrade - a.avgGrade);
+  }
+
+  // Students who attended >=2 sessions in the last 14 days — same "active"
+  // definition as getStats().activeStudents (a count on the home dashboard),
+  // but returning the actual student list (name, hub, course) for display here.
+  private async getActiveStudentsList(
+    hubId?: number,
+    courseId?: number,
+    limit = 100,
+  ) {
+    const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+
+    const activeGroups = await this.prisma.attendance_record.groupBy({
+      by: ['studentId'],
+      where: {
+        checkedInAt: { gte: fourteenDaysAgo },
+        method: { not: 'Absent' },
+        ...(hubId ? { student: { hubId } } : {}),
+        ...(courseId ? { session: { courseId } } : {}),
+      },
+      _count: { studentId: true },
+      having: { studentId: { _count: { gte: 2 } } },
+    });
+
+    const studentIds = activeGroups.map((g) => g.studentId);
+    if (!studentIds.length) return [];
+
+    const students = await this.prisma.student.findMany({
+      where: { id: { in: studentIds } },
+      take: limit,
+      include: {
+        contact: { include: { person: true } },
+        hub: { select: { name: true } },
+        enrollments: { include: { course: true }, take: 1 },
+      },
+    });
+
+    return students.map((s) => ({
+      id: s.id,
+      name:
+        [s.contact?.person?.firstName, s.contact?.person?.lastName]
+          .filter(Boolean)
+          .join(' ') || 'Unknown',
+      hub: s.hub?.name ?? null,
+      course: s.enrollments[0]?.course?.title ?? null,
+    }));
+  }
+
+  // Enrolled students with zero present attendance in the last 14 days —
+  // same "inactive" definition already used in AttendanceService.getStats().
+  private async getInactiveStudentsList(
+    hubId?: number,
+    courseId?: number,
+    limit = 100,
+  ) {
+    const cutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+
+    const enrollmentWhere: any = { status: { not: 'Dropped' } };
+    if (courseId) enrollmentWhere.courseId = courseId;
+    if (hubId) enrollmentWhere.student = { hubId };
+
+    const allEnrollments = await this.prisma.enrollment.findMany({
+      where: enrollmentWhere,
+      select: { studentId: true },
+    });
+    const enrolledStudentIds = [
+      ...new Set(allEnrollments.map((e) => e.studentId)),
+    ];
+    if (!enrolledStudentIds.length) return [];
+
+    const recentlyActive = await this.prisma.attendance_record.findMany({
+      where: {
+        studentId: { in: enrolledStudentIds },
+        method: { not: 'Absent' },
+        checkedInAt: { gte: cutoff },
+      },
+      select: { studentId: true },
+      distinct: ['studentId'],
+    });
+    const activeSet = new Set(recentlyActive.map((r) => r.studentId));
+    const inactiveIds = enrolledStudentIds.filter((id) => !activeSet.has(id));
+    if (!inactiveIds.length) return [];
+
+    const students = await this.prisma.student.findMany({
+      where: { id: { in: inactiveIds } },
+      take: limit,
+      include: {
+        contact: { include: { person: true } },
+        hub: { select: { name: true } },
+        enrollments: { include: { course: true }, take: 1 },
+      },
+    });
+
+    return students.map((s) => ({
+      id: s.id,
+      name:
+        [s.contact?.person?.firstName, s.contact?.person?.lastName]
+          .filter(Boolean)
+          .join(' ') || 'Unknown',
+      hub: s.hub?.name ?? null,
+      course: s.enrollments[0]?.course?.title ?? null,
+    }));
+  }
+
+  private async getRecentlyRegisteredStudents(hubId?: number, limit = 10) {
+    const students = await this.prisma.student.findMany({
+      where: hubId ? { hubId } : undefined,
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      include: {
+        contact: { include: { person: true } },
+        hub: { select: { name: true } },
+      },
+    });
+    return students.map((s) => ({
+      id: s.id,
+      name:
+        [s.contact?.person?.firstName, s.contact?.person?.lastName]
+          .filter(Boolean)
+          .join(' ') || 'Unknown',
+      hub: s.hub?.name ?? null,
+      status: s.status,
+      createdAt: s.createdAt,
+    }));
+  }
+
+  // Job-placement gender split + recently-placed list, hub/course-scoped
+  private async getPlacementBreakdown(
+    hubId?: number,
+    courseId?: number,
+    limit = 10,
+  ) {
+    const where: any = { isActive: true };
+    if (hubId) where.hubId = hubId;
+    if (courseId) where.courseId = courseId;
+
+    const [genderGroups, recent] = await Promise.all([
+      this.prisma.job_placement.groupBy({
+        by: ['gender'],
+        _count: { id: true },
+        where,
+      }),
+      this.prisma.job_placement.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        include: {
+          course: { select: { title: true } },
+          hub: { select: { name: true } },
+        },
+      }),
+    ]);
+
+    return {
+      genderBreakdown: genderGroups.map((g) => ({
+        gender: g.gender ?? 'Unknown',
+        count: g._count.id,
+      })),
+      recentlyPlaced: recent.map((p) => ({
+        id: p.id,
+        name: p.fullName,
+        placementType: p.placementType,
+        jobTitle: p.jobTitle,
+        companyName: p.companyName,
+        course: p.course?.title ?? null,
+        hub: p.hub?.name ?? null,
+        createdAt: p.createdAt,
+      })),
+    };
+  }
+
+  // Sum of salaryAfterProgram across job placements logged since Jan 1 of the
+  // current year — a simple "wages currently earned by this year's graduates"
+  // figure, hub/course-scoped like the rest of the job-placement breakdowns.
+  private async getTotalWagesThisYear(hubId?: number, courseId?: number) {
+    const now = new Date();
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+
+    const result = await this.prisma.job_placement.aggregate({
+      _sum: { salaryAfterProgram: true },
+      where: {
+        isActive: true,
+        createdAt: { gte: startOfYear },
+        salaryAfterProgram: { not: null },
+        ...(hubId ? { hubId } : {}),
+        ...(courseId ? { courseId } : {}),
+      },
+    });
+
+    return result._sum.salaryAfterProgram ?? 0;
+  }
+
+  // Consolidated admin report — everything the rebuilt admin dashboard needs
+  // in one call, optionally scoped to a hub and/or course.
+  async getAdminReport(hubId?: number, courseId?: number) {
+    const [
+      stats,
+      hubStats,
+      reportStats,
+      performers,
+      allPerformance,
+      communityReach,
+      jobPlacements,
+      attendance,
+      totalContacts,
+      genderBreakdown,
+      completionByStatus,
+      courseCompletion,
+      gradeRollup,
+      recentStudents,
+      placementBreakdown,
+      activeStudentsList,
+      inactiveStudentsList,
+      totalWagesThisYear,
+    ] = await Promise.all([
+      this.getStats(),
+      this.getHubStats(),
+      this.getReportStats(),
+      this.getTopPerformers(hubId),
+      this.getAllPerformance({ hubId, courseId, limit: 10 }),
+      this.communityReachService.getStats(),
+      this.jobPlacementsService.getStats(),
+      this.attendanceService.getStats(hubId, courseId),
+      this.getTotalContacts(),
+      this.getGenderBreakdown(hubId),
+      this.getCompletionByStatus(hubId),
+      this.getCourseCompletion(hubId, courseId),
+      this.getGradeRollup(hubId, courseId),
+      this.getRecentlyRegisteredStudents(hubId),
+      this.getPlacementBreakdown(hubId, courseId),
+      this.getActiveStudentsList(hubId, courseId),
+      this.getInactiveStudentsList(hubId, courseId),
+      this.getTotalWagesThisYear(hubId, courseId),
+    ]);
+
+    return {
+      totals: {
+        totalStudents: stats.totalStudents,
+        totalCourses: stats.totalCourses,
+        activeEnrollments: stats.activeEnrollments,
+        activeStudents: stats.activeStudents,
+        totalContacts,
+        totalCommunityReach: communityReach.total,
+        // Youth reached = community outreach contacts + enrolled students
+        totalYouthReached: communityReach.total + stats.totalStudents,
+        totalJobPlacements: jobPlacements.total,
+        totalWagesThisYear,
+      },
+      activeStudentsList,
+      inactiveStudentsList,
+      attendance: {
+        ...attendance,
+        byHub: hubStats.map((h) => ({
+          hub: h.hub,
+          hubCode: h.hubCode,
+          presentToday: h.presentToday,
+          absentToday: h.absentToday,
+        })),
+      },
+      hubs: hubStats,
+      enrollment: {
+        byCourse: reportStats.enrollmentsByCourse,
+        byStatus: reportStats.enrollmentsByStatus,
+        byHub: reportStats.studentsByHub,
+      },
+      completion: {
+        byStudentStatus: completionByStatus,
+        byCourse: courseCompletion,
+      },
+      performance: {
+        topStudents: performers.topStudents,
+        topCourses: performers.topCourses,
+        allStudents: allPerformance.students,
+        byCourse: gradeRollup,
+      },
+      jobPlacements: {
+        ...jobPlacements,
+        ...placementBreakdown,
+      },
+      communityReach,
+      demographics: {
+        gender: genderBreakdown,
+      },
+      recentStudents,
     };
   }
 }

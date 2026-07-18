@@ -46,6 +46,14 @@ let HubsService = class HubsService {
       },
     });
   }
+  async getCombo() {
+    const hubs = await this.prisma.hub.findMany({
+      select: { id: true, name: true },
+      where: { isActive: true },
+      orderBy: { name: 'asc' },
+    });
+    return hubs.map((h) => ({ id: h.id.toString(), name: h.name }));
+  }
   async findOne(id) {
     return this.prisma.hub.findUnique({
       where: { id },

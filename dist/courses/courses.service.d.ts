@@ -570,6 +570,8 @@ export declare class CoursesService {
     dto: {
       title?: string;
       description?: string;
+      weekNumber?: number;
+      order?: number;
     },
   ): Promise<{
     id: number;
@@ -582,6 +584,28 @@ export declare class CoursesService {
     order: number;
     isPublished: boolean;
   }>;
+  reorderModules(
+    courseId: number,
+    moduleIds: number[],
+  ): Promise<
+    {
+      id: number;
+      title: string;
+      description: string;
+      weekNumber: number;
+      order: number;
+      contentCount: number;
+      completedCount: number;
+      contents: {
+        id: any;
+        title: any;
+        type: any;
+        order: any;
+        durationMin: any;
+        completed: boolean;
+      }[];
+    }[]
+  >;
   createContent(
     moduleId: number,
     dto: any,

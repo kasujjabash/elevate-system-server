@@ -35,6 +35,8 @@ const announcements_module_1 = require('./announcements/announcements.module');
 const students_module_1 = require('./students/students.module');
 const classes_module_1 = require('./classes/classes.module');
 const dashboard_module_1 = require('./dashboard/dashboard.module');
+const job_placements_module_1 = require('./job-placements/job-placements.module');
+const community_reach_module_1 = require('./community-reach/community-reach.module');
 const config_2 = require('./config');
 const seed_module_1 = require('./seed/seed.module');
 const vendor_module_1 = require('./vendor/vendor.module');
@@ -82,6 +84,8 @@ exports.AppModule = AppModule = __decorate(
         students_module_1.StudentsModule,
         announcements_module_1.AnnouncementsModule,
         workshops_module_1.WorkshopsModule,
+        job_placements_module_1.JobPlacementsModule,
+        community_reach_module_1.CommunityReachModule,
         seed_module_1.SeedModule,
         vendor_module_1.VendorModule,
         chat_module_1.ChatModule,

@@ -199,6 +199,7 @@ let UsersService = class UsersService {
       firstName: user.contact?.person?.firstName || '',
       lastName: user.contact?.person?.lastName || '',
       dateOfBirth: user.contact?.person?.dateOfBirth || null,
+      gender: user.contact?.person?.gender || '',
     };
   }
   async create(data) {
@@ -226,7 +227,7 @@ let UsersService = class UsersService {
         data: {
           firstName: data.firstName || '',
           lastName: data.lastName || '',
-          gender: 'Male',
+          gender: data.gender || 'Male',
           contactId: contact.id,
           ...(data.dateOfBirth
             ? { dateOfBirth: new Date(data.dateOfBirth) }
@@ -448,8 +449,9 @@ let UsersService = class UsersService {
       isActive: data.isActive,
     };
     const shouldInvalidateTokens =
-      (0, validation_1.hasValue)(data.password) || data.isActive === false;
-    if ((0, validation_1.hasValue)(data.password)) {
+      (data.password && data.password.trim().length > 0) ||
+      data.isActive === false;
+    if (data.password && data.password.trim().length > 0) {
       const user = new user_entity_1.User();
       user.password = data.password;
       user.hashPassword();
@@ -539,7 +541,8 @@ let UsersService = class UsersService {
       (data.phone !== undefined ||
         data.dateOfBirth !== undefined ||
         data.firstName !== undefined ||
-        data.lastName !== undefined)
+        data.lastName !== undefined ||
+        data.gender !== undefined)
     ) {
       const personData = {};
       if (data.dateOfBirth !== undefined) {
@@ -549,6 +552,7 @@ let UsersService = class UsersService {
       }
       if (data.firstName !== undefined) personData.firstName = data.firstName;
       if (data.lastName !== undefined) personData.lastName = data.lastName;
+      if (data.gender !== undefined) personData.gender = data.gender;
       if (Object.keys(personData).length > 0) {
         await this.prisma.person.updateMany({
           where: { contactId: data.contactId },

@@ -11,4 +11,5 @@ export declare class UpdateUserDto {
   dateOfBirth?: string;
   firstName?: string;
   lastName?: string;
+  gender?: string;
 }

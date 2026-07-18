@@ -44,6 +44,7 @@ export declare class AssignmentsService {
       isCoursePlayer: boolean;
     }
   >;
+  private emailStudentsAboutNewAssignment;
   private formatAssignment;
   findAll(options?: {
     courseId?: number;

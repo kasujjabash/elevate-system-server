@@ -87,7 +87,7 @@ let AttendanceService = class AttendanceService {
     await this.assertCanCreateSession(dto, createdBy, requester);
     const token = (0, crypto_1.randomBytes)(24).toString('hex');
     const shortCode = this.generateShortCode();
-    const durationMinutes = dto.durationMinutes ?? 30;
+    const durationMinutes = dto.durationMinutes ?? 60;
     const expiresAt = new Date(Date.now() + durationMinutes * 60 * 1000);
     const session = await this.prisma.attendance_session.create({
       data: {
@@ -96,12 +96,14 @@ let AttendanceService = class AttendanceService {
         label: dto.label,
         courseId: dto.courseId,
         hubId: dto.hubId,
+        eventId: dto.eventId,
         expiresAt,
         createdBy,
       },
       include: {
         course: { select: { id: true, title: true } },
         hub: { select: { id: true, name: true } },
+        event: { select: { id: true, title: true } },
         _count: { select: { records: true } },
       },
     });
@@ -117,6 +119,7 @@ let AttendanceService = class AttendanceService {
         include: {
           course: { select: { id: true, title: true } },
           hub: { select: { id: true, name: true } },
+          event: { select: { id: true, title: true } },
           _count: {
             select: {
               records: { where: { method: { not: 'Absent' } } },
@@ -134,6 +137,7 @@ let AttendanceService = class AttendanceService {
       include: {
         course: { select: { id: true, title: true } },
         hub: { select: { id: true, name: true } },
+        event: { select: { id: true, title: true } },
         records: {
           where: { method: { not: 'Absent' } },
           orderBy: { checkedInAt: 'asc' },
@@ -488,7 +492,7 @@ let AttendanceService = class AttendanceService {
       }),
       this.prisma.student.groupBy({
         by: ['hubId'],
-        where: { status: 'Inactive' },
+        where: { status: { in: ['OnBreak', 'Dropped'] } },
         _count: { id: true },
       }),
     ]);

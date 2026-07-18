@@ -13,6 +13,7 @@ export declare class StudentsController {
     hub?: string,
     hubId?: string,
     course?: string,
+    status?: string,
     dateFrom?: string,
     dateTo?: string,
     limit?: string,
@@ -413,6 +414,19 @@ export declare class StudentsController {
   update(
     id: number,
     body: any,
+  ): Promise<{
+    id: number;
+    contactId: number;
+    status: import('.prisma/client').$Enums.student_status_enum;
+    hubId: number;
+    createdAt: Date;
+    updatedAt: Date;
+    studentId: string;
+    enrolledAt: Date;
+  }>;
+  updateStatus(
+    id: number,
+    status: string,
   ): Promise<{
     id: number;
     contactId: number;

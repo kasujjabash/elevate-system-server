@@ -43,6 +43,7 @@ class UpdateUserDto {
       dateOfBirth: { required: false, type: () => String },
       firstName: { required: false, type: () => String },
       lastName: { required: false, type: () => String },
+      gender: { required: false, type: () => String },
     };
   }
 }
@@ -119,6 +120,12 @@ __decorate(
   [(0, class_validator_1.IsOptional)(), __metadata('design:type', String)],
   UpdateUserDto.prototype,
   'lastName',
+  void 0,
+);
+__decorate(
+  [(0, class_validator_1.IsOptional)(), __metadata('design:type', String)],
+  UpdateUserDto.prototype,
+  'gender',
   void 0,
 );
 //# sourceMappingURL=update-user.dto.js.map

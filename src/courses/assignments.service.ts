@@ -1,9 +1,11 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../shared/prisma.service';
+import { IEmail, sendEmail } from '../utils/mailer';
 
 @Injectable()
 export class AssignmentsService {
@@ -47,7 +49,9 @@ export class AssignmentsService {
         ...(targetHubId ? { student: { hubId: targetHubId } } : {}),
       },
       include: {
-        student: { include: { contact: { include: { user: true } } } },
+        student: {
+          include: { contact: { include: { user: true, email: true } } },
+        },
       },
     });
     const userIds = enrollments
@@ -68,7 +72,54 @@ export class AssignmentsService {
       });
     }
 
+    await this.emailStudentsAboutNewAssignment(dto, assignment, enrollments);
+
     return assignment;
+  }
+
+  // ── Email enrolled students that a new assignment was posted ─────────────
+  // Best-effort: mail failures are logged, never block assignment creation.
+  private async emailStudentsAboutNewAssignment(
+    dto: { title: string; dueDate?: string },
+    assignment: { course?: { title: string } },
+    enrollments: any[],
+  ): Promise<void> {
+    const recipients = enrollments
+      .map((e) => {
+        const emails = e.student?.contact?.email ?? [];
+        const primary = emails.find((em: any) => em.isPrimary) ?? emails[0];
+        return primary?.value;
+      })
+      .filter((value): value is string => !!value);
+
+    if (!recipients.length) return;
+
+    const dueDateLine = dto.dueDate
+      ? `<p>Due: ${new Date(dto.dueDate).toDateString()}</p>`
+      : '';
+    const courseLine = assignment.course
+      ? ` in <strong>${assignment.course.title}</strong>`
+      : '';
+    const link = `${process.env.APP_URL}/#/my-assignments`;
+
+    const results = await Promise.allSettled(
+      recipients.map((to) => {
+        const mailerData: IEmail = {
+          to,
+          subject: `New Assignment: ${dto.title}`,
+          html: `<h3>New assignment posted${courseLine}</h3><p>"${dto.title}" has been posted.</p>${dueDateLine}<p><a href="${link}">View your assignments</a></p>`,
+        };
+        return sendEmail(mailerData);
+      }),
+    );
+
+    results.forEach((r, i) => {
+      if (r.status === 'rejected') {
+        Logger.warn(
+          `Failed to email assignment notice to ${recipients[i]}: ${r.reason}`,
+        );
+      }
+    });
   }
 
   // ── Format a raw assignment row into the shape the client expects ──────────

@@ -77,6 +77,12 @@ export declare class HubsService {
       updatedAt: Date;
     })[]
   >;
+  getCombo(): Promise<
+    {
+      id: string;
+      name: string;
+    }[]
+  >;
   findOne(id: number): Promise<
     {
       courses: ({

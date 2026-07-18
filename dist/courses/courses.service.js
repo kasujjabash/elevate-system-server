@@ -643,8 +643,35 @@ let CoursesService = class CoursesService {
       data: {
         ...(dto.title !== undefined && { title: dto.title }),
         ...(dto.description !== undefined && { description: dto.description }),
+        ...(dto.weekNumber !== undefined && { weekNumber: dto.weekNumber }),
+        ...(dto.order !== undefined && { order: dto.order }),
       },
     });
+  }
+  async reorderModules(courseId, moduleIds) {
+    const existing = await this.prisma.course_module.findMany({
+      where: { courseId },
+      select: { id: true },
+    });
+    const existingIds = new Set(existing.map((m) => m.id));
+    if (
+      !Array.isArray(moduleIds) ||
+      moduleIds.length !== existing.length ||
+      !moduleIds.every((id) => existingIds.has(id))
+    ) {
+      throw new common_1.BadRequestException(
+        "moduleIds must include exactly the course's current modules",
+      );
+    }
+    await this.prisma.$transaction(
+      moduleIds.map((id, index) =>
+        this.prisma.course_module.update({
+          where: { id },
+          data: { order: index, weekNumber: index + 1 },
+        }),
+      ),
+    );
+    return this.getCourseModules(courseId);
   }
   async createContent(moduleId, dto) {
     return this.prisma.module_content.create({

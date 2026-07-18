@@ -2,6 +2,7 @@ export declare class CreateUserDto {
   contactId?: number;
   firstName?: string;
   lastName?: string;
+  gender?: string;
   username: string;
   password: string;
   roles: string[];

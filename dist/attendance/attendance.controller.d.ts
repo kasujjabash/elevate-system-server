@@ -8,6 +8,10 @@ export declare class AttendanceController {
     req: any,
   ): Promise<
     {
+      event: {
+        id: number;
+        title: string;
+      };
       hub: {
         id: number;
         name: string;
@@ -27,6 +31,7 @@ export declare class AttendanceController {
       createdAt: Date;
       courseId: number;
       token: string;
+      eventId: number;
       shortCode: string;
       expiresAt: Date;
       createdBy: number;
@@ -37,6 +42,10 @@ export declare class AttendanceController {
     limit?: string,
   ): Promise<{
     sessions: ({
+      event: {
+        id: number;
+        title: string;
+      };
       hub: {
         id: number;
         name: string;
@@ -56,6 +65,7 @@ export declare class AttendanceController {
       createdAt: Date;
       courseId: number;
       token: string;
+      eventId: number;
       shortCode: string;
       expiresAt: Date;
       createdBy: number;
@@ -87,6 +97,10 @@ export declare class AttendanceController {
   >;
   getSession(id: number): Promise<
     {
+      event: {
+        id: number;
+        title: string;
+      };
       hub: {
         id: number;
         name: string;
@@ -121,6 +135,7 @@ export declare class AttendanceController {
       createdAt: Date;
       courseId: number;
       token: string;
+      eventId: number;
       shortCode: string;
       expiresAt: Date;
       createdBy: number;
@@ -134,6 +149,7 @@ export declare class AttendanceController {
     createdAt: Date;
     courseId: number;
     token: string;
+    eventId: number;
     shortCode: string;
     expiresAt: Date;
     createdBy: number;
@@ -217,6 +233,7 @@ export declare class AttendanceController {
       createdAt: Date;
       courseId: number;
       token: string;
+      eventId: number;
       shortCode: string;
       expiresAt: Date;
       createdBy: number;

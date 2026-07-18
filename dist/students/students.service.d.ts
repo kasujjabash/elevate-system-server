@@ -1,4 +1,5 @@
 import { PrismaService } from '../shared/prisma.service';
+export declare const STUDENT_STATUSES: string[];
 export declare class StudentsService {
   private prisma;
   constructor(prisma: PrismaService);
@@ -500,6 +501,7 @@ export declare class StudentsService {
     hub?: string;
     hubId?: number;
     course?: string;
+    status?: string;
     dateFrom?: string;
     dateTo?: string;
     limit?: number;
@@ -592,6 +594,19 @@ export declare class StudentsService {
   update(
     id: number,
     dto: any,
+  ): Promise<{
+    id: number;
+    contactId: number;
+    status: import('.prisma/client').$Enums.student_status_enum;
+    hubId: number;
+    createdAt: Date;
+    updatedAt: Date;
+    studentId: string;
+    enrolledAt: Date;
+  }>;
+  updateStatus(
+    id: number,
+    status: string,
   ): Promise<{
     id: number;
     contactId: number;

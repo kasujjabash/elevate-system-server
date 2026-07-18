@@ -44,7 +44,18 @@ let StudentsController = class StudentsController {
     this.studentsService = studentsService;
     this.enrollmentService = enrollmentService;
   }
-  findAll(req, query, hub, hubId, course, dateFrom, dateTo, limit, skip) {
+  findAll(
+    req,
+    query,
+    hub,
+    hubId,
+    course,
+    status,
+    dateFrom,
+    dateTo,
+    limit,
+    skip,
+  ) {
     const roles = req?.user?.roles || '';
     const isHubManager = roles.includes('HUB_MANAGER');
     const resolvedHubId = isHubManager
@@ -57,6 +68,7 @@ let StudentsController = class StudentsController {
       hub,
       hubId: resolvedHubId,
       course,
+      status,
       dateFrom,
       dateTo,
       limit: limit ? parseInt(limit, 10) : 50,
@@ -114,6 +126,9 @@ let StudentsController = class StudentsController {
   update(id, body) {
     return this.studentsService.update(id, body);
   }
+  updateStatus(id, status) {
+    return this.studentsService.updateStatus(id, status);
+  }
   getProgress(id) {
     return this.studentsService.getStudentProgress(id);
   }
@@ -135,13 +150,15 @@ __decorate(
     __param(2, (0, common_1.Query)('hub')),
     __param(3, (0, common_1.Query)('hubId')),
     __param(4, (0, common_1.Query)('course')),
-    __param(5, (0, common_1.Query)('dateFrom')),
-    __param(6, (0, common_1.Query)('dateTo')),
-    __param(7, (0, common_1.Query)('limit')),
-    __param(8, (0, common_1.Query)('skip')),
+    __param(5, (0, common_1.Query)('status')),
+    __param(6, (0, common_1.Query)('dateFrom')),
+    __param(7, (0, common_1.Query)('dateTo')),
+    __param(8, (0, common_1.Query)('limit')),
+    __param(9, (0, common_1.Query)('skip')),
     __metadata('design:type', Function),
     __metadata('design:paramtypes', [
       Object,
+      String,
       String,
       String,
       String,
@@ -402,6 +419,21 @@ __decorate(
   ],
   StudentsController.prototype,
   'update',
+  null,
+);
+__decorate(
+  [
+    (0, common_1.Patch)(':id/status'),
+    (0, swagger_1.ApiOperation)({ summary: 'Update student status' }),
+    openapi.ApiResponse({ status: 200 }),
+    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Body)('status')),
+    __metadata('design:type', Function),
+    __metadata('design:paramtypes', [Number, String]),
+    __metadata('design:returntype', void 0),
+  ],
+  StudentsController.prototype,
+  'updateStatus',
   null,
 );
 __decorate(

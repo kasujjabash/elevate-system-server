@@ -18,6 +18,7 @@ export declare class UserListDto extends UserPermissions {
   lastName?: string;
   dateOfBirth?: Date | string | null;
   phone?: string;
+  gender?: string;
 }
 export declare class UserDto {
   id: number;

@@ -95,6 +95,19 @@ export class DashboardController {
     return this.dashboardService.getReportStats();
   }
 
+  @Get('admin-report')
+  async getAdminReport(
+    @Request() req: any,
+    @Query('hubId') hubId?: string,
+    @Query('courseId') courseId?: string,
+  ) {
+    this.assertStaffAccess(req);
+    return this.dashboardService.getAdminReport(
+      hubId ? Number(hubId) : undefined,
+      courseId ? Number(courseId) : undefined,
+    );
+  }
+
   /** GET /api/dashboard/trainer-stats — scoped to logged-in trainer */
   @Get('trainer-stats')
   async getTrainerStats(@Request() req: any) {

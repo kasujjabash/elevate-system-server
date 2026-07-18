@@ -77,6 +77,12 @@ export declare class HubsController {
       updatedAt: Date;
     })[]
   >;
+  combo(): Promise<
+    {
+      id: string;
+      name: string;
+    }[]
+  >;
   findOne(id: number): Promise<
     {
       courses: ({

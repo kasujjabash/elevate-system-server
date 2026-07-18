@@ -94,6 +94,13 @@ let DashboardController = class DashboardController {
     this.assertStaffAccess(req);
     return this.dashboardService.getReportStats();
   }
+  async getAdminReport(req, hubId, courseId) {
+    this.assertStaffAccess(req);
+    return this.dashboardService.getAdminReport(
+      hubId ? Number(hubId) : undefined,
+      courseId ? Number(courseId) : undefined,
+    );
+  }
   async getTrainerStats(req) {
     const contactId = req?.user?.contactId;
     if (!contactId)
@@ -205,6 +212,21 @@ __decorate(
   ],
   DashboardController.prototype,
   'getReportStats',
+  null,
+);
+__decorate(
+  [
+    (0, common_1.Get)('admin-report'),
+    openapi.ApiResponse({ status: 200 }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Query)('hubId')),
+    __param(2, (0, common_1.Query)('courseId')),
+    __metadata('design:type', Function),
+    __metadata('design:paramtypes', [Object, String, String]),
+    __metadata('design:returntype', Promise),
+  ],
+  DashboardController.prototype,
+  'getAdminReport',
   null,
 );
 __decorate(

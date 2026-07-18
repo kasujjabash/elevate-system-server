@@ -27,6 +27,7 @@ class UserListDto extends UserPermissions {
       lastName: { required: false, type: () => String },
       dateOfBirth: { required: false, type: () => Object },
       phone: { required: false, type: () => String },
+      gender: { required: false, type: () => String },
     };
   }
 }

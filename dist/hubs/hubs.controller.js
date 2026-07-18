@@ -49,6 +49,9 @@ let HubsController = class HubsController {
   findAll() {
     return this.hubsService.findAll();
   }
+  combo() {
+    return this.hubsService.getCombo();
+  }
   findOne(id) {
     return this.hubsService.findOne(id);
   }
@@ -99,6 +102,21 @@ __decorate(
   ],
   HubsController.prototype,
   'findAll',
+  null,
+);
+__decorate(
+  [
+    (0, common_1.Get)('combo'),
+    (0, swagger_1.ApiOperation)({
+      summary: 'Get lightweight {id, name} list of active hubs',
+    }),
+    openapi.ApiResponse({ status: 200 }),
+    __metadata('design:type', Function),
+    __metadata('design:paramtypes', []),
+    __metadata('design:returntype', void 0),
+  ],
+  HubsController.prototype,
+  'combo',
   null,
 );
 __decorate(
