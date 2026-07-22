@@ -110,10 +110,12 @@ export class AttendanceService {
     return session;
   }
 
-  async getSessions(page = 1, limit = 20) {
+  async getSessions(page = 1, limit = 20, hubId?: number) {
     const skip = (page - 1) * limit;
+    const where = hubId ? { hubId } : {};
     const [sessions, total] = await Promise.all([
       this.prisma.attendance_session.findMany({
+        where,
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
@@ -128,7 +130,7 @@ export class AttendanceService {
           },
         },
       }),
-      this.prisma.attendance_session.count(),
+      this.prisma.attendance_session.count({ where }),
     ]);
 
     return { sessions, total, page, limit };

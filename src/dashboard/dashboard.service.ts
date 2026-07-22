@@ -593,7 +593,7 @@ export class DashboardService {
           enrollments: { include: { course: true }, take: 1 },
         },
         orderBy: { enrolledAt: 'desc' },
-        take: 5,
+        take: 10,
       }),
       // Courses that hub students are actually enrolled in (not just courses tagged to this hub)
       this.prisma.enrollment.groupBy({

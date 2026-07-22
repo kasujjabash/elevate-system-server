@@ -38,10 +38,18 @@ export class AttendanceController {
     });
   }
 
-  /** Admin: list all sessions (paginated) */
+  /** Admin: list all sessions (paginated), optionally scoped to a hub */
   @Get('sessions')
-  async getSessions(@Query('page') page = '1', @Query('limit') limit = '20') {
-    return this.attendanceService.getSessions(+page, +limit);
+  async getSessions(
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+    @Query('hubId') hubId?: string,
+  ) {
+    return this.attendanceService.getSessions(
+      +page,
+      +limit,
+      hubId ? Number(hubId) : undefined,
+    );
   }
 
   /** Student: daily attendance count for last N days (dashboard chart) */
