@@ -234,18 +234,37 @@ export class CoursesService {
       orderBy: { enrolledAt: 'desc' },
     });
 
+    // Total active assignments per course, so avgGrade divides by what was
+    // *assigned*, not just what the student submitted — an assignment never
+    // turned in counts as 0, matching the top-performers calculation.
+    const enrollmentCourseIds = [
+      ...new Set(enrollments.map((e) => e.courseId)),
+    ];
+    const assignmentCounts = enrollmentCourseIds.length
+      ? await this.prisma.assignment.groupBy({
+          by: ['courseId'],
+          where: { courseId: { in: enrollmentCourseIds }, isActive: true },
+          _count: { _all: true },
+        })
+      : [];
+    const assignmentCountMap = new Map(
+      assignmentCounts.map((a) => [a.courseId, a._count._all]),
+    );
+
     return enrollments.map((e) => {
       const person = e.student?.contact?.person;
       const emails = (e.student?.contact?.email as any[]) ?? [];
       const phones = (e.student?.contact?.phone as any[]) ?? [];
       const gradedSubs = (e.student?.submissions as any[]) ?? [];
+      const totalAssigned = assignmentCountMap.get(e.courseId) ?? 0;
+      const divisor = Math.max(totalAssigned, gradedSubs.length, 1);
       const avgGrade =
         gradedSubs.length > 0
           ? Math.round(
               gradedSubs.reduce((sum: number, s: any) => {
                 const max = s.assignment?.maxScore ?? 100;
                 return sum + (max > 0 ? (s.score / max) * 100 : 0);
-              }, 0) / gradedSubs.length,
+              }, 0) / divisor,
             )
           : null;
       return {
