@@ -312,7 +312,6 @@ export class StudentsService {
     const primaryEnrollment = s.enrollments?.[0];
     return {
       id: s.id.toString(),
-      contactId: s.contactId,
       firstName: person?.firstName || '',
       lastName: person?.lastName || '',
       name: person ? `${person.firstName} ${person.lastName}` : s.studentId,
