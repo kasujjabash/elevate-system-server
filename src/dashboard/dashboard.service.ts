@@ -825,7 +825,11 @@ export class DashboardService {
     }));
   }
 
-  // Per-course average grade rollup (org/hub/course-scoped)
+  // Per-course average grade rollup (org/hub/course-scoped). The average
+  // divides by (enrolled students * assignments assigned) in the course, not
+  // just the number of submissions graded — a course where most students
+  // skip assignments shouldn't show the same avgGrade as one where everyone
+  // completes their work, matching the per-student calculation elsewhere.
   private async getGradeRollup(hubId?: number, courseId?: number) {
     const gradedSubs = await this.prisma.submission.findMany({
       where: {
@@ -848,7 +852,7 @@ export class DashboardService {
 
     const byCourse = new Map<
       number,
-      { courseName: string; scores: number[] }
+      { courseName: string; totalScore: number; scoreCount: number }
     >();
     for (const sub of gradedSubs) {
       const cid = sub.assignment?.courseId;
@@ -858,21 +862,52 @@ export class DashboardService {
       if (!byCourse.has(cid)) {
         byCourse.set(cid, {
           courseName: sub.assignment?.course?.title ?? 'Unknown',
-          scores: [],
+          totalScore: 0,
+          scoreCount: 0,
         });
       }
-      byCourse.get(cid)!.scores.push(pct);
+      const entry = byCourse.get(cid)!;
+      entry.totalScore += pct;
+      entry.scoreCount += 1;
     }
 
+    const rollupCourseIds = [...byCourse.keys()];
+    const [assignmentCounts, enrollmentCounts] = rollupCourseIds.length
+      ? await Promise.all([
+          this.prisma.assignment.groupBy({
+            by: ['courseId'],
+            where: { courseId: { in: rollupCourseIds }, isActive: true },
+            _count: { _all: true },
+          }),
+          this.prisma.enrollment.groupBy({
+            by: ['courseId'],
+            where: {
+              courseId: { in: rollupCourseIds },
+              status: { not: 'Dropped' },
+            },
+            _count: { _all: true },
+          }),
+        ])
+      : [[], []];
+    const assignmentCountMap = new Map(
+      assignmentCounts.map((a) => [a.courseId, a._count._all]),
+    );
+    const enrollmentCountMap = new Map(
+      enrollmentCounts.map((e) => [e.courseId, e._count._all]),
+    );
+
     return Array.from(byCourse.entries())
-      .map(([id, v]) => ({
-        courseId: id,
-        courseName: v.courseName,
-        avgGrade: Math.round(
-          v.scores.reduce((a, b) => a + b, 0) / v.scores.length,
-        ),
-        submissionCount: v.scores.length,
-      }))
+      .map(([id, v]) => {
+        const totalSlots =
+          (assignmentCountMap.get(id) ?? 0) * (enrollmentCountMap.get(id) ?? 0);
+        const divisor = Math.max(totalSlots, v.scoreCount, 1);
+        return {
+          courseId: id,
+          courseName: v.courseName,
+          avgGrade: Math.round(v.totalScore / divisor),
+          submissionCount: v.scoreCount,
+        };
+      })
       .sort((a, b) => b.avgGrade - a.avgGrade);
   }
 
